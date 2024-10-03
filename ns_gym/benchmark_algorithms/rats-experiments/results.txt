@@ -1,0 +1,56 @@
+NSBridge-v0-0.0 AsynDP-NSMDP
+    mean                      : 0.46767857142857366
+    median                    : 0.81
+    standard deviation        : 0.6740302297396727
+    VaR                       : -0.9 (alpha = 0.05 )
+    CVaR (expected shortfall) : -0.9 (alpha = 0.05 )
+NSBridge-v0-0.0 AsynDP-snapshot
+    mean                      : 0.4761607142857169
+    median                    : 0.81
+    standard deviation        : 0.6674869810529404
+    VaR                       : -0.9 (alpha = 0.05 )
+    CVaR (expected shortfall) : -0.9 (alpha = 0.05 )
+NSBridge-v0-0.0 RATS
+    mean                      : -0.026158429285714307
+    median                    : 0.0
+    standard deviation        : 0.6611381358183177
+    VaR                       : -0.81 (alpha = 0.05 )
+    CVaR (expected shortfall) : -0.8100000000000003 (alpha = 0.05 )
+
+NSBridge-v0-0.5 AsynDP-NSMDP
+    mean                      : -0.07680013151785728
+    median                    : 0.0
+    standard deviation        : 0.5831876905366141
+    VaR                       : -0.81 (alpha = 0.05 )
+    CVaR (expected shortfall) : -0.8100000000000003 (alpha = 0.05 )
+NSBridge-v0-0.5 AsynDP-snapshot
+    mean                      : -0.46267857142856733
+    median                    : -0.9
+    standard deviation        : 0.7224535926290532
+    VaR                       : -0.9 (alpha = 0.05 )
+    CVaR (expected shortfall) : -0.9 (alpha = 0.05 )
+NSBridge-v0-0.5 RATS
+    mean                      : -0.031865965714285724
+    median                    : 0.0
+    standard deviation        : 0.6046673132892396
+    VaR                       : -0.81 (alpha = 0.05 )
+    CVaR (expected shortfall) : -0.8100000000000003 (alpha = 0.05 )
+
+NSBridge-v0-1.0 AsynDP-NSMDP
+    mean                      : 0.6571001732142906
+    median                    : 0.7290000000000001
+    standard deviation        : 0.20604145492352913
+    VaR                       : 0.4782969000000001 (alpha = 0.05 )
+    CVaR (expected shortfall) : -0.03254903999999995 (alpha = 0.05 )
+NSBridge-v0-1.0 AsynDP-snapshot
+    mean                      : -0.7804464285714143
+    median                    : -0.81
+    standard deviation        : 0.3507230424984493
+    VaR                       : -0.9 (alpha = 0.05 )
+    CVaR (expected shortfall) : -0.9 (alpha = 0.05 )
+NSBridge-v0-1.0 RATS
+    mean                      : 0.6660825589285772
+    median                    : 0.7290000000000001
+    standard deviation        : 0.18808482817773894
+    VaR                       : 0.5904900000000001 (alpha = 0.05 )
+    CVaR (expected shortfall) : 0.09496018800000006 (alpha = 0.05 )
