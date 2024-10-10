@@ -3,6 +3,7 @@ import math
 import numpy as np
 from scipy.stats import wasserstein_distance
 from copy import deepcopy
+import ns_gym.base as base
 
 def update_probability_table(P,
                              nS: int,
@@ -130,7 +131,7 @@ def type_mismatch_checker(observation=None, reward=None):
     """
     # Process the observation if provided
     if observation is not None:
-        if isinstance(observation, nsg.base.Observation):
+        if isinstance(observation, base.Observation):
             obs = observation.state
         else:
             obs = observation
@@ -139,7 +140,7 @@ def type_mismatch_checker(observation=None, reward=None):
 
     # Process the reward if provided
     if reward is not None:
-        if isinstance(reward, nsg.base.Reward):
+        if isinstance(reward, base.Reward):
             rew = reward.reward
         else:
             rew = reward
