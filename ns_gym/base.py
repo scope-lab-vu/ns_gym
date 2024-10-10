@@ -126,7 +126,11 @@ class UpdateFn(ABC):
         raise NotImplementedError("Subclasses must implement this method")
     
     def _get_delta_change(self, param:Any, t:int) -> float:
-        return param - self.prev_param
+
+        if self.prev_param is None:
+            return 0
+        else:
+            return param - self.prev_param
 
     
 class UpdateDistributionFn(UpdateFn):
@@ -145,8 +149,13 @@ class UpdateDistributionFn(UpdateFn):
 
         Returns:
             float: Amount of change in the distribution
+
         """
-        return utils.wasserstein_distance(param,self.prev_param)
+
+        if self.prev_param is None:
+            return 0
+        else:
+            return utils.wasserstein_distance(param,self.prev_param)
 
 
 class NSWrapper(Wrapper):
