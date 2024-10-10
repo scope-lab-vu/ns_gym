@@ -111,9 +111,9 @@ class UpdateFn(ABC):
         """
         assert isinstance(t,(int,float)),(f"Expected t to be an int or float, got {type(t)}, Arrays operations need to inherit from UpdateDistributionFn")
         if self.scheduler(t):
-            updated_param = self.update(param,t)   
+            updated_param = self.update(copy.copy(param),t)   
 
-            delta_change = self._get_delta_change(param,t)
+            delta_change = self._get_delta_change(param,updated_param,t)
             self.prev_param = param
             self.prev_time = t
             return updated_param, True, delta_change
@@ -125,12 +125,9 @@ class UpdateFn(ABC):
     def update(self, param:Any, t:int) -> Any:
         raise NotImplementedError("Subclasses must implement this method")
     
-    def _get_delta_change(self, param:Any, t:int) -> float:
+    def _get_delta_change(self, param:Any,updated_param:Any, t:int) -> float:
 
-        if self.prev_param is None:
-            return 0
-        else:
-            return param - self.prev_param
+        return updated_param - param
 
     
 class UpdateDistributionFn(UpdateFn):
@@ -140,7 +137,7 @@ class UpdateDistributionFn(UpdateFn):
         assert(isinstance(param,list)),(f"param must be a list, got {type(param)}")
         return super().__call__(param,t)
     
-    def _get_delta_change(self, param: Any, t: int) -> float:
+    def _get_delta_change(self, param: Any,updated_param:Any, t: int) -> float:
         """We will use the Wasserstein distance to measure the amount of change in the distribution.
 
         Args:
@@ -151,11 +148,7 @@ class UpdateDistributionFn(UpdateFn):
             float: Amount of change in the distribution
 
         """
-
-        if self.prev_param is None:
-            return 0
-        else:
-            return utils.wasserstein_distance(param,self.prev_param)
+        return utils.wasserstein_distance(param,updated_param)
 
 
 class NSWrapper(Wrapper):
