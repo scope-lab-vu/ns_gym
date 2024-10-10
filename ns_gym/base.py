@@ -8,6 +8,7 @@ import numpy as np
 import ns_gym.utils as utils
 import uuid 
 import copy
+from scipy.stats import wasserstein_distance
 
 #TODO: add other envs
 TUNABLE_PARAMS = {"CartPoleEnv": {"gravity":9.8,"masscart":1.0,"masspole":0.1,"force_mag": 10.0,"tau":0.02,"length":0.5},
@@ -111,9 +112,11 @@ class UpdateFn(ABC):
         assert isinstance(t,(int,float)),(f"Expected t to be an int or float, got {type(t)}, Arrays operations need to inherit from UpdateDistributionFn")
         if self.scheduler(t):
             updated_param = self.update(param,t)   
+
+            delta_change = self._get_delta_change(param,t)
             self.prev_param = param
             self.prev_time = t
-            return updated_param, True, self._get_delta_change(param,t)
+            return updated_param, True, delta_change
         else:       
             self.prev_param = param
             self.prev_time = t  
