@@ -115,5 +115,39 @@ def categorical_sample(probs:list):
 #             transitions = P[s][a]
 #             for i
 
+
+def type_mismatch_checker(observation=None, reward=None):
+    """
+    A helper function to handle type mismatches between ns_gym
+    and Gymnasium environments.
+
+    Args:
+        observation: The observation object, which may be an instance of nsg.base.Observation.
+        reward: The reward object, which may be an instance of nsg.base.Reward.
+
+    Returns:
+        A tuple containing the processed observation and reward, with None if not provided.
+    """
+    # Process the observation if provided
+    if observation is not None:
+        if isinstance(observation, nsg.base.Observation):
+            obs = observation.state
+        else:
+            obs = observation
+    else:
+        obs = None
+
+    # Process the reward if provided
+    if reward is not None:
+        if isinstance(reward, nsg.base.Reward):
+            rew = reward.reward
+        else:
+            rew = reward
+    else:
+        rew = None
+
+    return obs, rew
+
+
 if __name__ == "__main__":
     test  = n_choose_k(5,2)

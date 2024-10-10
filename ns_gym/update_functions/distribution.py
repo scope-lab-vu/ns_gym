@@ -78,7 +78,7 @@ class DistributionIncrementUpdate(base.UpdateDistributionFn):
             param[i] = (1-param[0])/(len(param)-1)
         return param
 
-class DistributionDecrmentUpdate(base.UpdateDistributionFn):
+class DistributionDecrementUpdate(base.UpdateDistributionFn):
     """Decrement the probability of going in the intended direction by some k.
 
     Overview:
