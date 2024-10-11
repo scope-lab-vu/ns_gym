@@ -253,19 +253,3 @@ class DistributionNoUpdate(base.UpdateDistributionFn):
         return param
     
 
-# if __name__ == "__main___":
-# ####### Testing ###########
-#     import ns_bench as nsg
-
-#     scheduler = nsg.schedulers.ContinuousScheduler()
-#     update_fn = LCBoundedDistrubutionUpdate(scheduler,L=1.0)
-
-#     dist = [1,0,0,0]
-
-#     print(dist)
-
-#     updated_dist = update_fn(dist,0)
-
-#     print(updated_dist)
-
-
