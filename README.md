@@ -71,8 +71,8 @@ print("Episode Reward: ", episode_reward)
 ```
 
 
-# Experiments:
+# Tutorial:
 
-The experiment files for each environment and benchmark algorithm can be found in the [experiments](experiments) directory. 
+A more comprehensive tutorial presented can be found [here](tutorial.ipynb)
 
 
