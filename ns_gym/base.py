@@ -290,5 +290,26 @@ class NSWrapper(Wrapper):
         # TODO: Implement this function
         return super().__str__()
     
+
+class Agent(ABC):
+    """Base class for agents.
+    """
+
+    def __init__(self) -> None:
+        super().__init__()
+
+    def act(self, obs: Observation, *args, **kwargs) -> Any:
+        """Agent decision making function. 
+
+        Args:
+            obs (Observation): Observation from the environment
+
+        Returns:
+            Any: Action to be taken by the agent
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+    
+
+    
 if __name__ == "__main__":
     pass

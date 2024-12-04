@@ -2,7 +2,8 @@ import gymnasium as gym
 import numpy as np
 from copy import deepcopy
 import ns_gym as nsg
-from ns_gym import base
+
+import ns_gym.base as base
 import random
 from collections import defaultdict
 
@@ -68,7 +69,7 @@ class ChanceNode:
         self.children = []
         self.value = 0
 
-class MCTS:
+class MCTS(base.Agent):
     """Vanilla MCTS with Chance Nodes. Compatible with OpenAI Gym environments.
         Selection and expansion are combined into the "treepolicy method"
         The rollout/simluation is the "default" policy. 
@@ -330,15 +331,36 @@ class MCTS:
 
         return best_action
     
-    def reset_root(self,obs):
-        pass
+    def act(self, observation, env):
+        """
+        Decide on an action using the MCTS search, reinitializing the tree structure.
 
+        Args:
+            observation (Union[int, np.ndarray]): The current state or observation of the environment.
+
+        Returns:
+            int: The selected action.
+        """
+        # Ensure observation is in the correct format
+        if isinstance(observation, base.Observation):
+            observation = observation.state
+        if isinstance(observation, np.ndarray):
+            observation = tuple(observation)
+
+        # Reinitialize the instance by calling __init__
+        self.__init__(env, observation, self.d, self.m, self.c, self.gamma)
+
+        # Perform MCTS search to determine the best action
+        best_action, _ = self.search()
+
+        return best_action
 
 
 if __name__ == "__main__":
     import time
 
-    env = gym.make("CartPole-v1",max_episode_steps=100)
+
+    env = gym.make("CartPole-v1",max_episode_steps=500)
     scheduler  = nsg.schedulers.ContinuousScheduler()
     update_fn= nsg.update_functions.NoUpdate(scheduler=scheduler)
     env = nsg.wrappers.NSClassicControlWrapper(env,tunable_params={"masspole":update_fn})
@@ -356,17 +378,20 @@ if __name__ == "__main__":
         done = False
         truncated = False
         step = 0 
-        max_steps = 100
-        while not done or truncated or step < max_steps:
-            mcts_agent = MCTS(env,obs,100,300,1.44,0.99)
-            start = time.time()
-            a, vals = mcts_agent.search()
+        max_steps = 500
+        mcts_agent = MCTS(env,obs,15,50,1.44,0.999)
+        reward_list = []
+        while not done and not truncated and step < max_steps:
+            a = mcts_agent.act(obs,env)
             obs,reward,done,truncated,info = env.step(a)
+            reward_list.append(reward.reward)
+            
             # decision_times.append(time.time()-start)
-            print(time.time()-start)
+
             step+=1
-    print("Reward ",reward)
-    print("Average decision time", np.mean(decision_times))
+            if step%10 == 0:
+                print("Step ",step)
+    print("Reward ",np.sum(reward_list))
 
 
 
