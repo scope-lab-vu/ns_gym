@@ -140,7 +140,7 @@ class IncrementUpdate(base.UpdateFn):
         param+=self.k
         return param
     
-class DecrementUpdate(base.UpdateDistributionFn):
+class DecrementUpdate(base.UpdateFn):
     """Decrment the probabilty go going in the intened direction by some k.
 
     #TODO: instead of hard coding the intended direction, we can pass in the action as a param
