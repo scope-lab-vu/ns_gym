@@ -160,6 +160,11 @@ class PPO(base.Agent):
         self.actor = actor
         self.critic = critic
 
+        self.actor.to(device)
+        self.critic.to(device)
+
+
+
         ############################# HYPERPARAMETERS #############################
         self.max_grad_norm = max_grad_norm  # Maximum gradient norm for clipping
         self.ent_weight = ent_weight  # Entropy weight for exploration
