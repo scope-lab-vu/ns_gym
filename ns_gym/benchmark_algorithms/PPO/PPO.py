@@ -327,7 +327,7 @@ class PPO(base.Agent):
                 
                 # Use GAE-Lambda advantage estimation
                 last_value = self.critic(
-                    torch.tensor(np.expand_dims(mb_states[-1], axis=0), dtype=torch.float32)
+                    torch.tensor(np.expand_dims(mb_states[-1], axis=0), dtype=torch.float32).to(self.device)
                 ).detach().numpy()
                 
                 mb_returns = compute_gae(mb_rewards, mb_values,gamma,lamb,last_value)
