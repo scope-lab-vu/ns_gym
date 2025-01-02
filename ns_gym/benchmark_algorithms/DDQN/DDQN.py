@@ -141,7 +141,7 @@ class DQN(nn.Module):
             return x
     
 
-class DQNAgent:
+class DQNAgent(base.Agent):
     def __init__(self,
                  state_size, 
                  action_size, 
@@ -202,7 +202,7 @@ class DQNAgent:
                 experiences = self.memory.sample(self.batch_size)
                 self.learn(experiences, self.gamma)
 
-    def act(self, state, eps=0.):
+    def search(self, state, eps=0.):
         state = network_input_checker(state,state_size=self.state_size)
         self.q_network_local.eval()
         with torch.no_grad():
@@ -214,6 +214,11 @@ class DQNAgent:
             return np.argmax(action_values.cpu().data.numpy()),action_values.cpu().data.numpy().ravel()
         else:
             return random.choice(np.arange(self.action_size)),action_values.cpu().data.numpy()
+    
+    def act(self, state):
+        best_action, _ = self.search(state)
+        return best_action
+    
 
     def learn(self, experiences, gamma):
         states, actions, rewards, next_states, dones = experiences

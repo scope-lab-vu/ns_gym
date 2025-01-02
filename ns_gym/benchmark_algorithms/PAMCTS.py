@@ -1,7 +1,8 @@
 import ns_gym as nsg
 import numpy as np
+from ns_gym import base
 
-class PAMCTS:
+class PAMCTS(base.Agent):
     def __init__(self,
                  alpha,
                  mcts_iter,
@@ -45,7 +46,8 @@ class PAMCTS:
         
         self.DDQN_agent = nsg.benchmark_algorithms.DDQN.DQNAgent(self.state_space_size,self.action_space_size,seed = seed,model=self.DDQN_model,model_path=self.DDQN_model_path)        
     
-    def act(self,state,env,normalize=True):
+
+    def search(self,state,env,normalize=True):
         self.mcts_agent = nsg.benchmark_algorithms.MCTS(env,state,d=self.mcts_search_depth,m=self.mcts_iter,c=self.mcts_exploration_constant,gamma=self.mcts_discount_factor)
         mcts_action,mcts_action_values = self.mcts_agent.search()
         ddqn_action,ddqn_action_values = self.DDQN_agent.act(state)
@@ -58,6 +60,10 @@ class PAMCTS:
 
         hybrid_action_values = self._get_pa_uct_score(self.alpha,ddqn_action_values,mcts_action_values)
         return np.argmax(hybrid_action_values), hybrid_action_values
+    
+    def act(self,state,env,normalize=True):
+        action,_  = self.search(state,env,normalize)
+        return action
     
     def _get_pa_uct_score(self,alpha, policy_value, mcts_return):
 
