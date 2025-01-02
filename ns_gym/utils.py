@@ -4,6 +4,9 @@ import numpy as np
 from scipy.stats import wasserstein_distance
 from copy import deepcopy
 import ns_gym.base as base
+import yaml
+import argparse
+from pathlib import Path
 
 def update_probability_table(P,
                              nS: int,
@@ -148,6 +151,47 @@ def type_mismatch_checker(observation=None, reward=None):
         rew = None
 
     return obs, rew
+
+
+def parse_config(file_path):
+    """
+    Reads a YAML config file and updates its values with any command-line arguments.
+    
+    Args:
+        file_path (str or Path): Path to the YAML configuration file.
+    
+    Returns:
+        dict: The combined configuration dictionary.
+    """
+    # Ensure file_path is a Path object
+    file_path = Path(file_path)
+
+    if not file_path.is_file():
+        raise FileNotFoundError(f"Configuration file '{file_path}' not found.")
+    
+    # Load configuration from the YAML file
+    with open(file_path, 'r') as file:
+        config = yaml.safe_load(file)
+    
+    # Parse command-line arguments to override config values
+    parser = argparse.ArgumentParser(description="Override configuration parameters.")
+    
+    for key, value in config.items():
+        # Dynamically add arguments based on the YAML keys
+        arg_type = type(value) if value is not None else str
+        parser.add_argument(f"--{key}", type=arg_type, help=f"Override {key} in config.")
+    
+    # Parse command-line arguments
+    args = parser.parse_args()
+    
+    # Update the config with provided command-line arguments
+    for key in config.keys():
+        arg_value = getattr(args, key, None)
+        if arg_value is not None:
+            config[key] = arg_value
+    
+    return config
+
 
 
 if __name__ == "__main__":

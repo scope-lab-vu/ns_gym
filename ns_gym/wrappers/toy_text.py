@@ -5,8 +5,9 @@ import numpy as np
 import math
 from gymnasium import Wrapper
 from copy import deepcopy
-from ns_gym import base, utils, update_functions, schedulers
+from ns_gym import base, update_functions, schedulers
 
+from ns_gym.benchmark_algorithms import algo_utils
 from ns_gym.utils import update_probability_table,state_action_update,n_choose_k
 
 

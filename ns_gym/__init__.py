@@ -7,7 +7,7 @@ register(
 )
 
 
-__all__ = ["base","wrappers", "update_functions", "schedulers", "utils","benchmark_algorithms","envs"]
+__all__ = ["base","wrappers", "update_functions", "schedulers", "algo_utils","benchmark_algorithms","envs"]
 
 from .wrappers import *
 from .update_functions import *

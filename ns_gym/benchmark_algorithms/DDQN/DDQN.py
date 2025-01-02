@@ -7,7 +7,7 @@ from collections import namedtuple, deque
 from itertools import count
 import ns_gym.base as base
 import numpy as np
-from ns_gym.benchmark_algorithms.utils import observation_type_checker, reward_type_checker
+from ns_gym.benchmark_algorithms.algo_utils import observation_type_checker, reward_type_checker
 import torch
 import torch.nn as nn
 import time
