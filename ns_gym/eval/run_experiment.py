@@ -19,7 +19,7 @@ Generic experiment runner functions
 
 
 def make_env(config):
-    pass
+    raise NotImplementedError("make_env function not implemented")
 
 def run_episode(queue,env,agent,seed,sample_id,config,logger):
     """Run an episode with a given agent and environment.

@@ -7,7 +7,7 @@ register(
 )
 
 
-__all__ = ["base","wrappers", "update_functions", "schedulers", "algo_utils","benchmark_algorithms","envs"]
+__all__ = ["base","wrappers", "update_functions", "schedulers", "algo_utils","benchmark_algorithms","envs","eval"]
 
 from .wrappers import *
 from .update_functions import *
@@ -15,3 +15,4 @@ from .schedulers import *
 from .utils import *
 from .benchmark_algorithms import *
 from ns_gym.envs.Bridge import Bridge
+from .eval import *
