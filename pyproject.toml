@@ -16,7 +16,6 @@ dependencies = [
     "tensorboard",
     "pyyaml",
     "pandas"
-    "
 ]
 requires-python = ">=3.10"
 
