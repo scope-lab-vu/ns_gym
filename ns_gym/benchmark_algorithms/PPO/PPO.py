@@ -261,13 +261,13 @@ class PPO(base.Agent):
     
     def act(self, obs, *args, **kwargs):
 
-        obs = ns_gym.utils.type_mismatch_checker(obs)
+        obs,_ = ns_gym.utils.type_mismatch_checker(obs,None)
         obs = ns_gym.nn_model_input_checker(obs)
 
         self.actor.eval()
 
         with torch.no_grad():
-            action, _ = self.actor(obs)
+            action, _ = self.actor(obs,deterministic=True)
 
         return action
     

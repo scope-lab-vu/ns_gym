@@ -9,6 +9,9 @@ from multiprocessing import Pool
 import logging
 import itertools
 import time
+import pandas as pd
+import numpy as np
+
 """
 Generic experiment runner functions
 - Reads a YAML config file or command line arguments
@@ -17,6 +20,40 @@ Generic experiment runner functions
 - Stores results csv, trace visualizer
 """
 
+
+def read_experiment_results(file_path):
+    """Read the results of an experiment from a file.
+    Args:
+        file_path (str): Path to the file containing the results.
+    Returns:
+        pd.Dataframe: A pandas dataframe containing the results.
+    """
+
+    df  = pd.read_csv(file_path)
+
+    df["State-Action-Reward-NextState"] = df["State-Action-Reward-NextState"].apply(lambda x: eval(x))
+
+    return df
+
+
+
+def array_to_list_if_array(x):
+    """
+    Converts a NumPy array to a Python list if the input is a NumPy array.
+    If the array has a single element, return that value instead of a list.
+    Otherwise, returns the input unchanged.
+    
+    Args:
+        x: Input object to check and possibly convert.
+        
+    Returns:
+        list, single value, or original object.
+    """
+    if isinstance(x, np.ndarray):
+        if x.size == 1:  # If array has only one element
+            return x.item()  # Return the single value
+        return x.tolist()  # Otherwise, return the array as a list
+    return x
 
 def make_env(config):
     raise NotImplementedError("make_env function not implemented")
@@ -29,23 +66,31 @@ def run_episode(queue,env,agent,seed,sample_id,config,logger):
         logger.info(f"Running experiment with seed {seed}")
         done = False
         truncated = False
-        obs,_ = env.reset(seed)
+        obs,_ = env.reset(seed=seed)
+        obs,_ = ns_gym.utils.type_mismatch_checker(obs,None)
+
         
         episode_reward = []
+
+        SARNS = [] # State, Action, Reward, Next State
         
         num_steps = 0
         start_time = time.time()    
 
+
+
         while not done and not truncated:
-            action = agent.act(obs)
-            obs, reward, done, truncated = env.step(action)
-            obs,reward = ns_gym.utils.type_mismatch_checker(obs,reward)
+            action = agent.act(obs).numpy()
+            next_obs, reward, done, truncated,info = env.step(action)
+            next_obs,reward = ns_gym.utils.type_mismatch_checker(next_obs,reward)
+            SARNS.append((array_to_list_if_array(obs),array_to_list_if_array(action),array_to_list_if_array(reward),array_to_list_if_array(next_obs)))
+            obs = next_obs
             episode_reward.append(reward)
             num_steps += 1
 
         t = time.time() - start_time
 
-        result = [sum(episode_reward),episode_reward,num_steps,seed,sample_id,t] # total reward, reward per step, num_steps, seed, sample_id, time
+        result = [sum(episode_reward),SARNS,num_steps,seed,sample_id,t] # total reward, reward per step, num_steps, seed, sample_id, time
         queue.put(result)
 
     except Exception as e:
@@ -117,7 +162,7 @@ def run_experiment(config,make_env,agent):
 
     with open(outfile, mode='w', newline='') as file:
         writer = csv.writer(file)
-        writer.writerow(["total reward", "reward per step", "num_steps", "seed", "sample_id", "time"])
+        writer.writerow(["total_reward", "State-Action-Reward-NextState", "num_steps", "seed", "sample_id", "time"])
 
     writer_process = multiprocessing.Process(target=write_results_to_file, args=(queue,outfile,logger))
     writer_process.start()
@@ -134,6 +179,14 @@ def run_experiment(config,make_env,agent):
     print("number of experiments",num_experiments)
     queue.put("DONE")
     writer_process.join()
+    print("Results written to file")
+
+    df = read_experiment_results(outfile)
+
+    mean_reward = df["total_reward"].mean()
+    std_err = df["total_reward"].std()/np.sqrt(num_experiments)
+    print(f"Mean reward: {mean_reward}  +/- {std_err}")
+    
 
 
 

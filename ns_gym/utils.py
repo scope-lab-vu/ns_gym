@@ -7,6 +7,10 @@ import ns_gym.base as base
 import yaml
 import argparse
 from pathlib import Path
+import pathlib
+import os
+import datetime
+import warnings
 
 def update_probability_table(P,
                              nS: int,
@@ -156,6 +160,7 @@ def type_mismatch_checker(observation=None, reward=None):
 def parse_config(file_path):
     """
     Reads a YAML config file and updates its values with any command-line arguments.
+    Also checks if necessary configs for experiments are present.
     
     Args:
         file_path (str or Path): Path to the YAML configuration file.
@@ -189,8 +194,38 @@ def parse_config(file_path):
         arg_value = getattr(args, key, None)
         if arg_value is not None:
             config[key] = arg_value
+
+
+    # Check if necessary configs are present
+
+    if 'num_exp' not in config:
+        config['num_exp'] = 1
+        warnings.warn("num_exp not found in config. Defaulting to 1.")
     
+    if 'results_dir' not in config:
+        # results_dir = pathlib.Path(__file__).parent / 'results'
+        # config['results_dir'] = results_dir
+        # os.makedirs(results_dir, exist_ok=True)
+        # warnings.warn("results_dir not found in config. Defaulting to 'results'.")
+        raise ValueError("results_dir not found in config. Please specify a results directory.")
+    
+    if 'experiment_name' not in config:
+        config['experiment_name'] = f"experiment_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        warnings.warn("experiment_name not found in config. Defaulting to current timestamp.")
+    
+    if 'logs_dir' not in config:
+        # logsdir = pathlib.Path(__file__).parent / 'logs'
+        # config['logsdir'] = logsdir
+        # os.makedirs(logsdir, exist_ok=True)
+        # warnings.warn("logsdir not found in config. Defaulting to 'logs'.")
+        raise ValueError("logs_dir not found in config. Please specify a logs directory.")
+    
+    if 'num_workers' not in config:
+        config['num_workers'] = 1
+        warnings.warn("num_workers not found in config. Defaulting to 1.")
+        
     return config
+
 
 
 
