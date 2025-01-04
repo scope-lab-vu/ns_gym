@@ -272,7 +272,17 @@ class PPO(base.Agent):
         return action
     
     def train_ppo(self, env,config):
-        """Main training loop PPO algorithm."""
+        """Main training loop PPO algorithm.
+
+        Saves best model based on running average reward over 100 episodes.
+        
+        Args: 
+            env: Gym environment.
+            config: Configuration dictionary.
+        
+        Returns:
+            best_reward: Best running average reward over 100 episodes. 
+        """
         # Initialize environment
         s_dim = env.observation_space.shape[0]
         a_dim = env.action_space.shape[0]
@@ -359,6 +369,7 @@ class PPO(base.Agent):
             #     torch.save(actor.state_dict(), 'bipedalwalker_actor_weights_keplinns.pt')
             #     torch.save(critic.state_dict(), 'bipedalwalker_critic_weights_keplinns.pt')
             #     break
-
+        
+        return best_reward
 
 
