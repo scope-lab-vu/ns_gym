@@ -130,7 +130,7 @@ def run_experiment(config,make_env,agent):
         config (dict): Configuration dictionary.
         make_env (function): Function to create the environment. Takes in config and returns the non-stationary environment.
     """
-
+    multiprocessing.set_start_method("spawn")
 
     num_experiments= config['num_exp']
     results_dir = config['results_dir']
