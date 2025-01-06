@@ -284,9 +284,23 @@ class PPO(base.Agent):
             best_reward: Best running average reward over 100 episodes. 
         """
         # Initialize environment
-        s_dim = env.observation_space.shape[0]
-        a_dim = env.action_space.shape[0]
+        # s_dim = env.observation_space.shape[0]  # For now I am manully setting the state and action dimensions in the config file. 
+        # a_dim = env.action_space.shape[0] # This method does not work all the time -- due to the dfiferent types of action/observation spaces in gym.
 
+        if "s_dim" not in config:
+            s_dim = env.observation_space.shape[0]
+        else:
+            s_dim = config["s_dim"]
+
+
+        if "a_dim" not in config:
+            a_dim = config["a_dim"]
+        else:
+            a_dim = env.action_space.shape[0]
+
+        
+
+        
         # Training parameters from Config
         max_episodes = config["max_episodes"]
         batch_size = config["batch_size"]
