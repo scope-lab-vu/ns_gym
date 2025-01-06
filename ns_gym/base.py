@@ -58,6 +58,8 @@ class Reward:
 
 class Scheduler(ABC):
     """Base class for scheduler functions. This class is used to determine when to update a parameter in the environment.
+
+    Start and end times inclusive.
     """
     def __init__(self,
                  start = 0, 

@@ -11,6 +11,8 @@ import itertools
 import time
 import pandas as pd
 import numpy as np
+import torch
+import ns_gym.utils
 
 """
 Generic experiment runner functions
@@ -53,10 +55,15 @@ def array_to_list_if_array(x):
         if x.size == 1:  # If array has only one element
             return x.item()  # Return the single value
         return x.tolist()  # Otherwise, return the array as a list
+    
+    if isinstance(x,torch.Tensor):
+        if x.numel() == 1:
+            return x.item()
+        return x.tolist()
     return x
 
-def make_env(config):
-    raise NotImplementedError("make_env function not implemented")
+# def make_env(config):
+#     raise NotImplementedError("make_env function not implemented")
 
 def run_episode(queue,env,agent,seed,sample_id,config,logger):
     """Run an episode with a given agent and environment.
@@ -69,7 +76,7 @@ def run_episode(queue,env,agent,seed,sample_id,config,logger):
         obs,_ = env.reset(seed=seed)
         obs,_ = ns_gym.utils.type_mismatch_checker(obs,None)
 
-        
+                
         episode_reward = []
 
         SARNS = [] # State, Action, Reward, Next State
@@ -78,8 +85,8 @@ def run_episode(queue,env,agent,seed,sample_id,config,logger):
         start_time = time.time()    
 
 
-
         while not done and not truncated:
+            obs = ns_gym.utils.neural_network_checker(config["device"],obs)
             action = agent.act(obs).numpy()
             next_obs, reward, done, truncated,info = env.step(action)
             next_obs,reward = ns_gym.utils.type_mismatch_checker(next_obs,reward)
@@ -87,6 +94,9 @@ def run_episode(queue,env,agent,seed,sample_id,config,logger):
             obs = next_obs
             episode_reward.append(reward)
             num_steps += 1
+            if num_steps == config["max_steps"]+1:
+                print("Max steps reached")
+                break
 
         t = time.time() - start_time
 

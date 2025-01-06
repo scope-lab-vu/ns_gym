@@ -11,6 +11,7 @@ import pathlib
 import os
 import datetime
 import warnings
+import torch
 
 def update_probability_table(P,
                              nS: int,
@@ -227,6 +228,18 @@ def parse_config(file_path):
     return config
 
 
+def neural_network_checker(agent_device, obs):
+    """
+    Helper function to check if model and inputs are on the same device
+    """
+
+
+    if isinstance(obs,np.ndarray):
+        obs = torch.from_numpy(obs).float()
+
+    obs = obs.to(agent_device)
+
+    return obs
 
 
 if __name__ == "__main__":

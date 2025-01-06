@@ -290,7 +290,25 @@ class NSClassicControlWrapper(base.NSWrapper):
             raise NotImplementedError
 
         elif self.unwrapped.__class__.__name__ == "PendulumEnv": #TODO check this
-            raise NotImplementedError   
+            for p,new_val in new_vals.items():
+                constraint_dict[p] = False
+                if p=="m":
+                    if new_val <= 0:
+                        warnings.warn("Mass of the pendulum must be greater than zero, parameter not updated",ConstraintViolationWarning)
+                        constraint_dict[p] = True
+                elif p=="l":
+                    if new_val <= 0:
+                        warnings.warn("Length of the pendulum must be greater than zero, parameter not updated",ConstraintViolationWarning)
+                        constraint_dict[p] = True
+                elif p=="g":
+                    if new_val < 0:
+                        warnings.warn("Gravity must be greater than or equal to zero, parameter not updated",ConstraintViolationWarning)
+                        constraint_dict[p] = True
+
+                elif p=="dt":
+                    if new_val <= 0:
+                        warnings.warn("Time step must be greater than zero, parameter not updated",ConstraintViolationWarning)
+                        constraint_dict[p] = True
 
         return constraint_dict
 
@@ -311,7 +329,7 @@ class NSClassicControlWrapper(base.NSWrapper):
             raise NotImplementedError
         
         elif self.unwrapped.__class__.__name__ == "PendulumEnv":
-            raise NotImplementedError
+            pass
         
 
 
