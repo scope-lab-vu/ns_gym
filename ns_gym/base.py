@@ -311,7 +311,22 @@ class Agent(ABC):
         """
         raise NotImplementedError("Subclasses must implement this method")
     
+class StableBaselineWrapper:
+    """Interface for stable baseline rl implementations and NSGym environments.
+    Makes it so that you can call the stable baseline functions as you would other NS_Gym agents.
+    """
 
-    
+    def __init__(self,model):
+        """
+        Args:
+            model (Any): Stable baseline 3 model
+        """
+        self.model = model
+
+    def act(self,obs: Observation, *args, **kwargs) -> Any:
+        action, _states = self.model.predict(obs)
+        return action
+        
+
 if __name__ == "__main__":
     pass
