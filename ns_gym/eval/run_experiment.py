@@ -22,6 +22,21 @@ Generic experiment runner functions
 - Stores results csv, trace visualizer
 """
 
+class Queue:
+    def __init__(self):
+        self.queue = []
+
+    def put(self,item):
+        self.queue.append(item)
+    
+    def get(self):
+        return self.queue.pop(0)
+    
+    def empty(self):
+        return len(self.queue) == 0
+    
+
+
 
 def read_experiment_results(file_path):
     """Read the results of an experiment from a file.
@@ -62,6 +77,14 @@ def array_to_list_if_array(x):
         return x.tolist()
     return x
 
+
+def action_type_checker(action):
+    if isinstance(action,torch.Tensor):
+        return action.numpy()
+    
+    if isinstance(action,np.ndarray):
+        return action
+    
 # def make_env(config):
 #     raise NotImplementedError("make_env function not implemented")
 
@@ -87,7 +110,10 @@ def run_episode(queue,env,agent,seed,sample_id,config,logger):
 
         while not done and not truncated:
             obs = ns_gym.utils.neural_network_checker(config["device"],obs)
-            action = agent.act(obs).numpy()
+            action = agent.act(obs)
+
+            action = action_type_checker(action)
+
             next_obs, reward, done, truncated,info = env.step(action)
             next_obs,reward = ns_gym.utils.type_mismatch_checker(next_obs,reward)
             SARNS.append((array_to_list_if_array(obs),array_to_list_if_array(action),array_to_list_if_array(reward),array_to_list_if_array(next_obs)))
@@ -112,6 +138,7 @@ def run_episode(queue,env,agent,seed,sample_id,config,logger):
     return sum(episode_reward), episode_reward
 
 
+
 def write_results_to_file(q,outfile,logger):
     """Write results to file.
     Args:
@@ -132,7 +159,7 @@ def write_results_to_file(q,outfile,logger):
 
 
 
-def run_experiment(config,make_env,agent):
+def run_experiment(config,make_env,agent,multiprocess=True):
     """Run an experiment with a given configuration
     
 
@@ -140,7 +167,7 @@ def run_experiment(config,make_env,agent):
         config (dict): Configuration dictionary.
         make_env (function): Function to create the environment. Takes in config and returns the non-stationary environment.
     """
-    multiprocessing.set_start_method("spawn")
+
 
     num_experiments= config['num_exp']
     results_dir = config['results_dir']
@@ -149,7 +176,7 @@ def run_experiment(config,make_env,agent):
 
     sample_id= [x for x in range(num_experiments)]
 
-
+    # Set up logging
     log_name = experiment_name + ".log"
     os.makedirs(logsdir,exist_ok=True)
     logging.basicConfig(format='%(asctime)s,%(msecs)03d %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
@@ -157,49 +184,72 @@ def run_experiment(config,make_env,agent):
                     handlers=[logging.FileHandler(os.path.join(logsdir,log_name), mode='w')])
     logger = logging.getLogger()
 
-
-    manager = multiprocessing.Manager()
-    queue = manager.Queue()
-    
-
+    # Set up results directory
     os.makedirs(results_dir,exist_ok=True)
 
-    
+    # Set up random seeds
     seeds = random.sample(range(100000), num_experiments)
 
-
+    #outfile 
     outfile = os.path.join(results_dir,experiment_name + ".csv")
 
     with open(outfile, mode='w', newline='') as file:
         writer = csv.writer(file)
         writer.writerow(["total_reward", "State-Action-Reward-NextState", "num_steps", "seed", "sample_id", "time"])
 
-    writer_process = multiprocessing.Process(target=write_results_to_file, args=(queue,outfile,logger))
-    writer_process.start()
+
+    if multiprocess:
+        multiprocessing.set_start_method("spawn")
+        manager = multiprocessing.Manager()
+        queue = manager.Queue()
+
+        writer_process = multiprocessing.Process(target=write_results_to_file, args=(queue,outfile,logger))
+        writer_process.start()
+
+        env = make_env(config)
+
+        parameter_combinations = itertools.product(sample_id)
+        input = [(queue,env,agent,seeds[i],sample_id[i],config,logger) for i,params in enumerate(parameter_combinations)]
 
 
-    env = make_env(config)
+        print("Running experiments")
+        with Pool(config["num_workers"]) as p:
+            p.starmap(run_episode, input)
 
-    parameter_combinations = itertools.product(sample_id)
-    input = [(queue,env,agent,seeds[i],sample_id[i],config,logger) for i,params in enumerate(parameter_combinations)]
+        print("Number of experiments",num_experiments)
+        queue.put("DONE")
+        writer_process.join()
+        print("Results written to file")
 
-    with Pool(config["num_workers"]) as p:
-        p.starmap(run_episode, input)
+        df = read_experiment_results(outfile)
 
-    print("number of experiments",num_experiments)
-    queue.put("DONE")
-    writer_process.join()
-    print("Results written to file")
-
-    df = read_experiment_results(outfile)
-
-    mean_reward = df["total_reward"].mean()
-    std_err = df["total_reward"].std()/np.sqrt(num_experiments)
-    print(f"Mean reward: {mean_reward}  +/- {std_err}")
+        mean_reward = df["total_reward"].mean()
+        std_err = df["total_reward"].std()/np.sqrt(num_experiments)
+        print(f"Mean reward: {mean_reward}  +/- {std_err}")
     
+    else:
+
+        queue = Queue()
+
+        print("Running experiments")
+        for i in range(num_experiments):
+            run_episode(queue,make_env(config),agent,seeds[i],sample_id[i],config,logger)
+        print("Number of experiments",num_experiments)
 
 
+        with open(outfile, mode='a', newline='') as file:
+            writer = csv.writer(file)
+            while not queue.empty():
+                result = queue.get()
+                writer.writerow(result)
 
+        print("Results written to file")
+
+        df = read_experiment_results(outfile)
+
+        mean_reward = df["total_reward"].mean()
+        std_err = df["total_reward"].std()/np.sqrt(num_experiments)
+        print(f"Mean reward: {mean_reward}  +/- {std_err}")
 
 
 if __name__ == "__main__":
