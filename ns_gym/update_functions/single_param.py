@@ -193,6 +193,21 @@ class NoUpdate(base.UpdateFn):
         return param
     
 
+class OscillatingUpdate(base.UpdateFn):
+    """Update the parameter with an oscillating function.
+    """
+    def __init__(self, scheduler: Type[base.Scheduler], delta: float) -> None:
+        super().__init__(scheduler)
+        self.delta = delta
+
+    def __call__(self, param: Any, t: int) -> Any:
+        return super().__call__(param, t)
+    
+    def update(self, param: Any, t: int) -> Any:
+        oscillation = self.delta * np.sin(t)
+        return param + oscillation
+
+
 if __name__ == "__main__":
     from ns_gym.schedulers import PeriodicScheduler,DiscreteScheduler
     from ns_gym.update_functions.single_param import StepWiseUpdate

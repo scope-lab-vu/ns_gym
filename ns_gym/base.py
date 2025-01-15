@@ -14,6 +14,7 @@ from scipy.stats import wasserstein_distance
 TUNABLE_PARAMS = {"CartPoleEnv": {"gravity":9.8,"masscart":1.0,"masspole":0.1,"force_mag": 10.0,"tau":0.02,"length":0.5},
                   "AcrobotEnv": {"dt":0.2,"LINK_LENGTH_1":1.0,"LINK_LENGTH_2":1.0,"LINK_MASS_1":1.0,"LINK_MASS_2":1.1,"LINK_COM_POS_1":0.5,"LINK_COM_POS_2":0.5,"LINK_MOI":1.0},
                   "MountianCarEnv": {"gravity":0.0025,"force":0.001},
+                  "Continuous_MountainCarEnv": {"power":0.0015},
                   "PendulumEnv": {"m":1.0,"l":1.0,"dt":0.05,"g":9.8},
                   }
 """
@@ -281,7 +282,7 @@ class NSWrapper(Wrapper):
         try:
             return TUNABLE_PARAMS[self.unwrapped.__class__.__name__]
         except KeyError:
-            raise NotImplementedError(f"Default parameters for {self.unwrapped.__class__.__name__} not included in TUNABLE_PARAMS. Please add them to the dictionary in the classic_control.py file.")
+            raise NotImplementedError(f"Default parameters for {self.unwrapped.__class__.__name__} not included in TUNABLE_PARAMS. Please add them to the dictionary in the base.py file.")
 
     def __repr__(self):
         return super().__repr__()
@@ -327,6 +328,41 @@ class StableBaselineWrapper:
         action, _states = self.model.predict(obs)
         return action
         
+
+
+class Evaluator(ABC):
+    """Evaluator base class. This class is used to evaluate the difficulty of a transition between two environments.
+    """
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__()
+
+    def evaluate(self, env_1: Type[Env], env_2: Type[Env],*args,**kwargs) -> float:
+        assert env_1.unwrapped.__class__.__name__ == env_2.unwrapped.__class__.__name__, "Environments must be the same"
+        assert env_1.observation_space == env_2.observation_space, "Observation spaces must be the same"
+        assert env_1.action_space == env_2.action_space, "Action spaces must be the same"
+
+        # loop through supported observation and action spaces...s
+
+        # It may be the case for continuous action spaces that we have to simple discritize it ... 
+
+
+       # Check observation space
+        assert isinstance(env_1.observation_space, (gym.spaces.Box, gym.spaces.Discrete)), \
+            "Unsupported observation space"
+        assert isinstance(env_2.observation_space, (gym.spaces.Box, gym.spaces.Discrete)), \
+            "Unsupported observation space"
+
+        # Check action spacel
+
+        self.space_type = env_1.observation_space.__class__.__name__
+        self.action_type = env_1.action_space.__class__.__name__
+
+    
+    
+    def __call__(self):
+        return self.evaluate()
+    
+
 
 if __name__ == "__main__":
     pass

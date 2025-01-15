@@ -6,7 +6,7 @@ NS-Gym is a set of wrappers for the popular gymnasium environment to model non-s
 
 # Install from source
 
-Requires `python = 3.10`. To install on MacOS and Linux make sure you are in the same directory as this README file then execute the following lines in the terminal. ns_gym has not been tested on Windows machines. 
+Requires `python = 3.10`. To install on MacOS and Linux make sure you are in the same directory as this README file then execute the following lines in the terminal.
 
 ```bash
 python3.10 -m venv ns_gym_env
@@ -17,7 +17,6 @@ pip install .
 # Quickstart
 
 Suppose we want to model a non-stationary environment in the classical CartPole environment, where the pole’s mass increases by 0.1 units at each time step, and the system’s gravity increases through a random walk every three time steps. Furthermore, we want the decision-making agent to have a basic notification level. The following code snippet shows the general experimental setup in this CartPole Gymnasium environment using NS-Gym.
-
 
 ```python
 
@@ -73,6 +72,25 @@ print("Episode Reward: ", episode_reward)
 
 # Tutorial:
 
-A more comprehensive tutorial presented can be found [here](tutorial.ipynb)
+A more comprehensive tutorial can be found [here](tutorial.ipynb)
+
+
+# Development and testing
+
+We welcome any contributions to this NS-Gym project!
+
+Unit tests for this project are found under [test/](test/). To run a single test file do:
+
+```bash
+python -m unittest test/test_file.py
+```
+
+To run all test in the project run: 
+
+```bash
+python -m unittest discover -s test
+```
+
+
 
 

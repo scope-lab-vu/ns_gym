@@ -288,6 +288,15 @@ class NSClassicControlWrapper(base.NSWrapper):
                                             
         elif self.unwrapped.__class__.__name__ == "MountainCarEnv": #TODO check this
             raise NotImplementedError
+        
+
+        elif self.unwrapped.__class__.__name__ == "Continuous_MountainCarEnv":
+            for p,new_val in new_vals.items():
+                constraint_dict[p] = False
+                if p == "power":
+                    if new_val <= 0:
+                        warnings.warn("Power must be greater than zero, parameter not updated",ConstraintViolationWarning)
+                        constraint_dict[p] = True
 
         elif self.unwrapped.__class__.__name__ == "PendulumEnv": #TODO check this
             for p,new_val in new_vals.items():
@@ -329,6 +338,9 @@ class NSClassicControlWrapper(base.NSWrapper):
             raise NotImplementedError
         
         elif self.unwrapped.__class__.__name__ == "PendulumEnv":
+            pass
+
+        elif self.unwrapped.__class__.__name__ == "Continuous_MountainCarEnv":
             pass
         
 
