@@ -2,20 +2,86 @@ from ns_gym.base import Evaluator
 import scipy.integrate 
 import warnings
 import itertools
+from abc import ABC
+from typing import Type
+from gymnasium import Env
+import gymnasium as gym
+import os 
+import pathlib
 
 
-# TODO!!!!
-
-class EnsembleMetric(Evaluator):
-
-    def __init__(self):
+class ComparativeEvaluator(Evaluator):
+    """Superclass for evaluators that compare two environments. Handles checking that the environments are the same, etc 
+    """
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__()
 
-    def evaluate(self,env1,env2):
-        raise NotImplementedError
+    def evaluate(self, env_1: Type[Env], env_2: Type[Env],*args,**kwargs) -> float:
+        assert env_1.unwrapped.__class__.__name__ == env_2.unwrapped.__class__.__name__, "Environments must be the same"
+        assert env_1.observation_space == env_2.observation_space, "Observation spaces must be the same"
+        assert env_1.action_space == env_2.action_space, "Action spaces must be the same"
+
+        # loop through supported observation and action spaces...s
+
+        # It may be the case for continuous action spaces that we have to simple discritize it ... 
+
+       # Check observation space
+        assert isinstance(env_1.observation_space, (gym.spaces.Box, gym.spaces.Discrete)), \
+            "Unsupported observation space"
+        assert isinstance(env_2.observation_space, (gym.spaces.Box, gym.spaces.Discrete)), \
+            "Unsupported observation space"
+
+        # Check action spacel
+
+        self.space_type = env_1.observation_space.__class__.__name__
+        self.action_type = env_1.action_space.__class__.__name__
+
+    def __call__(self):
+        return self.evaluate()
+
+class EnsembleMetric(Evaluator):
+    """
+    Evaluates the difficulty of an NS-MDP by comparing mean reward over an ensemble of agents.
+    """
+    def __init__(self,agents=[]) -> None:
+        super().__init__()
+        self.agents = agents
+
+    @staticmethod       
+    def evaluate(self,env,M,include_MCTS=False,include_RL=True,include_AlphaZero=False):
+        """Evaluate the difficulty of a particular NS-MDP by comparing the mean reward over an ensemble of agents.
+        NS-Gym uses the following procedure to evaluate the difficulty of a particular NS-MDP:
+
+        For a particular NS-MDP, NS-Gym will look too see if there are saved agents in the directory. By default we will evaluate using StableBaseline3 RL agents.
+        If there are no saved agents (say for custom environments), you will be prompted to train the agents.
+
+        Args:
+            M (int): The number of episodes to run
+            include_MCTS (bool): Whether to include the MCTS agent in the ensemble. 
+        """
+
+        agent_list = self.__load_agents(env)
+
+        for agent in agent_list:
+            pass
+
+    def __load_agents(self,env):
+        """
+        Load agents from the agent_paths
+        """
+
+        if self.agents:
+            return self.agents
+        
+        else:
+            env_name = env.unwrapped.__class__.__name__
+            agent_paths = os.listdir(pathlib.Path(__file__).parent / "evaluation_model_weights" / env_name)
+            agent_list = []
 
 
-class PAMCTS_Bound(Evaluator):
+
+
+class PAMCTS_Bound(ComparativeEvaluator):
     """Evaluates the difficulty of a NS-MDP Tranisition as a transition-bounded non-stationary Markov decision porcess (T-NSMDP)
 
     When the environment undergoes some change between time steps 0 and t, a T-NSMDP assumes 
@@ -41,9 +107,7 @@ class PAMCTS_Bound(Evaluator):
         raise NotImplementedError
 
  
-
-
-class TSMDP_Bound(Evaluator):
+class TSMDP_Bound(ComparativeEvaluator):
     def __init__(self):
         super().__init__()
     
@@ -112,7 +176,6 @@ class BIBO_Stablilty(Evaluator):
         """
         raise NotImplementedError
     
-
 class LyapunovStability(Evaluator):
     
     def __init__(self):

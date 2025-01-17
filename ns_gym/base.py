@@ -21,11 +21,9 @@ TUNABLE_PARAMS = {"CartPoleEnv": {"gravity":9.8,"masscart":1.0,"masspole":0.1,"f
 Look up table for tunable parameters and their default values for each environment.
 """
 
-
 """
 Some core types 
 """
-
 @dataclass(frozen=True)
 class Observation:
     """Observation dataclass type. This is the output of the step function in the environment.
@@ -329,7 +327,6 @@ class StableBaselineWrapper:
         return action
         
 
-
 class Evaluator(ABC):
     """Evaluator base class. This class is used to evaluate the difficulty of a transition between two environments.
     """
@@ -337,31 +334,12 @@ class Evaluator(ABC):
         super().__init__()
 
     def evaluate(self, env_1: Type[Env], env_2: Type[Env],*args,**kwargs) -> float:
-        assert env_1.unwrapped.__class__.__name__ == env_2.unwrapped.__class__.__name__, "Environments must be the same"
-        assert env_1.observation_space == env_2.observation_space, "Observation spaces must be the same"
-        assert env_1.action_space == env_2.action_space, "Action spaces must be the same"
+        raise NotImplementedError("Subclasses must implement this method")
 
-        # loop through supported observation and action spaces...s
-
-        # It may be the case for continuous action spaces that we have to simple discritize it ... 
-
-
-       # Check observation space
-        assert isinstance(env_1.observation_space, (gym.spaces.Box, gym.spaces.Discrete)), \
-            "Unsupported observation space"
-        assert isinstance(env_2.observation_space, (gym.spaces.Box, gym.spaces.Discrete)), \
-            "Unsupported observation space"
-
-        # Check action spacel
-
-        self.space_type = env_1.observation_space.__class__.__name__
-        self.action_type = env_1.action_space.__class__.__name__
-
-    
-    
     def __call__(self):
         return self.evaluate()
     
+
 
 
 if __name__ == "__main__":

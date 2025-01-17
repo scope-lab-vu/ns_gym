@@ -4,6 +4,8 @@ import numpy as np
 import copy
 from gymnasium import spaces
 from typing import List, Optional
+import functools
+
 
 '''
 '''
@@ -116,7 +118,7 @@ class Bridge(gym.Env):
     def state_to_coord(self, state):
         return np.array([state // self.ncol, state % self.ncol])
     
-    def get_loc_based_prob(self,coord):
+    def get_loc_basedProb(self,coord):
         if coord[1] < 4:
             return self.left_side_prob
         else:
@@ -151,6 +153,10 @@ class Bridge(gym.Env):
     def transition_matrix(self):
         return self._get_transition_matrix()
     
+    @property
+    def P(self):
+        return self.transition_matrix()
+        
     def _get_transition_matrix(self):
         table = {s: {a: [] for a in range(self.nA)} for s in range(self.nS)}
         for row in range(self.nrow):

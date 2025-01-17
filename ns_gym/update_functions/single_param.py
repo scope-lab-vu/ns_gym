@@ -166,9 +166,6 @@ class StepWiseUpdate(base.UpdateFn):
     def __init__(self, scheduler: Type[base.Scheduler], param_list: list) -> None:
         super().__init__(scheduler)
         self.param_list = param_list
-
-    def __call__(self, param: Any, t: int) -> Any:
-        return super().__call__(param, t)   
         
     def update(self, param: Any, t: int) -> Any:
         try:
@@ -186,9 +183,6 @@ class NoUpdate(base.UpdateFn):
     def __init__(self, scheduler: Type[base.Scheduler]) -> None:
         super().__init__(scheduler)
     
-    def __call__(self, param: Any, t: int) -> Any:
-        return super().__call__(param, t)
-    
     def update(self, param: Any, t: int) -> Any:
         return param
     
@@ -199,13 +193,38 @@ class OscillatingUpdate(base.UpdateFn):
     def __init__(self, scheduler: Type[base.Scheduler], delta: float) -> None:
         super().__init__(scheduler)
         self.delta = delta
+    
+    def update(self, param: Any, t: int) -> Any:
+        oscillation = self.delta * np.sin(t)
+        return param + oscillation
+    
+
+class ExponetialDecay(base.UpdateFn):
+    """Exponential decay of the parameter.
+    """
+    def __init__(self, scheduler: Type[base.Scheduler], decay_rate: float) -> None:
+        super().__init__(scheduler)
+        self.decay_rate = decay_rate
 
     def __call__(self, param: Any, t: int) -> Any:
         return super().__call__(param, t)
     
     def update(self, param: Any, t: int) -> Any:
-        oscillation = self.delta * np.sin(t)
-        return param + oscillation
+        updated_param = param * np.exp(-self.decay_rate * t)
+        return updated_param
+    
+class GeometricProgression(base.UpdateFn):
+    """Apply a geometric progression to the parameter.
+    """
+
+    def __init__(self, scheduler, r):
+        super().__init__(scheduler)
+        self.r = r
+
+    def update(self, param, t):
+        # Does not rely on t because the scheduler determines when the update function fires.
+        updated_param = param * self.r
+        return updated_param
 
 
 if __name__ == "__main__":

@@ -50,6 +50,17 @@ class BaseTestEvaluator(unittest.TestCase):
         a = ns_env.action_space.sample()
         ns_env.step(a)
         return ns_env
+    
+    def create_pendulum_env(self, update_value):    
+        env = gym.make("Pendulum-v0")
+        scheduler = ns_gym.schedulers.ContinuousScheduler(start=0, end=0)
+        update_fn = ns_gym.update_functions.DecrementUpdate(scheduler, update_value)
+        parameter_map = {"m": update_fn}
+        ns_env = ns_gym.wrappers.NSPendulumWrapper(env, tunable_params=parameter_map)
+        ns_env.reset()
+        a = ns_env.action_space.sample()
+        ns_env.step(a)
+        return ns_env
 
     def evaluate(self, evaluator_cls):
         """
@@ -71,9 +82,18 @@ class BaseTestEvaluator(unittest.TestCase):
 
 # Define explicit test cases for each Evaluator subclass
 class TestEnsembleMetric(BaseTestEvaluator):
+    def test_load_agents(self):
+        unittest.skip("Not implemented yet")
+
     def test_evaluate(self):
         from ns_gym.eval.metrics import EnsembleMetric
         self.evaluate(EnsembleMetric)
+
+    
+
+
+
+    
 
 class TestPAMCTSBound(BaseTestEvaluator):
     def test_evaluate(self):
@@ -108,6 +128,6 @@ class TestTSMDPBound(BaseTestEvaluator):
         self.assertIsInstance(self.env1.observation_space, gym.spaces.Discrete)
         result = evaluator.evaluate(self.create_bridge_env(0.5), self.create_bridge_env(0.0))
         self.assertEqual(result, 1-(0.5/3))
-    
+
 if __name__ == "__main__":
     unittest.main()
