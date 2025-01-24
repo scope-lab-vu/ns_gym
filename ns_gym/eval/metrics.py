@@ -8,6 +8,11 @@ from gymnasium import Env
 import gymnasium as gym
 import os 
 import pathlib
+import importlib
+import ns_gym
+import ns_gym.schedulers
+import ns_gym.update_functions
+import ns_gym.wrappers
 
 
 class ComparativeEvaluator(Evaluator):
@@ -43,12 +48,15 @@ class EnsembleMetric(Evaluator):
     """
     Evaluates the difficulty of an NS-MDP by comparing mean reward over an ensemble of agents.
     """
-    def __init__(self,agents=[]) -> None:
+    def __init__(self,agents={}) -> None:
+        """
+        Args:
+            agents (dict): A dictionary of agents to evaluate. The keys are the agent names and the values are the agent objects. Defaults to an empty dictionary.
+        """
         super().__init__()
         self.agents = agents
-
-    @staticmethod       
-    def evaluate(self,env,M,include_MCTS=False,include_RL=True,include_AlphaZero=False):
+    
+    def evaluate(self,env,M=100,include_MCTS=False,include_RL=True,include_AlphaZero=False,verbose=True):
         """Evaluate the difficulty of a particular NS-MDP by comparing the mean reward over an ensemble of agents.
         NS-Gym uses the following procedure to evaluate the difficulty of a particular NS-MDP:
 
@@ -56,62 +64,170 @@ class EnsembleMetric(Evaluator):
         If there are no saved agents (say for custom environments), you will be prompted to train the agents.
 
         Args:
-            M (int): The number of episodes to run
-            include_MCTS (bool): Whether to include the MCTS agent in the ensemble. 
+            env (gym.Env): The non-stationary environment to evaluate
+            M (int): The number of episodes to run. Defaults to 100.
+            include_MCTS (bool): Whether to include the MCTS agent in the ensemble. Defaults to False.
+            include_RL (bool): Whether to include the RL agents in the ensemble. Defaults to True.
+            include_AlphaZero (bool): Whether to include the AlphaZero agent in the ensemble. Defaults to False.
+            verbose (bool): Whether to print the results of the evaluation. Defaults to True.
+
+        Returns:
+            ensemble_performance (float): The mean reward over the ensemble of agents
+            performance (dict): A dictionary of the performance of each agent in the ensemble
+
         """
 
-        agent_list = self.__load_agents(env)
+        agent_list = self._load_agents(env) # returns a list of agent names, agent objects stored in self.agents
 
-        for agent in agent_list:
-            pass
+        performance = {}
 
-    def __load_agents(self,env):
+        if not agent_list:
+            raise ValueError("No agents found in the evaluation_model_weights directory. Please train some agents first.")
+        
+        base_ensebleperformance, base_performance = self._evaluate_stable_baselines(env,agent_list,M)
+
+        for i,agent_name in enumerate(agent_list):
+            agent = self.agents[agent_name]
+            performance[agent_name] = []
+            for ep in range(M):
+
+                total_reward = 0
+                obs,info = env.reset()
+                obs,_ = ns_gym.utils.type_mismatch_checker(obs,None)
+
+                done = False
+                truncated = False
+
+                total_reward = 0
+                while not (done or truncated):
+                    # ns_gym.utils.neural_network_checker(self.agents[i].device,obs)
+                    action = agent.act(obs)
+                    action = ns_gym.eval.action_type_checker(action)
+                    obs, reward, done, truncated,info = env.step(action)
+                    obs,reward = ns_gym.utils.type_mismatch_checker(obs,reward)
+                    total_reward += reward
+
+                performance[agent_name].append(total_reward)
+            
+            performance[agent_name] = sum(performance[agent_name])/M
+
+        ensemble_performance = sum(performance.values())/len(performance)
+
+        regret = ensemble_performance - base_ensebleperformance
+
+        agent_wise_regret = {agent_name:performance[agent_name] - base_performance[agent_name] for agent_name in agent_list}
+
+        if verbose:
+            self._print_results(ensemble_performance, performance)
+
+        return ensemble_performance, performance    
+                
+
+    def _load_agents(self,env):
         """
         Load agents from the agent_paths
         """
 
         if self.agents:
-            return self.agents
+            return list(self.agents.keys())
         
         else:
             env_name = env.unwrapped.__class__.__name__
-            agent_paths = os.listdir(pathlib.Path(__file__).parent / "evaluation_model_weights" / env_name)
-            agent_list = []
+            eval_dir = pathlib.Path(__file__).parent / "evaluation_model_weights" / env_name
+            agent_paths = os.listdir(eval_dir) # this grabs the available agents for the environment (it is a list of paths to the agents)
 
+            try:
+                import stable_baselines3
+            except:
+                raise ImportError("Stable Baselines 3 is required to load agents")
+            
+            loaded_agents = []
+            for agent in agent_paths:
 
+                agent_dir = eval_dir / agent
 
+                model  = getattr(stable_baselines3,agent)
+                weights = [x for x in agent_dir.iterdir() if x.suffix.lower()==".zip"]
 
-class PAMCTS_Bound(ComparativeEvaluator):
-    """Evaluates the difficulty of a NS-MDP Tranisition as a transition-bounded non-stationary Markov decision porcess (T-NSMDP)
+                if not weights:
+                    warnings.warn(f"No weights found for {agent}. Skipping...")
+                    continue
 
-    When the environment undergoes some change between time steps 0 and t, a T-NSMDP assumes 
+                elif len(weights) > 1:
+                    warnings.warn(f"Multiple weights found for {agent}. Using the first one.")
+                    
+                model = model.load(weights[0])
 
-    $$
-    \forall s,a: \sum_{s'\in S}|P_t(s'|s,a) - P_0(s'|s,a)| \leq \eta
-    $$
+                wrapped_model = ns_gym.base.StableBaselineWrapper(model)  
 
-    Where $t\in \mathcal{T}$ is some point in time after the original policy was learned, and \eta is some scalar bound. 
+                loaded_agents.append(agent)  
 
-    Of course if the environment is continious we instead integrate over the state space.
-    """
+                self.agents[agent]=(wrapped_model)
 
-    def __init__(self):
-        super().__init__()
+            return loaded_agents
+        
 
-    def evaluate(self,env_1, env_2):
+    def _evaluate_stable_baselines(self,env,agent_list,M):
         """
-        Evaluate the difficulty of a transition between two environments.
-
-        TODO 
+        Evaluates the baseline_performance of the environment on default environments.
         """
-        raise NotImplementedError
 
+        env_name = env.unwrapped.spec.id
+
+        stationary_env = gym.make(env_name)
+
+        performance = {agent_name:[] for agent_name in agent_list}
+        
+        for i,agent_name in enumerate(agent_list):
+            agent = self.agents[agent_name]
+
+            for ep in range(M):
+                
+                obs,_ = stationary_env.reset()
+                done = False
+                truncated = False
+                total_reward = 0
+                while not (done or truncated):
+                    action = agent.act(obs)
+                    obs, reward, done, truncated, info = stationary_env.step(action)
+                    total_reward += reward
+
+                performance[agent_name].append(total_reward)
+
+            performance[agent_name] = sum(performance[agent_name])/M
+
+        base_ensemble_performance = sum(performance.values())/len(performance)
+
+        return base_ensemble_performance, performance        
+
+        
+    def _print_results(self, ensemble_performance, performance_dict):
+        """
+        Print the results of the evaluation in a structured format.
+
+        Args:
+            ensemble_performance (float): The performance metric for the ensemble.
+            performance_dict (dict): A dictionary where keys are agent names and 
+                                    values are their corresponding performance metrics.
+        """
+        print("=" * 40)
+        print("Evaluation Results")
+        print("=" * 40)
+        print(f"Ensemble Regret: {ensemble_performance}\n")
+        print("Agent Regret:")
+        for agent, performance in performance_dict.items():
+            print(f"  - {agent}: {performance}")
+        print("=" * 40)
+
+
+
+                    
  
-class TSMDP_Bound(ComparativeEvaluator):
+class PAMCTS_Bound(ComparativeEvaluator):
     def __init__(self):
         super().__init__()
     
-    def evaluate(self,env_1, env_2):
+    def evaluate(self,env_1, env_2,verbose=True):
         """
         Evaluate the difficulty of a transition between two environments.
         For a particular state s, $\forall a \in A: |P_t(s'|s,a) - P_0(s'|a,s)|_{\infty}$ 
@@ -119,6 +235,7 @@ class TSMDP_Bound(ComparativeEvaluator):
         Args:
             env_1 (gym.Env): The original environment
             env_2 (gym.Env): The new environment
+            verbose (bool): Whether to print the results of the evaluation. Defaults to True.
 
         Returns:
             float: The maximum difference between the transition probabilities of the two environments
@@ -150,6 +267,9 @@ class TSMDP_Bound(ComparativeEvaluator):
                         for s_prime_1,s_prime_2 in itertools.product([x for x in range(len(P1[s][a]))],repeat=2):
                             max_diff = max(max_diff, abs(P1[s][a][s_prime_1][0] - P2[s][a][s_prime_2][0])) # From state s with action a, what is the probability of transitioning to state s_prime
 
+                if verbose:
+                    self._print_results(max_diff)
+
                 return max_diff
             
             except Exception as e:
@@ -164,6 +284,18 @@ class TSMDP_Bound(ComparativeEvaluator):
         
         else:
             raise ValueError("Observation space must be either Box or Discrete")
+        
+
+    def _print_results(max_diff):
+        print("=" * 40)
+        print("Evaluation Results")
+        print("=" * 40)
+        print(f"PAMCTS-Bound: {max_diff}")
+        print("=" * 40)
+
+        
+
+
 
 class BIBO_Stablilty(Evaluator):
     
@@ -190,6 +322,34 @@ class LyapunovStability(Evaluator):
 
 
 
+if __name__ == "__main__":
+    import ns_gym
+    import gymnasium as gym
 
-        
+
+  
+    env = gym.make('FrozenLake-v1',render_mode="rgb_array",max_episode_steps=50)
+    scheduler = ns_gym.schedulers.DiscreteScheduler({1})
+    update_function = ns_gym.update_functions.DistributionDecrementUpdate(scheduler=scheduler,k = 0.5)
+    param = "P"
+    params = {param:update_function}
+    ns_env_1 = ns_gym.wrappers.NSFrozenLakeWrapper(env, params,initial_prob_dist=[1,0,0])
+
+    ns_env_1.reset()
+
+    ns_env_1.step(0)
+
+
+    env = gym.make('FrozenLake-v1',render_mode="rgb_array",max_episode_steps=50)
+    scheduler = ns_gym.schedulers.DiscreteScheduler({1})
+    update_function = ns_gym.update_functions.DistributionDecrementUpdate(scheduler=scheduler,k = 0.5)
+    params = {param:update_function}
+    ns_env_2 = ns_gym.wrappers.NSFrozenLakeWrapper(env, params,initial_prob_dist=[1,0,0])
+
+    evaluator = PAMCTS_Bound()
+
+    bound = evaluator.evaluate(ns_env_1,ns_env_2)
+
+
+
 

@@ -10,6 +10,7 @@ readme = "README.md"
 dependencies = [
     "numpy==1.26.4",
     "gymnasium",
+    "pygame",  
     "torch",
     "scipy",
     "matplotlib",
