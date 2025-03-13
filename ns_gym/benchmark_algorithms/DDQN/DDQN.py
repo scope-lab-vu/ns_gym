@@ -215,8 +215,8 @@ class DQNAgent(base.Agent):
         else:
             return random.choice(np.arange(self.action_size)),action_values.cpu().data.numpy()
     
-    def act(self, state):
-        best_action, _ = self.search(state)
+    def act(self, state,eps):
+        best_action, _ = self.search(state,eps=eps)
         return best_action
     
 
@@ -264,7 +264,9 @@ def do_gradient_updates(state,env, agent, time_budget,eps_start=1.0, eps_end=0.0
 
 
 def train_ddqn(env, model, n_episodes=1000, max_t=200, eps_start=1.0, eps_end=0.01, eps_decay=0.999, seed=0):
-    agent = DQNAgent(model.state_size, model.action_size, seed=seed, model=model)
+    """DDQN Training Loop
+    """
+    agent = DQNAgent(model.state_size, model.action_size, seed=seed, model=model)   
     scores = []
     scores_window = deque(maxlen=100)
     eps = eps_start
