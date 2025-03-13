@@ -230,7 +230,7 @@ class PAMCTS_Bound(ComparativeEvaluator):
     def evaluate(self,env_1, env_2,verbose=True):
         """
         Evaluate the difficulty of a transition between two environments.
-        For a particular state s, $\forall a \in A: |P_t(s'|s,a) - P_0(s'|a,s)|_{\infty}$ 
+        For a particular state s, $forall a in A: |P_t(s'|s,a) - P_0(s'|a,s)|_{infty}$ 
 
         Args:
             env_1 (gym.Env): The original environment

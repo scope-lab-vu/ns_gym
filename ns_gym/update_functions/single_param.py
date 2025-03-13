@@ -51,7 +51,7 @@ class RandomWalkWithDriftAndTrend(base.UpdateFn):
     
 class RandomWalk(base.UpdateFn):
     """Parameter update function that updates the parameter with white noise.    
-    A pure random walk : Y_t = Y_{t-1} + \epsilon_t where Y_t is the parameter value at time step t
+    A pure random walk : Y_t = Y_{t-1} + epsilon_t where Y_t is the parameter value at time step t
     and epsilon is white noise. 
     """
     def __init__(self,
