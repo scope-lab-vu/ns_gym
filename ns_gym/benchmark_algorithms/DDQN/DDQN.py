@@ -278,7 +278,7 @@ def train_ddqn(env, model, n_episodes=1000, max_t=200, eps_start=1.0, eps_end=0.
         score = 0
         t = 0
         while True:
-            action, values = agent.act(state, eps)
+            action, values = agent.search(state, eps)
             next_state, reward, done, truncated,_ = env.step(action)
             next_state, reward = observation_type_checker(next_state), reward_type_checker(reward)
             agent.step(state, action, reward, next_state, done)
