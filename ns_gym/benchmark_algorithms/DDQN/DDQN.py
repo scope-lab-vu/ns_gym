@@ -172,7 +172,7 @@ class DQNAgent(base.Agent):
             self.q_network_target = model
             self.q_network_target = self.q_network_target.to(self.device)
             if model_path:
-                model_weights = torch.load(model_path,map_location=self.device)
+                model_weights = torch.load(model_path,map_location=self.device,weights_only=True)
                 self.q_network_local.load_state_dict(model_weights)
                 self.q_network_target.load_state_dict(model_weights)
         else:
@@ -215,7 +215,7 @@ class DQNAgent(base.Agent):
         else:
             return random.choice(np.arange(self.action_size)),action_values.cpu().data.numpy()
     
-    def act(self, state,eps):
+    def act(self, state,eps=0.0):
         best_action, _ = self.search(state,eps=eps)
         return best_action
     

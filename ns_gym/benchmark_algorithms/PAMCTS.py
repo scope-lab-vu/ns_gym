@@ -50,13 +50,14 @@ class PAMCTS(base.Agent):
     def search(self,state,env,normalize=True):
         self.mcts_agent = nsg.benchmark_algorithms.MCTS(env,state,d=self.mcts_search_depth,m=self.mcts_iter,c=self.mcts_exploration_constant,gamma=self.mcts_discount_factor)
         mcts_action,mcts_action_values = self.mcts_agent.search()
-        ddqn_action,ddqn_action_values = self.DDQN_agent.act(state)
+        ddqn_action,ddqn_action_values = self.DDQN_agent.search(state)
 
         ddqn_action_values = np.array(ddqn_action_values).astype(np.float32)
         mcts_action_values = np.array(mcts_action_values).astype(np.float32) 
         if normalize:
-            ddqn_action_values = (ddqn_action_values - np.min(ddqn_action_values))/(np.max(ddqn_action_values) - np.min(ddqn_action_values))
-            mcts_action_values = (mcts_action_values - np.min(mcts_action_values))/(np.max(mcts_action_values) - np.min(mcts_action_values))
+            epsilon = 1e-8
+            ddqn_action_values = (ddqn_action_values - np.min(ddqn_action_values))/(np.max(ddqn_action_values) - np.min(ddqn_action_values) + epsilon)
+            mcts_action_values = (mcts_action_values - np.min(mcts_action_values))/(np.max(mcts_action_values) - np.min(mcts_action_values) + epsilon)
 
         hybrid_action_values = self._get_pa_uct_score(self.alpha,ddqn_action_values,mcts_action_values)
         return np.argmax(hybrid_action_values), hybrid_action_values
