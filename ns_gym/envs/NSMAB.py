@@ -4,8 +4,6 @@ import ns_gym.base as base
 
 """
 This is a simple MAB environment where the rewards are generated from a normal distribution
-
-TODO: Either create a Non-stationary wrapper for this environment or create a new environment that is non-stationary
 """
 
 LEFT = 0

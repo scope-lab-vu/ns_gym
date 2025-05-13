@@ -4,8 +4,6 @@ import numpy as np
 """
 The schdulers can be initialized at different times to we need to maintian an internal clock as well.
 """
-#TODO: Clean this up and add more schedulers.
-
 class RandomScheduler(base.Scheduler):
     """Random event scheduler: Events occur randomly with a given probability at each time step.
     """

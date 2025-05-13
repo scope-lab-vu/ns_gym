@@ -20,17 +20,11 @@ Wrappers for some of the toytext / gridworld style environments.
 class NSCliffWalkingWrapper(base.NSWrapper):
     """Wrapper for gridworld environments (FrozenLake, CliffWalking, Bridge, ... ) that allows for non-stationary transitions.
 
-    #TODO: This implementation is not finished.
-
-    # NOTE: This may just be a wrapper for the CliffWalking environment. The reason is that although the action spaces for the gridworld environments are
-    the same, at each time step the available actions are different.
-
-    This wrapper as opossed to the NSFrozenLakeWrapper simply changes the actions the agent can take given an intended action.
+        This wrapper as opossed to the NSFrozenLakeWrapper simply changes the actions the agent can take given an intended action.
     
     The action space for these environements is discrete. 
     In frozen lake there is probality of going in the intended direction and a probability of going in the two perpendicular directions.
-    In cliff walking there is a probality of going in the intended direction and a probability of going in the two perpendicular directions and the reverse direcition. 
-
+    In cliff walking there is a probability of going in the intended direction and a probability of going in the two perpendicular directions and the reverse direcition. 
     """
     def __init__(self,
                  env: Type[gym.Env], 
@@ -408,7 +402,6 @@ class NSFrozenLakeWrapper(base.NSWrapper):
         return newstate, reward, terminated
     
     def get_planning_env(self):
-
         assert(self.has_reset),("The environment must be reset before getting the planning environment.")
         if self.is_sim_env or self.change_notification:
             return deepcopy(self)
@@ -420,7 +413,6 @@ class NSFrozenLakeWrapper(base.NSWrapper):
     
 
     def __deepcopy__(self, memo):
-        #TODO: You dont need all these deepcopy calls.
         sim_env = gym.make("FrozenLake-v1",is_slippery=False,max_episode_steps=1000,render_mode="ansi")
         sim_env = NSFrozenLakeWrapper(sim_env,
                                       tunable_params=deepcopy(self.tunable_params),
@@ -440,60 +432,6 @@ class NSFrozenLakeWrapper(base.NSWrapper):
         sim_env.is_sim_env = True
         return sim_env
     
-        
-    # def __deepcopy__(self, memo):
-    #     f = self.__deepcopy__
-    #     self.__deepcopy__ = None
-    #     sim_env = deepcopy(self)
-    #     sim_env.__deepcopy__ = f
-    #     sim_env.is_sim_env = True   
-    #     return sim_env
-
-
-
-
-class NSTaxiWrapper(Wrapper):
-    """A wrapper for the Taxi gridworld environment. 
-    TODO: This is a prototype and needs to be fixed.
-    Args:
-        Wrapper (_type_): _description_
-
-    Notes:
-        I think we can make the Taxi environment non-stationary in a couple of ways.
-        
-        1. We can add changing pick up/movement probabilites
-        2. We can create non-stationary rewards by dynamically adding passengers to be picked up.
-            At each time step there is some probability that new passengers arrive. 
-
-        The ussual appraoch of specifying the full MDP may eb 
-    ## Starting State
-    
-    The episode starts with the player in a random state.
-
-    ## Rewards
-    
-    The agent rewards are largely the same. 
-
-    - -1 per step unless other reward is triggered.
-    - +20 delivering passenger.
-    - -10  executing "pickup" and "drop-off" actions illegally.
-
-    ## Termination conditions
-
-    The episode finishes when the max time limit is hit or when a passenger is correclty dropped off. 
-
-    ## Non-stationary passengers. 
-
-    There can be multiple passengers with reward values that vary ofer time. 
-    The reward of a passenger must be some positive number between 0 and 20. The reward changes wrt time until the passenger is picked up.
-    After the taxi picks up the passenger the reward stays the same until drop off. 
-    After dorp off the episode ends? 
-
-    """
-
-    def __init__(self, env: gym.Env):
-        raise NotImplementedError("This method is not implemented.")
-
 
 class NSBridgeWrapper(base.NSWrapper):
     """Bridge environment wrapper that allows for non-stationary transitions.
@@ -520,25 +458,17 @@ class NSBridgeWrapper(base.NSWrapper):
         self.init_tunable_params = deepcopy(tunable_params)
         self.update_fn = tunable_params["P"]
 
-        
-        # self.P = getattr(self.unwrapped,"P")
-        # assert(self.P == initial_prob_dist),("The initial probability distribution is not being set correctly.")
-        # self.intial_p = deepcopy(self.unwrapped.P)
         self.delta_t = 1
 
     def step(self, action: Any) -> tuple[Any, SupportsFloat, bool, bool, dict[str, Any]]:
         if self.is_sim_env and not self.in_sim_change:
-            # action = self._get_action(action)
             obs,reward,terminated,truncated,info = super().step(action,env_change=None,delta_change=None)
         else:
             P = self.unwrapped.P
             P, env_change, delta_change = self.update_fn(P,self.t) 
-            # print(P)
             setattr(self.unwrapped,"P",P)
-            # self.P = P
             assert(self.unwrapped.P == P),("The transition probability table is not being updated correctly.")
             obs, reward, terminated, truncated, info = super().step(action,env_change=env_change,delta_change=delta_change)
-            # obs, reward, terminated, truncated, info = super().step(action,env_change=None,delta_change=None)
         return obs, reward, terminated, truncated, info
 
     def reset(self, *, seed: int | None = None, options: dict[str, Any] | None = None) -> tuple[Any, dict[str, Any]]:
@@ -546,7 +476,6 @@ class NSBridgeWrapper(base.NSWrapper):
         self.unwrapped.P = deepcopy(self.initial_prob_dist)
         self.tunable_params = deepcopy(self.init_tunable_params)
         self.update_fn = self.tunable_params["P"]
-        # setattr(self.unwrapped,"P",self.initial_prob_dist)
         return obs, info
 
     def get_planning_env(self):
@@ -556,23 +485,18 @@ class NSBridgeWrapper(base.NSWrapper):
             return deepcopy(self)
         elif not self.change_notification:
             planning_env = deepcopy(self)
-            # planning_env.transition_prob = deepcopy(self.initial_prob_dist)
             setattr(planning_env.unwrapped,"P",deepcopy(self.initial_prob_dist))
         return planning_env
     
 
     def __deepcopy__(self, memo):
-        #TODO: You dont need all these deepcopy calls.
         sim_env = gym.make("ns_bench/Bridge-v0",max_episode_steps=1000)
         sim_env = NSBridgeWrapper(sim_env,tunable_params=deepcopy(self.tunable_params),change_notification=self.change_notification,delta_change_notification=self.delta_change_notification,in_sim_change=self.in_sim_change,initial_prob_dist=self.initial_prob_dist)
         sim_env.reset()
         sim_env.unwrapped.s = deepcopy(self.unwrapped.s)
-        # sim_env._elapsed_steps = self._elapsed_steps
         sim_env.t = deepcopy(self.t)
         sim_env.unwrapped.P = deepcopy(self.unwrapped.P)
         sim_env.update_fn = deepcopy(self.update_fn)
-        # sim_env.intial_p = deepcopy(self.intial_p)
-        # sim_env.unwrapped.P = deepcopy(self.P)
         sim_env.is_sim_env = True
         return sim_env
     
@@ -587,7 +511,6 @@ if __name__ == "__main__":
 
     env = gym.make("ns_bench/Bridge-v0")
     scheduler = ns_gym.schedulers.ContinuousScheduler()
-    # update_function = ns_bench.update_functions.DistributionNoUpdate(scheduler)
     update_function = ns_gym.update_functions.DistributionDecrmentUpdate(scheduler,k=0.1)
     tunable_params = {"P": update_function} 
 

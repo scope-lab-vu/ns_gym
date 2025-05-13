@@ -93,7 +93,7 @@ class MCTS(base.Agent):
 
         """
         self.env = env # This is the current state of the mdp
-        self.d = d # depth #TODO icorportae this into simulation depth
+        self.d = d # depth 
         self.m = m # number of simulations
         self.c = c # exploration constant
         if isinstance(state,base.Observation):
@@ -139,7 +139,7 @@ class MCTS(base.Agent):
         Returns:
             ChanceNode: The leaf node reached by the tree policy.
         """
-        while node.children: #BUG: Returns a list sometimes
+        while node.children:
             if type(node) == DecisionNode:
                 node = self._selection(node)
                 assert(type(node) == ChanceNode)
@@ -316,7 +316,7 @@ class MCTS(base.Agent):
         s = v.state # root is Type[Node] 
 
         # Iterate through all possible actions from this state
-        for a in range(self.env.action_space.n): # FIXME
+        for a in range(self.env.action_space.n): 
             sa = (s, a)  # Create a state-action pair
             # Check if this state-action pair has been explored
             if sa in self.Qsa and sa in self.Nsa and self.Nsa[sa] > 0:
