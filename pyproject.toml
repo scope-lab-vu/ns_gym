@@ -16,7 +16,8 @@ dependencies = [
     "matplotlib",
     "tensorboard",
     "pyyaml",
-    "pandas"
+    "pandas",
+    "stable_baselines3"
 ]
 requires-python = ">=3.10"
 
