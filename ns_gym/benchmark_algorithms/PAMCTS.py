@@ -19,16 +19,16 @@ class PAMCTS(base.Agent):
         Uses a convex combination of DDQN policy values and MCTS values to select actions.
 
         Args:
-            alpha (_type_): _description_
-            env (_type_): _description_
-            mcts_iter (_type_): _description_
-            mcts_search_depth (_type_): _description_
-            mcts_discount_factor (_type_): _description_
-            mcts_exploration_constant (_type_): _description_
-            state_space_size (_type_): _description_
-            action_space_size (_type_): _description_
-            DDQN_model (_type_, optional): _description_. Defaults to None.
-            DDQN_model_path (_type_, optional): _description_. Defaults to None.
+            alpha (float): PAMCTS convex combination parameter
+            env (gym.Env): Gymnasium style environment object
+            mcts_iter (int): Total number of MCTS iterations
+            mcts_search_depth (int): MCTS search depth
+            mcts_discount_factor (float): MCTS discount factor
+            mcts_exploration_constant (float): UCT exploration constant `c`
+            state_space_size (int): Size of environment state space. For Q-value networks.
+            action_space_size (int): Size of environment action space. For Q-value networks.
+            DDQN_model (torch.NN, optional): DDQN torch neural network object . Defaults to None.
+            DDQN_model_path (str, optional): Path to DDQN model weights. Defaults to None.
         """
         self.alpha = alpha
         self.mcts_iter = mcts_iter

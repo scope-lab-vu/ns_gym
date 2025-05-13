@@ -142,12 +142,6 @@ class IncrementUpdate(base.UpdateFn):
     
 class DecrementUpdate(base.UpdateFn):
     """Decrment the probabilty go going in the intened direction by some k.
-
-    #TODO: instead of hard coding the intended direction, we can pass in the action as a param
-        This action will be used to determine the intended direction. This works in our discrete action case. 
-
-    Note:
-        This function only really works in the Frozen lake environment where the intended directino is always in the second elem in the prob array.
     """
     def __init__(self,scheduler,k) -> None:
         super().__init__(scheduler)
