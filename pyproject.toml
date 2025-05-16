@@ -17,7 +17,7 @@ dependencies = [
     "tensorboard",
     "pyyaml",
     "pandas",
-    "stable_baselines3"
+    "stable_baselines3[extra]"
 ]
 requires-python = ">=3.10"
 

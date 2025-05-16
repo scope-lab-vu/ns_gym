@@ -11,7 +11,7 @@ del register
 __all__ = ["base","wrappers", "update_functions", "schedulers", "algo_utils","benchmark_algorithms","envs","evaluate"]
 
 
-from .  import wrappers, update_functions, schedulers,evaluate,benchmark_algorithms, context_switching
+from .  import wrappers, update_functions, schedulers,evaluate,benchmark_algorithms, context_switching,evaluate
 
 
 # import .utils

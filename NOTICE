@@ -4,6 +4,9 @@ This project includes code derived from the following sources:
    License: MIT License (See THIRD_PARTY_LICENSES/stable-baselines3_LICENSE)
    Modification:
    - The code has been modified for integration into this project.
+2. Gymnasium [https://github.com/Farama-Foundation/Gymnasium/tree/main]
+   License: MIT License (See THIRD_PARY_LICENSES/gymnasium_LICENSE)
+
 
 
 

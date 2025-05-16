@@ -73,14 +73,14 @@ class NSClassicControlWrapper(base.NSWrapper):
             self.initial_params[key] = deepcopy(getattr(self.unwrapped,key))
 
     def step(self, 
-             action: Any) -> tuple[base.Observation, base.Reward, bool, bool, dict[str, Any]]:
-        """_summary_
+             action: Union[float,int]) -> tuple[base.Observation, base.Reward, bool, bool, dict[str, Any]]:
+        """Step through environment and update environmental parameters
 
         Args:
-            action (Any): _description_
+            action (Union[float,int]): Action to take in environment
 
         Returns:
-            tuple[base.Observation, base.Reward, bool, bool, dict[str, Any]]: _description_
+            tuple[base.Observation, base.Reward, bool, bool, dict[str, Any]]: NS-Gym Observation type, reward, done flag, truncated flag, info dictionary
         """
         if self.is_sim_env and not self.in_sim_change:
             obs,reward,terminated,truncated,info = super().step(action,env_change=None,delta_change=None)
@@ -90,7 +90,7 @@ class NSClassicControlWrapper(base.NSWrapper):
             new_vals = {} 
             for p,fn in self.tunable_params.items():
                 cur_val = getattr(self.unwrapped,p)
-                new_val, change_flag, delta = fn(cur_val,self.t) #param,t think its best to change how we handle the update functions. 
+                new_val, change_flag, delta = fn(cur_val,self.t) 
                 delta_change[p] = delta
                 env_change[p] = change_flag
                 new_vals[p] = new_val
@@ -109,14 +109,7 @@ class NSClassicControlWrapper(base.NSWrapper):
         return obs,reward,terminated,truncated,info
 
     def reset(self, *, seed: int | None = None, options: dict[str, Any] | None = None) -> tuple[base.Observation, dict[str, Any]]:
-        """_summary_
-
-        Args:
-            seed (int | None, optional): _description_. Defaults to None.
-            options (dict[str, Any] | None, optional): _description_. Defaults to None.
-
-        Returns:
-            tuple[Any, dict[str, Any]]: _description_
+        """Reset environment
         """
         obs,info = super().reset(seed=seed, options=options)
         for k,v in self.initial_params.items():
@@ -135,8 +128,7 @@ class NSClassicControlWrapper(base.NSWrapper):
         return super().__repr__()
     
     def get_planning_env(self):
-        """Return a copy of the environment with the initial parameters (MDP_0) but the current state of the environment.
-
+        """Return a copy of the environment
         NOTE: 
             - If the environment is a simulation environment, the function returns a deepcopy of the simulation environment.
             - If change notification is enabled, the function returns a deepcopy of the current environment because the decision making agent needs to be aware of the changes in the environment.

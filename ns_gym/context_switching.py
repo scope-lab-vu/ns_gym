@@ -1,25 +1,18 @@
 import gymnasium as gym
-import ns_gym
-# from ns_gym.base import StableBaselineWrapper # Not used in the provided script
 from ns_gym.wrappers import NSClassicControlWrapper,NSBridgeWrapper,NSCliffWalkingWrapper,NSFrozenLakeWrapper
 from ns_gym.schedulers import ContinuousScheduler
-from ns_gym.update_functions import StepWiseUpdate,DistributionStepWiseUpdate # User's script uses this
-import ns_gym.utils # For type_mismatch_checker
+from ns_gym.update_functions import StepWiseUpdate,DistributionStepWiseUpdate 
+import ns_gym.utils 
 import numpy as np
 from stable_baselines3 import PPO,DQN
-from stable_baselines3.common.env_util import make_vec_env
+
 import matplotlib.pyplot as plt
-import torch # For checking device if needed, SB3 handles device for predict
-import argparse # For command-line arguments
-import os # For creating output directories if needed
-from datetime import datetime # For timestamping output files
+import torch 
+import argparse 
+import os 
+from datetime import datetime 
 
-# --- Configuration (Defaults, will be overridden by argparse) ---
-# Contexts for training individual policies
 
-# Range of contexts for evaluation - will be generated based on args
-
-# --- Environment Creation ---
 def make_env_with_context(env_name,context_value, context_parameter_name="masscart", seed=None):
     """
     Creates a CartPole environment with a specific context value.
@@ -75,9 +68,6 @@ def make_env_with_context(env_name,context_value, context_parameter_name="massca
     else:
         raise ValueError("Invalid environment")
 
-
-
-
     ns_env = gym.wrappers.TransformObservation(ns_env, lambda obs: obs.state,None)
     ns_env = gym.wrappers.TransformReward(ns_env, lambda rew: rew.reward)
 
@@ -85,11 +75,9 @@ def make_env_with_context(env_name,context_value, context_parameter_name="massca
         ns_env.reset(seed=seed)
     return ns_env
 
-# --- Episode Runner (for evaluation) ---
 def run_context_episode(agent, ns_env_instance, num_episodes):
     """
     Runs an agent in a given ns_gym environment for a number of episodes.
-    (Identical to user's provided version)
     """
     reward_list = []
     for ep in range(num_episodes):
@@ -97,34 +85,26 @@ def run_context_episode(agent, ns_env_instance, num_episodes):
         done = False
         truncated = False
         obs, info = ns_env_instance.reset()
-        # Ensure obs is a numpy array if type_mismatch_checker expects it
-        # This might be redundant if TransformObservation is correctly applied
-        if not isinstance(obs, np.ndarray) and hasattr(obs, 'state'): # Fallback for safety
-             obs = np.array(obs.state, dtype=np.float32) # type: ignore
+
+        if not isinstance(obs, np.ndarray) and hasattr(obs, 'state'): 
+             obs = np.array(obs.state, dtype=np.float32) 
         elif not isinstance(obs, np.ndarray):
              obs = np.array(obs, dtype=np.float32)
-
-
-        # obs, _ = ns_gym.utils.type_mismatch_checker(obs, None) # Assuming this handles potential custom obs
         
         while not (done or truncated):
             action, _states = agent.predict(obs, deterministic=True)
             obs, reward, done, truncated, current_info = ns_env_instance.step(action)
             
-            # Ensure obs and reward are in the correct format
-            # This might be redundant if TransformObservation/Reward are correctly applied
-            if not isinstance(obs, np.ndarray) and hasattr(obs, 'state'): # Fallback for safety
-                obs = np.array(obs.state, dtype=np.float32) # type: ignore
+            if not isinstance(obs, np.ndarray) and hasattr(obs, 'state'): 
+                obs = np.array(obs.state, dtype=np.float32) 
             elif not isinstance(obs, np.ndarray):
                 obs = np.array(obs, dtype=np.float32)
 
-            if not isinstance(reward, (float, int)) and hasattr(reward, 'reward'): # Fallback for safety
-                reward = float(reward.reward) # type: ignore
+            if not isinstance(reward, (float, int)) and hasattr(reward, 'reward'): 
+                reward = float(reward.reward) 
             elif not isinstance(reward, (float, int)):
                  reward = float(reward)
 
-
-            # obs, reward = ns_gym.utils.type_mismatch_checker(obs, reward) # Assuming this handles custom types
             ep_reward += reward
         reward_list.append(ep_reward)
     return np.mean(reward_list), np.std(reward_list)
@@ -157,18 +137,16 @@ def normalize_rewards_matrix(U_matrix_raw):
     min_val = np.min(U_matrix_raw)
     max_val = np.max(U_matrix_raw)
 
-    if max_val == min_val: # Avoid division by zero if all values are the same
-        # If all values are same, normalized could be all 0, 0.5, or 1.
-        # Let's choose 0.5 if min_val != 0 else 0.0 (or 0.0 if you prefer all zeros when min=max).
+    if max_val == min_val: 
         U_matrix_normalized = np.full_like(U_matrix_raw, 0.5 if min_val != 0 else 0.0)
-        return U_matrix_normalized, min_val, max_val # Ensure three values are returned
-    
+        return U_matrix_normalized, min_val, max_val 
+
     U_matrix_normalized = (U_matrix_raw - min_val) / (max_val - min_val)
-    # print(U_matrix_normalized) # This print was in your original code, you can keep or remove it.
     return U_matrix_normalized, min_val, max_val
+
 def calculate_sem(data_array):
     """Calculates the standard error of the mean for a 1D array."""
-    if len(data_array) < 2: # SEM is not well-defined for less than 2 data points
+    if len(data_array) < 2: 
         return 0.0 
     return np.std(data_array, ddof=1) / np.sqrt(len(data_array))
 
@@ -229,7 +207,7 @@ def calculate_generalized_performance(
             U_matrix_normalized, peak_perf_per_policy_normalized, overall_system_perf_paper_normalized, sem_overall_system_perf_paper_normalized,
             normalization_params)
 
-# --- Plotting Function ---
+
 def plot_performance_curves(U_matrix_to_plot, eval_context_range, train_source_contexts, 
                             overall_perf_to_display, context_param_name, is_normalized, output_filename=None):
     """
@@ -313,8 +291,9 @@ def save_metrics_to_file(filename,
     except Exception as e:
         print(f"Error saving metrics to {filename}: {e}")
 
-# --- Main Script ---
+
 if __name__ == "__main__":
+    #Example test context switching experiment code.
     parser = argparse.ArgumentParser(description="Run Model-Based Transfer Learning Evaluation for CartPole.")
     parser.add_argument("--timesteps_train", type=int, default=30000, help="Total timesteps to train each agent.")
     parser.add_argument("--episodes_eval", type=int, default=20, help="Number of episodes for evaluation on each target context.")
@@ -324,7 +303,7 @@ if __name__ == "__main__":
     parser.add_argument("--target_context_max", type=float, default=10.0, help="Maximum value for the target context range.")
     parser.add_argument("--env_name",type=str,help="Environment name")
     
-    # Create a timestamped output directory
+
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     default_output_dir = f"experiment_results_{timestamp}"
     
@@ -335,11 +314,13 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    # SOURCE_CONTEXTS = np.array([1.0,2.0,3.0,4.0,5.0,6.0,7.0,8.0,9.0])
+    from stable_baselines3.common.env_util import make_vec_env
+
+    SOURCE_CONTEXTS = np.array([1.0,2.0,3.0,4.0,5.0,6.0,7.0,8.0,9.0])
 
     # SOURCE_CONTEXTS = np.linspace(0.0025 - 0.001, 0.05,9)
 
-    # Create output directory if it doesn't exist
+
     if not os.path.exists(args.output_dir):
         os.makedirs(args.output_dir)
         print(f"Created output directory: {args.output_dir}")

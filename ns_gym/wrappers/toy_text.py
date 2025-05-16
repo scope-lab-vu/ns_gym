@@ -105,8 +105,9 @@ class NSCliffWalkingWrapper(base.NSWrapper):
             # action = self._get_action(action)
             obs,reward,terminated,truncated,info = super().step(action,env_change=None,delta_change=None)
         else:
-            self.transition_prob, env_change, delta_change = self.update_fn(self.transition_prob,self.t) 
-            self.update_transition_prob_table()   
+            self.transition_prob, env_change, delta_change = self.update_fn(self.transition_prob,self.t)
+            if env_change: 
+                self.update_transition_prob_table()   
             setattr(self.unwrapped,"P",self.P)
             assert(self.unwrapped.P == self.P),("The transition probability table is not being updated correctly.")
             obs, reward, terminated, truncated, info = super().step(action,env_change=env_change,delta_change=delta_change)
@@ -193,6 +194,7 @@ class NSCliffWalkingWrapper(base.NSWrapper):
                 transition_list.append((self.transition_prob[ind], new_state, self.modified_rewards["F"], is_terminated))
 
         return transition_list
+    
 
     
     def get_planning_env(self):
@@ -308,8 +310,9 @@ class NSFrozenLakeWrapper(base.NSWrapper):
             # action = self._get_action(action)
             obs,reward,terminated,truncated,info = super().step(action,env_change=None,delta_change=None)
         else:
-            self.transition_prob, env_change, delta_change = self.update_fn(self.transition_prob,self.t) 
-            self._update_transition_prob_table()   
+            self.transition_prob, env_change, delta_change = self.update_fn(self.transition_prob,self.t)
+            if env_change: 
+                self._update_transition_prob_table()   
             setattr(self.unwrapped,"P",self.P)
             assert(self.unwrapped.P == self.P),("The transition probability table is not being updated correctly.")
             obs, reward, terminated, truncated, info = super().step(action,env_change=env_change,delta_change=delta_change)

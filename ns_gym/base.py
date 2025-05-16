@@ -324,11 +324,6 @@ class StableBaselineWrapper:
         return action
  
 
-
-    
-
-    
-
 class Evaluator(ABC):
     """Evaluator base class. This class is used to evaluate the difficulty of a transition between two environments.
     """
@@ -341,10 +336,6 @@ class Evaluator(ABC):
     def __call__(self):
         return self.evaluate()
     
-
-
-
-
 
 if __name__ == "__main__":
     pass
