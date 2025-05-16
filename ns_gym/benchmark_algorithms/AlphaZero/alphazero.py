@@ -94,11 +94,6 @@ class ReplayBuffer:
                 self.buffer[self.idx] = experience
                 self.idx = (self.idx + 1) % self.max_size
 
-    # def sample(self, batch_size):
-    #     indices = np.random.choice(len(self.buffer), batch_size, replace=False)
-    #     states, actions, rewards, next_states, dones = zip(*[self.buffer[idx] for idx in indices])
-    #     states, actions, rewards, next_states, dones = zip(*[self.buffer[idx] for idx in len(self.buffer)])
-    #     return torch.tensor(states), torch.tensor(actions), torch.tensor(rewards), torch.tensor(next_states), torch.tensor(dones)
     
     def sample(self, batch_size):
         buffer_size = len(self.buffer)
@@ -115,7 +110,6 @@ class ReplayBuffer:
         values = torch.from_numpy(np.array(values)).float()
         pis = torch.from_numpy(pis).float()
 
-        # return torch.tensor(states,dtype=torch.float32), torch.tensor(values, dtype=torch.float32), torch.tensor(pis, dtype=torch.float32)
         return states, values, pis
     
     def all_samples(self):
@@ -393,7 +387,7 @@ def train_alpha_zero(config_file_path):
     """Train the AlphaZero agent using yaml configuration file
 
     Args:
-        config_file_path (_type_): _description_
+        config_file_path (str): Path the alphazero config yaml file
     """
     import yaml
 

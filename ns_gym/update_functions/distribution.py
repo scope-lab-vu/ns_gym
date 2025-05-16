@@ -110,7 +110,7 @@ class DistributionDecrementUpdate(base.UpdateDistributionFn):
 
 class DistributionStepWiseUpdate(base.UpdateDistributionFn):
     """Update the parameter to values to a set of predefined values at specific time steps.
-    TODO: Implement this
+
     """
     def __init__(self, scheduler: base.Scheduler,update_values:list) -> None:
         """
@@ -126,8 +126,7 @@ class DistributionStepWiseUpdate(base.UpdateDistributionFn):
         return super().__call__(param,t)
     
     def update(self, param: Any, t: int) -> Any:
-        """TODO implement this
-
+        """
         Args:
             param (Any): _description_
             t (int): _description_

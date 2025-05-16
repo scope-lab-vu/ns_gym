@@ -10,10 +10,9 @@ import uuid
 import copy
 from scipy.stats import wasserstein_distance
 
-#TODO: add other envs
 TUNABLE_PARAMS = {"CartPoleEnv": {"gravity":9.8,"masscart":1.0,"masspole":0.1,"force_mag": 10.0,"tau":0.02,"length":0.5},
                   "AcrobotEnv": {"dt":0.2,"LINK_LENGTH_1":1.0,"LINK_LENGTH_2":1.0,"LINK_MASS_1":1.0,"LINK_MASS_2":1.1,"LINK_COM_POS_1":0.5,"LINK_COM_POS_2":0.5,"LINK_MOI":1.0},
-                  "MountianCarEnv": {"gravity":0.0025,"force":0.001},
+                  "MountainCarEnv": {"gravity":0.0025,"force":0.001},
                   "Continuous_MountainCarEnv": {"power":0.0015},
                   "PendulumEnv": {"m":1.0,"l":1.0,"dt":0.05,"g":9.8},
                   }
@@ -288,10 +287,8 @@ class NSWrapper(Wrapper):
     def __str__(self):
         """Change the string representation of the environment so that user can see what/how parameters are being updated.
         """
-        # TODO: Implement this function
         return super().__str__()
     
-
 class Agent(ABC):
     """Base class for agents.
     """
@@ -325,7 +322,7 @@ class StableBaselineWrapper:
     def act(self,obs: Observation, *args, **kwargs) -> Any:
         action, _states = self.model.predict(obs)
         return action
-        
+ 
 
 class Evaluator(ABC):
     """Evaluator base class. This class is used to evaluate the difficulty of a transition between two environments.
@@ -339,8 +336,6 @@ class Evaluator(ABC):
     def __call__(self):
         return self.evaluate()
     
-
-
 
 if __name__ == "__main__":
     pass

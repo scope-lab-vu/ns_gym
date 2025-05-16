@@ -2,7 +2,7 @@ import unittest
 import ns_gym
 import gymnasium as gym
 from ns_gym.base import Evaluator
-from ns_gym.eval.metrics import *
+from ns_gym.evaluate.metrics import *
 
 
 class BaseTestEvaluator(unittest.TestCase):
@@ -83,14 +83,14 @@ class BaseTestEvaluator(unittest.TestCase):
 # Define explicit test cases for each Evaluator subclass
 class TestEnsembleMetric(BaseTestEvaluator):
     def test_load_agents(self):
-        from ns_gym.eval.metrics import EnsembleMetric
+        from ns_gym.evaluate.metrics import EnsembleMetric
 
         env = self.create_pendulum_env(0.5)
 
         evaluator = EnsembleMetric(env, 5)
 
     def test_pendulum(self):
-        from ns_gym.eval.metrics import EnsembleMetric
+        from ns_gym.evaluate.metrics import EnsembleMetric
         evaluator = EnsembleMetric()
         env = self.create_pendulum_env(0.5)
         result = evaluator(env)
@@ -102,16 +102,16 @@ class TestEnsembleMetric(BaseTestEvaluator):
 
 class TestPAMCTSBound(BaseTestEvaluator):
     def test_evaluate(self):
-        from ns_gym.eval.metrics import PAMCTS_Bound
+        from ns_gym.evaluate.metrics import PAMCTS_Bound
         self.evaluate(PAMCTS_Bound)
 
 class TestTSMDPBound(BaseTestEvaluator):
     def test_evaluate(self):
-        from ns_gym.eval.metrics import TSMDP_Bound
+        from ns_gym.evaluate.metrics import TSMDP_Bound
         self.evaluate(TSMDP_Bound)
 
     def test_frozenlake(self):
-        from ns_gym.eval.metrics import TSMDP_Bound
+        from ns_gym.evaluate.metrics import TSMDP_Bound
         evaluator = TSMDP_Bound()
 
         self.assertIsInstance(self.env1.observation_space, gym.spaces.Discrete)
@@ -119,7 +119,7 @@ class TestTSMDPBound(BaseTestEvaluator):
         self.assertEqual(result, 1-(0.5/2))
 
     def test_cliffwalking(self):
-        from ns_gym.eval.metrics import TSMDP_Bound
+        from ns_gym.evaluate.metrics import TSMDP_Bound
         evaluator = TSMDP_Bound()
 
         self.assertIsInstance(self.env1.observation_space, gym.spaces.Discrete)

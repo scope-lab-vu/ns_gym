@@ -18,40 +18,7 @@ logger = logging.getLogger()
 
 
 
-# def train_model(network, replay_buffer, msg_len, inner_training_times, batch_size, epochs):
-#     """
-#     train the neural network
-#     pre: network, a tensorflow neural network
-#          replay_buffer, a list of messages
-#     post: send the trained neural network
-#     """
-#     try:
-#         df = pd.DataFrame(replay_buffer, columns=["root_state", "prob_priors", "q"])
 
-#         for i in range(inner_training_times):
-#             minibatch = df.sample(msg_len)
-
-#             states = []
-#             pi_hats = []
-#             v_hats = []
-
-#             root_state = minibatch["root_state"].tolist()
-#             prob_priors = minibatch["prob_priors"].tolist()
-#             q = minibatch["q"].tolist()
-
-#             for j in range(len(root_state)):
-#                 states.append(root_state[j])
-#                 pi_hats.append(prob_priors[j])
-#                 v_hats.append(q[j])
-
-#             states = np.array(states).reshape((len(root_state), 1))
-#             pi_hats = np.array(pi_hats).reshape((len(root_state), 4))
-#             v_hats = np.array(v_hats).reshape((len(root_state), 1))
-
-#             network.fit(x=states, y=[pi_hats, v_hats], batch_size=batch_size, epochs=epochs)
-#         return network
-#     except:
-#         traceback.print_exc()
 
 
 def nn_training(args_dict):

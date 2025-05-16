@@ -1,8 +1,6 @@
 # NS-Gym: Open-Source Simulation Environments and Benchmarks for Non-Stationary Markov Decision Processes
 
-
 NS-Gym is a set of wrappers for the popular gymnasium environment to model non-stationary Markov decision processes.
-
 
 # Install from source
 
@@ -15,7 +13,6 @@ pip install .
 ```
 
 # Quickstart
-
 Suppose we want to model a non-stationary environment in the classical CartPole environment, where the pole’s mass increases by 0.1 units at each time step, and the system’s gravity increases through a random walk every three time steps. Furthermore, we want the decision-making agent to have a basic notification level. The following code snippet shows the general experimental setup in this CartPole Gymnasium environment using NS-Gym.
 
 ```python

@@ -102,7 +102,7 @@ class EnsembleMetric(Evaluator):
                 while not (done or truncated):
                     # ns_gym.utils.neural_network_checker(self.agents[i].device,obs)
                     action = agent.act(obs)
-                    action = ns_gym.eval.action_type_checker(action)
+                    action = ns_gym.evaluate.action_type_checker(action)
                     obs, reward, done, truncated,info = env.step(action)
                     obs,reward = ns_gym.utils.type_mismatch_checker(obs,reward)
                     total_reward += reward

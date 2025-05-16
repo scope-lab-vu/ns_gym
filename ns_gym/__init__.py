@@ -6,13 +6,25 @@ register(
     max_episode_steps=100,
 )
 
+del register
 
-__all__ = ["base","wrappers", "update_functions", "schedulers", "algo_utils","benchmark_algorithms","envs","eval"]
+__all__ = ["base","wrappers", "update_functions", "schedulers", "algo_utils","benchmark_algorithms","envs","evaluate"]
 
-from .wrappers import *
-from .update_functions import *
-from .schedulers import *
-from .utils import *
-from .benchmark_algorithms import *
-from ns_gym.envs.Bridge import Bridge
-from .eval import *
+
+from .  import wrappers, update_functions, schedulers,evaluate,benchmark_algorithms, context_switching,evaluate
+
+
+# import .utils
+# import .benchmark_algorithms
+# import .eval
+# import context_switching
+
+
+# from .wrappers import *
+# from .update_functions import *
+# from .schedulers import *
+# from .utils import *
+# from .benchmark_algorithms import *
+# from ns_gym.envs.Bridge import Bridge
+# from .eval import *
+# from .context_switching import *

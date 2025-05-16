@@ -14,7 +14,6 @@ import ns_gym.base as base
 Table of tunable parameters for the classic control suite of environments
 Key : Class name of the environment
 Value : Dictionary of tunable parameters and their initial values
-TODO: Add more environments and their tunable parameters
 """
 class ConstraintViolationWarning(Warning):
     """Warning issued when a constraint in the application is violated."""
@@ -38,8 +37,6 @@ class NSClassicControlWrapper(base.NSWrapper):
         
         In addition to altering the physics of each episode step this wrapper augments the observations with, time and 
         a boolean flag denoting there has been a change in enviroment dynamics.
-
-        TODO: add kwargs to set initial values of the tunable parameters.
         ```
     """
     def __init__(self, 
@@ -76,14 +73,14 @@ class NSClassicControlWrapper(base.NSWrapper):
             self.initial_params[key] = deepcopy(getattr(self.unwrapped,key))
 
     def step(self, 
-             action: Any) -> tuple[base.Observation, base.Reward, bool, bool, dict[str, Any]]:
-        """_summary_
+             action: Union[float,int]) -> tuple[base.Observation, base.Reward, bool, bool, dict[str, Any]]:
+        """Step through environment and update environmental parameters
 
         Args:
-            action (Any): _description_
+            action (Union[float,int]): Action to take in environment
 
         Returns:
-            tuple[base.Observation, base.Reward, bool, bool, dict[str, Any]]: _description_
+            tuple[base.Observation, base.Reward, bool, bool, dict[str, Any]]: NS-Gym Observation type, reward, done flag, truncated flag, info dictionary
         """
         if self.is_sim_env and not self.in_sim_change:
             obs,reward,terminated,truncated,info = super().step(action,env_change=None,delta_change=None)
@@ -93,7 +90,7 @@ class NSClassicControlWrapper(base.NSWrapper):
             new_vals = {} 
             for p,fn in self.tunable_params.items():
                 cur_val = getattr(self.unwrapped,p)
-                new_val, change_flag, delta = fn(cur_val,self.t) #param,t #BUG: This can break if new values are stored in a queue that we pop off each time we call the function. I think its best to change how we handle the update functions. 
+                new_val, change_flag, delta = fn(cur_val,self.t) 
                 delta_change[p] = delta
                 env_change[p] = change_flag
                 new_vals[p] = new_val
@@ -108,18 +105,11 @@ class NSClassicControlWrapper(base.NSWrapper):
             self._dependency_resolver()
             obs,reward,terminated,truncated,info = super().step(action,env_change=env_change,delta_change=delta_change)
             info["prob"] = 1.0
-        #TODO: add probs to info dict --- eventhough its deterministic    
+    
         return obs,reward,terminated,truncated,info
 
     def reset(self, *, seed: int | None = None, options: dict[str, Any] | None = None) -> tuple[base.Observation, dict[str, Any]]:
-        """_summary_
-
-        Args:
-            seed (int | None, optional): _description_. Defaults to None.
-            options (dict[str, Any] | None, optional): _description_. Defaults to None.
-
-        Returns:
-            tuple[Any, dict[str, Any]]: _description_
+        """Reset environment
         """
         obs,info = super().reset(seed=seed, options=options)
         for k,v in self.initial_params.items():
@@ -138,13 +128,11 @@ class NSClassicControlWrapper(base.NSWrapper):
         return super().__repr__()
     
     def get_planning_env(self):
-        """Return a copy of the environment with the initial parameters (MDP_0) but the current state of the environment.
-
+        """Return a copy of the environment
         NOTE: 
             - If the environment is a simulation environment, the function returns a deepcopy of the simulation environment.
             - If change notification is enabled, the function returns a deepcopy of the current environment because the decision making agent needs to be aware of the changes in the environment.
             - If change notification is disabled, the function returns a deepcopy of the environment with the initial parameters.
-        TODO: Refacotor this so that it returns a copy of the environment for either the initial parameters or the MPD_k-1 step. 
         """
         assert(self.has_reset),("The environment must be reset before getting the planning environment.")
         if self.is_sim_env or self.change_notification: 
@@ -169,12 +157,7 @@ class NSClassicControlWrapper(base.NSWrapper):
             setattr(sim_env.unwrapped,k,deepcopy(getattr(self.unwrapped,k)))
         sim_env._dependency_resolver()
         sim_env.is_sim_env = True
-        return sim_env
-
-
-
-
-        
+        return sim_env        
 
     def get_default_params(self):
         """Get dictionary of default parameters and their initial values
@@ -194,7 +177,6 @@ class NSClassicControlWrapper(base.NSWrapper):
             Since each environement has different physical contraints, I can either create a new class for of each environment or just implement this method in the wrapper 
             that check the base environment name.
 
-        TODO: Make this better, can you use itertools to make this more efficient?
         - Relook at contrains to see if they make sense, no division by zero, no negative values, etc.
         - Make sure all dependent parameters are updated accordingly.
         - Should we store the previous values of the parameters?
@@ -218,7 +200,7 @@ class NSClassicControlWrapper(base.NSWrapper):
                     constraint_dict[p] = True
             return constraint_dict
 
-        elif self.unwrapped.__class__.__name__ == "AcrobotEnv": #TODO check this
+        elif self.unwrapped.__class__.__name__ == "AcrobotEnv": 
             for p,new_val in new_vals.items():
                 constraint_dict[p] = False
 
@@ -286,9 +268,19 @@ class NSClassicControlWrapper(base.NSWrapper):
                         constraint_dict[p] = True
                         continue
                                             
-        elif self.unwrapped.__class__.__name__ == "MountainCarEnv": #TODO check this
-            raise NotImplementedError
-        
+        elif self.unwrapped.__class__.__name__ == "MountainCarEnv": 
+            for p,new_val in new_vals.items():
+                constraint_dict[p] = False
+                if p == "gravity":
+                    if new_val <= 0:
+                        warnings.warn("Gravity must be greater than zero, parameter not updated",ConstraintViolationWarning)
+                        constraint_dict[p] = True
+
+                if p == "power":
+                    if new_val <= 0:
+                        warnings.warn("Power must be greater than zero, parameter not updated",ConstraintViolationWarning)
+                        constraint_dict[p] = True
+
 
         elif self.unwrapped.__class__.__name__ == "Continuous_MountainCarEnv":
             for p,new_val in new_vals.items():
@@ -298,7 +290,7 @@ class NSClassicControlWrapper(base.NSWrapper):
                         warnings.warn("Power must be greater than zero, parameter not updated",ConstraintViolationWarning)
                         constraint_dict[p] = True
 
-        elif self.unwrapped.__class__.__name__ == "PendulumEnv": #TODO check this
+        elif self.unwrapped.__class__.__name__ == "PendulumEnv": 
             for p,new_val in new_vals.items():
                 constraint_dict[p] = False
                 if p=="m":
@@ -335,7 +327,7 @@ class NSClassicControlWrapper(base.NSWrapper):
             pass
         
         elif self.unwrapped.__class__.__name__ == "MountainCarEnv":
-            raise NotImplementedError
+            pass
         
         elif self.unwrapped.__class__.__name__ == "PendulumEnv":
             pass
