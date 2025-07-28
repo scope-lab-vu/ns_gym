@@ -25,7 +25,7 @@ Wrapper for the classic control suite of environments.
 
 
 class NSClassicControlWrapper(base.NSWrapper):
-    """
+    """ 
     Overview:
         This is a proof of concept implementation of a non-statinoarity wrapper for the classic control suite of envs.
         The wrapper creates non-stationary transition functions by varying input parameter of the dynamical equation with respect to time.

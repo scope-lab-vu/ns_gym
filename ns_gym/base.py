@@ -15,6 +15,7 @@ TUNABLE_PARAMS = {"CartPoleEnv": {"gravity":9.8,"masscart":1.0,"masspole":0.1,"f
                   "MountainCarEnv": {"gravity":0.0025,"force":0.001},
                   "Continuous_MountainCarEnv": {"power":0.0015},
                   "PendulumEnv": {"m":1.0,"l":1.0,"dt":0.05,"g":9.8},
+                  "AntEnv": {"gravity": np.array([0, 0, -9.8]), "mass": 1.0, "friction": 0.5, "height": 0.5},
                   }
 """
 Look up table for tunable parameters and their default values for each environment.
@@ -205,7 +206,7 @@ class NSWrapper(Wrapper):
         """
 
         state,reward,terminated,truncated,info = super().step(action)
-        self.t+=self.delta_t
+
 
         if not self.change_notification:
             env_change = None

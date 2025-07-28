@@ -18,14 +18,8 @@ Wrappers for some of the toytext / gridworld style environments.
 """
 
 class NSCliffWalkingWrapper(base.NSWrapper):
-    """Wrapper for gridworld environments (FrozenLake, CliffWalking, Bridge, ... ) that allows for non-stationary transitions.
-
-        This wrapper as opossed to the NSFrozenLakeWrapper simply changes the actions the agent can take given an intended action.
+    """Wrapper for gridworld environments that allows for non-stationary transitions."""
     
-    The action space for these environements is discrete. 
-    In frozen lake there is probality of going in the intended direction and a probability of going in the two perpendicular directions.
-    In cliff walking there is a probability of going in the intended direction and a probability of going in the two perpendicular directions and the reverse direcition. 
-    """
     def __init__(self,
                  env: Type[gym.Env], 
                  tunable_params: dict[str,Union[Type[base.UpdateFn], Type[base.UpdateDistributionFn]]], 
@@ -36,29 +30,13 @@ class NSCliffWalkingWrapper(base.NSWrapper):
                  modified_rewards: Union[dict[str,int],None] = None,
                  terminal_cliff: bool = False,
                  **kwargs: Any):
-        """
-        Args:
-            env (gym.Env): _description_
-            tunable_params (dict[str,Type[base.UpdateDistributionFn]]): A dictionary of parameter names and their associated update functions.
-            change_notification` (bool, optional): Flag to indicate whether to notify the agent of changes in the environment. Defaults to False.
-            delta_change_notification` (bool, optional): Flag to indicate whether to notify the agent of the amount of change in the transition function. Defaults to False.
-            initial_prob_dist (list[float], optional): The initial probability distribution over the action space. Defaults to [1,0,0,0]. 
-
-        Notes:
-            We initilize the environment to include and transition probability distribution over the action space called `transition_prob`.
-            Each element of the list is the probability of taking an action. The 0th element is the probability of taking the intended action.
-            The 1st and 2nd elements are the probabilities of taking the perpendicular actions. The 3rd element is the probability of taking the reverse action.
-            The transitions are encoded such that transition_prob[(action - i)%4] is the probabililty of taking an action. i is the index of the list 
-        """
-   
-        super().__init__(env = env,
-                         tunable_params = tunable_params,
-                         change_notification = change_notification,
-                         delta_change_notification = delta_change_notification,
-                         in_sim_change = in_sim_change)
         
-              
-        self.P = self.unwrapped.P
+        super().__init__(env=env,
+                         tunable_params=tunable_params,
+                         change_notification=change_notification,
+                         delta_change_notification=delta_change_notification,
+                         in_sim_change=in_sim_change)
+            
         self.shape = self.unwrapped.shape
         self.start_state_index = self.unwrapped.start_state_index
         self.nS = self.unwrapped.nS
@@ -67,69 +45,137 @@ class NSCliffWalkingWrapper(base.NSWrapper):
         if modified_rewards:
             self.modified_rewards = modified_rewards
         else:
-            self.modified_rewards = {"H": -100, "G": 0, "F": -1,"S": -1} #hole , goal , frozen lake, start state 
-        
-        self.terminal_cliff = terminal_cliff
+            self.modified_rewards = {"H": -100, "G": 0, "F": -1, "S": -1}
 
+        self.terminal_cliff = terminal_cliff
         self._cliff = np.zeros(self.shape, dtype=bool)
         self._cliff[3, 1:-1] = True
 
-        for state in self.P.keys():
-            for action in self.P[state].keys():
-                assert(len(self.P[state][action]) == 1),("The base Cliff Walking environment must be non-slippery,set `env = gym.make(is_slippery = False`.")
+        for state in self.unwrapped.P.keys():
+            for action in self.unwrapped.P[state].keys():
+                assert len(self.unwrapped.P[state][action]) == 1, "The base Cliff Walking environment must be non-slippery."
         
-        self.delta_t = 1
         self.update_fn = tunable_params["P"]
-        self.action_space = self.unwrapped.action_space
-        
-        #The transitions are encoded such that transition_prob[(action - i)%4] is the probabililty of taking an action. i is the index of the list 
         self.initial_prob_dist = initial_prob_dist
-        self.transition_prob  =  deepcopy(initial_prob_dist) #This is the initial probability distribution over the action space.
+        self.transition_prob = deepcopy(initial_prob_dist)
+        self.delta_map_array = np.array([[-1, 0], [0, 1], [1, 0], [0, -1]], dtype=np.int8)
 
-
-        self.update_transition_prob_table()
-        setattr(self.unwrapped,"P",self.P)
-        self.intial_p = deepcopy(self.P)
-
-    def step(self,action: int) -> tuple[Type[base.Observation], Type[base.Reward], bool, bool, dict[str, Any]]:
-        """
-        Args:
-            action (int): The action to take in the environment.
+        # 1. Pre-compute the static outcomes once
+        self._outcome_table = self._create_outcome_table()
         
-        Returns:
-            tuple[base.Observation, base.Reward, bool, bool, dict[str, Any]]: The observation, reward, termination signal, truncation signal, and additional information.
+        # 2. Build the full P-table for the first time
+        self.P = self._build_P_from_outcomes(self.transition_prob)
+        setattr(self.unwrapped, "P", self.P)
+        self.intial_p = self._copy_P(self.P)
 
+    def _create_outcome_table(self):
         """
+        Pre-computes the static outcomes (next_state, reward, terminated) for all state-action pairs.
+        This is run only once during initialization.
+        """
+        outcome_table = {}
+        for s in range(self.nS):
+            outcome_table[s] = {}
+            current_pos = np.unravel_index(s, self.shape)
+            for a in range(self.nA):
+                b_actions = np.array([a, (a + 1) % 4, (a - 1) % 4, (a + 2) % 4])
+                deltas = self.delta_map_array[b_actions]
+                new_positions = np.array(current_pos) + deltas
+                
+                np.clip(new_positions[:, 0], 0, self.shape[0] - 1, out=new_positions[:, 0])
+                np.clip(new_positions[:, 1], 0, self.shape[1] - 1, out=new_positions[:, 1])
+                new_positions = new_positions.astype(int)
+                
+                new_states = np.ravel_multi_index((new_positions[:, 0], new_positions[:, 1]), self.shape)
+                
+                is_cliff = self._cliff[new_positions[:, 0], new_positions[:, 1]]
+                is_terminated = np.all(new_positions == (self.shape[0] - 1, self.shape[1] - 1), axis=1)
+                
+                rewards = np.where(is_cliff, self.modified_rewards["H"],
+                                   np.where(is_terminated, self.modified_rewards["G"], self.modified_rewards["F"]))
+                terminated_flags = np.where(is_cliff, self.terminal_cliff, is_terminated)
+                next_states = np.where(is_cliff, self.start_state_index, new_states)
+                
+                outcome_table[s][a] = list(zip(next_states.tolist(), rewards.tolist(), terminated_flags.tolist()))
+        return outcome_table
 
+    def _build_P_from_outcomes(self, probs):
+        """Builds a full P-table by combining probabilities with the pre-computed outcomes."""
+        P = {}
+        for s in range(self.nS):
+            P[s] = {}
+            for a in range(self.nA):
+                outcomes = self._outcome_table[s][a]
+                P[s][a] = [(probs[i],) + outcomes[i] for i in range(4)]
+        return P
+
+    def _update_P_probabilities(self):
+        """
+        Efficiently updates only the probabilities in the existing P-table without rebuilding it.
+        This is the new, fast update method.
+        """
+        new_probs = self.transition_prob
+        for s in range(self.nS):
+            for a in range(self.nA):
+                transitions = self.P[s][a]
+                # Overwrite the probability (index 0) in each transition tuple
+                self.P[s][a] = [(new_probs[i],) + transitions[i][1:] for i in range(4)]
+
+    def step(self, action: int) -> tuple[Type[base.Observation], Type[base.Reward], bool, bool, dict[str, Any]]:
         if self.is_sim_env and not self.in_sim_change:
-            # action = self._get_action(action)
-            obs,reward,terminated,truncated,info = super().step(action,env_change=None,delta_change=None)
+            obs, reward, terminated, truncated, info = super().step(action, env_change=None, delta_change=None)
         else:
-            self.transition_prob, env_change, delta_change = self.update_fn(self.transition_prob,self.t)
-            if env_change: 
-                self.update_transition_prob_table()   
-            setattr(self.unwrapped,"P",self.P)
-            assert(self.unwrapped.P == self.P),("The transition probability table is not being updated correctly.")
-            obs, reward, terminated, truncated, info = super().step(action,env_change=env_change,delta_change=delta_change)
-            # obs, reward, terminated, truncated, info = super().step(action,env_change=None,delta_change=None)
+            self.transition_prob, env_change, delta_change = self.update_fn(self.transition_prob, self.t)
+            if env_change:
+                # Use the new, fast update method
+                self._update_P_probabilities()
+            setattr(self.unwrapped, "P", self.P)
+            obs, reward, terminated, truncated, info = super().step(action, env_change=env_change, delta_change=delta_change)
+        
         info["transition_prob"] = self.transition_prob
         return obs, reward, terminated, truncated, info
-    
-    def reset(self, *, seed: int | None = None, options: dict[str, Any] | None = None) -> tuple[Any, dict[str, Any]]:
-        """
-        Args:
-            seed (int | None, optional): _description_. Defaults to None.
-            options (dict[str, Any] | None, optional): _description_. Defaults to None.
 
-        Returns:
-            tuple[Any, dict[str, Any]]: _description_
-        """
-        obs,info = super().reset(seed=seed, options=options)
+    # --- The rest of the class remains the same ---
+    def _copy_P(self, P):
+        return {s: {a: transitions[:] for a, transitions in actions.items()}
+                for s, actions in P.items()}
+
+    def reset(self, *, seed: int | None = None, options: dict[str, Any] | None = None) -> tuple[Any, dict[str, Any]]:
+        obs, info = super().reset(seed=seed, options=options)
         self.transition_prob = deepcopy(self.initial_prob_dist)
         self.update_fn = self.tunable_params["P"]
-        setattr(self.unwrapped,"P",self.intial_p)
+        setattr(self.unwrapped, "P", self.intial_p)
         return obs, info
-    
+        
+    def get_planning_env(self):
+        assert self.has_reset, "The environment must be reset before getting the planning environment."
+        return deepcopy(self)
+        
+    def __deepcopy__(self, memo):
+        sim_env = NSCliffWalkingWrapper(
+            gym.make("CliffWalking-v0", max_episode_steps=1000),
+            tunable_params=deepcopy(self.tunable_params, memo),
+            change_notification=self.change_notification,
+            delta_change_notification=self.delta_change_notification,
+            in_sim_change=self.in_sim_change,
+            initial_prob_dist=self.initial_prob_dist
+        )
+        memo[id(self)] = sim_env
+        
+        sim_env.reset()
+        sim_env.unwrapped.s = self.unwrapped.s
+        sim_env.t = self.t
+        sim_env.transition_prob = self.transition_prob[:]
+        sim_env.update_fn = deepcopy(self.update_fn, memo)
+        
+        sim_env.intial_p = self._copy_P(self.intial_p)
+        current_P = self._copy_P(self.P)
+        sim_env.P = current_P
+        setattr(sim_env.unwrapped, "P", current_P)
+        
+        sim_env.is_sim_env = True
+        return sim_env
+
     def close(self):
         return super().close()
     
@@ -138,95 +184,10 @@ class NSCliffWalkingWrapper(base.NSWrapper):
     
     def __repr__(self):
         return super().__repr__()
-    
-    def update_transition_prob_table(self):
-        UP = 0
-        RIGHT = 1
-        DOWN = 2
-        LEFT = 3
 
-        self.P = {}
-        for s in range(self.nS):
-            position = np.unravel_index(s, self.shape)
-            self.P[s] = {a: [] for a in range(self.nA)}
-            self.P[s][UP] = self.calculate_transition_prob(position, UP)
-            self.P[s][RIGHT] = self.calculate_transition_prob(position, RIGHT)
-            self.P[s][DOWN] = self.calculate_transition_prob(position, DOWN)
-            self.P[s][LEFT] = self.calculate_transition_prob(position, LEFT)
 
-    def new_limit_coordinates(self, coord: np.ndarray) -> np.ndarray:
-        """Prevent the agent from falling out of the grid world."""
-        coord[0] = min(coord[0], self.shape[0] - 1)
-        coord[0] = max(coord[0], 0)
-        coord[1] = min(coord[1], self.shape[1] - 1)
-        coord[1] = max(coord[1], 0)
-        return coord
-
-    def calculate_transition_prob(self, current,action):
-        """Determine the outcome for an action. Transition Prob is always 1.0.
-
-        Args:
-            current: Current position on the grid as (row, col)
-            action: Action to be taken as int. 0: up, 1: right, 2: down, 3: left
-
-        Returns:
-            Tuple of ``(1.0, new_state, reward, terminated)``
-        """
-
-        delta_map = {0: [-1,0], 1: [0,1], 2: [1,0], 3: [0,-1]}
-
-        transition_list = []
-
-        for ind,b in enumerate([action, (action + 1)%4, (action - 1)%4,(action + 2)%4]):
-            new_position = np.array(current) + np.array(delta_map[b])
-            new_position = self.new_limit_coordinates(new_position).astype(int)
-            new_state = np.ravel_multi_index(tuple(new_position), self.shape)
-
-            terminal_state = (self.shape[0] - 1, self.shape[1] - 1) # corner of the map 
-
-            is_terminated = tuple(new_position) == terminal_state
-
-            if self._cliff[tuple(new_position)]:
-                transition_list.append((self.transition_prob[ind], self.start_state_index, self.modified_rewards["H"], self.terminal_cliff))
-            elif is_terminated:
-                transition_list.append((self.transition_prob[ind], new_state, self.modified_rewards["G"], is_terminated))
-            else:
-                transition_list.append((self.transition_prob[ind], new_state, self.modified_rewards["F"], is_terminated))
-
-        return transition_list
-    
 
     
-    def get_planning_env(self):
-        assert(self.has_reset),("The environment must be reset before getting the planning environment.")
-        if self.is_sim_env or self.change_notification:
-            return deepcopy(self)
-        elif not self.change_notification:
-            planning_env = deepcopy(self)
-            planning_env.transition_prob = deepcopy(self.initial_prob_dist)
-            setattr(planning_env.unwrapped,"P",self.intial_p)
-        return planning_env
-    
-    def __deepcopy__(self, memo):
-        sim_env = gym.make("CliffWalking-v0",max_episode_steps=1000)
-        sim_env = NSCliffWalkingWrapper(sim_env,
-                                      tunable_params=deepcopy(self.tunable_params),
-                                      change_notification=self.change_notification,
-                                      delta_change_notification=self.delta_change_notification,
-                                      in_sim_change=self.in_sim_change,
-                                      initial_prob_dist=self.initial_prob_dist)
-        sim_env.reset()
-        sim_env.unwrapped.s = deepcopy(self.unwrapped.s)
-        # sim_env._elapsed_steps = self._elapsed_steps
-        sim_env.t = deepcopy(self.t)
-        sim_env.transition_prob = deepcopy(self.transition_prob)
-        sim_env.update_fn = deepcopy(self.update_fn)
-        sim_env.intial_p = deepcopy(self.intial_p)
-        sim_env.unwrapped.P = deepcopy(self.P)
-        sim_env.is_sim_env = True
-        return sim_env
-    
-
 class NSFrozenLakeWrapper(base.NSWrapper):
     """
     A wrapper for the FrozenLake environment that allows for non-stationary transitions.
