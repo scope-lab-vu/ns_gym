@@ -261,19 +261,22 @@ class PAMCTS_Bound(ComparativeEvaluator):
                 P1 = env_1.unwrapped.P
                 P2 = env_2.unwrapped.P
 
+
+
                 max_diff = 0
                 for s in range(num_states):
                     for a in range(num_actions):
-                        for s_prime_1,s_prime_2 in itertools.product([x for x in range(len(P1[s][a]))],repeat=2):
-                            max_diff = max(max_diff, abs(P1[s][a][s_prime_1][0] - P2[s][a][s_prime_2][0])) # From state s with action a, what is the probability of transitioning to state s_prime
+                        for s_prime in range(len(P1[s][a])):
+                            assert P1[s][a][s_prime][1] == P2[s][a][s_prime][1], "Transition probabilities do not match between environments"
+                            max_diff = max(max_diff, abs(P1[s][a][s_prime][0] - P2[s][a][s_prime][0])) # From state s with action a, what is the probability of transitioning to state s_prime
 
-                if verbose:
-                    self._print_results(max_diff)
+                # if verbose:
+                #     self._print_results(max_diff)
 
                 return max_diff
             
             except Exception as e:
-                warnings.warn("This method only works for environments that have a transition matrix P[s][a][s_prime] that is a dictionary of dictionaries that maps to the probability of transitioning to state s_prime given state s and action a")
+                warnings.warn(f"Error evaluating PAMCTS-Bound: {e}")
 
 
         elif self.space_type == "Box" and self.action_type == "Discrete":
@@ -325,31 +328,31 @@ class LyapunovStability(Evaluator):
 if __name__ == "__main__":
     import ns_gym
     import gymnasium as gym
-
-
-  
-    env = gym.make('FrozenLake-v1',render_mode="rgb_array",max_episode_steps=50)
-    scheduler = ns_gym.schedulers.DiscreteScheduler({1})
+    env_name = "CliffWalking-v1"
+    p = 1.0
+    env = gym.make(env_name,render_mode="rgb_array",max_episode_steps=50)
+    scheduler = ns_gym.schedulers.DiscreteScheduler({100})
     update_function = ns_gym.update_functions.DistributionDecrementUpdate(scheduler=scheduler,k = 0.5)
     param = "P"
     params = {param:update_function}
-    ns_env_1 = ns_gym.wrappers.NSFrozenLakeWrapper(env, params,initial_prob_dist=[1,0,0])
+    ns_env_1 = ns_gym.wrappers.NSCliffWalkingWrapper(env, params,initial_prob_dist=[p,(1-p)/3,(1-p)/3,(1-p)/3])
 
     ns_env_1.reset()
 
     ns_env_1.step(0)
 
+    for p2 in [0.4,0.6,0.8]:
+        env = gym.make(env_name,render_mode="rgb_array",max_episode_steps=50)
+        scheduler = ns_gym.schedulers.DiscreteScheduler({100})
+        update_function = ns_gym.update_functions.DistributionDecrementUpdate(scheduler=scheduler,k = 0.5)
+        params = {param:update_function}
+        ns_env_2 = ns_gym.wrappers.NSCliffWalkingWrapper(env, params,initial_prob_dist=[p2,(1-p2)/3,(1-p2)/3,(1-p2)/3])
+        ns_env_2.reset()
+        ns_env_2.step(0)
+        evaluator = PAMCTS_Bound()
 
-    env = gym.make('FrozenLake-v1',render_mode="rgb_array",max_episode_steps=50)
-    scheduler = ns_gym.schedulers.DiscreteScheduler({1})
-    update_function = ns_gym.update_functions.DistributionDecrementUpdate(scheduler=scheduler,k = 0.5)
-    params = {param:update_function}
-    ns_env_2 = ns_gym.wrappers.NSFrozenLakeWrapper(env, params,initial_prob_dist=[1,0,0])
-
-    evaluator = PAMCTS_Bound()
-
-    bound = evaluator.evaluate(ns_env_1,ns_env_2)
-
+        bound = evaluator.evaluate(ns_env_1,ns_env_2)
+        print(f"PAMCTS-Bound: {bound}")
 
 
 
