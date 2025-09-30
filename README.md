@@ -4,7 +4,7 @@ NS-Gym is a set of wrappers for the popular gymnasium environment to model non-s
 
 # Install from source
 
-Requires `python = 3.10`. To install on MacOS and Linux make sure you are in the same directory as this README file then execute the following lines in the terminal.
+Requires `python = 3.10`. To install on MacOS and Linux make sure you clone this repo and are in the same directory as this README file then execute the following lines in the terminal.
 
 ```bash
 python3.10 -m venv ns_gym_env

@@ -13,7 +13,7 @@ import ns_gym
 import ns_gym.schedulers
 import ns_gym.update_functions
 import ns_gym.wrappers
-
+import torch
 
 class ComparativeEvaluator(Evaluator):
     """Superclass for evaluators that compare two environments. Handles checking that the environments are the same, etc 
@@ -323,6 +323,121 @@ class LyapunovStability(Evaluator):
         raise NotImplementedError
     
 
+class LocalRegret(Evaluator):
+    def __init__(self, agent, cost_function, learning_rate_eta: float = 0.01, *args, **kwargs) -> None:
+        """
+        Initializes the LocalRegret evaluator.
+
+        Args:
+            agent (AdaptiveAgent): The adaptive agent whose policy is being evaluated.
+            cost_function (callable): A differentiable function representing stage cost (h_t).
+                                      Should handle cost = -reward.
+            learning_rate_eta (float): The eta parameter used in the projected gradient calculation.
+        """
+        super().__init__(*args, **kwargs)
+        self.agent = agent
+        self.cost_function = cost_function
+        self.eta = learning_rate_eta
+
+        self.historical_trace = []
+
+    def _project_gradient(self, grad: torch.Tensor, theta: torch.Tensor) -> torch.Tensor:
+        """
+        [cite_start]Computes the projected gradient based on Definition 14[cite: 595].
+        NOTE: This assumes the constraint set Theta is the entire space.
+              For a constrained set, you would need to implement the projection Pi_Theta.
+        """
+       
+        return grad
+
+    def compute_surrogate_cost(self, theta_to_eval: torch.Tensor, t: int, initial_state: torch.Tensor) -> torch.Tensor:
+        """
+        Computes the surrogate cost F_t(theta) by running a hypothetical simulation
+        [cite_start]from time 0 to t using a fixed policy parameter theta_to_eval[cite: 103].
+        [cite_start]This simulation uses the true historical dynamics and disturbances[cite: 584].
+        """
+        hypothetical_state = initial_state.clone()
+
+
+        for tau in range(t):
+            hist_entry = self.historical_trace[tau]
+
+            g_tau, f_tau, a_tau_star = hist_entry["true_dynamics"]
+
+            w_tau = hist_entry["disturbance"]
+
+
+
+            hypothetical_u = self.agent.policy(hypothetical_state, theta_to_eval, f_tau, a_tau_star)
+
+
+            hypothetical_state = g_tau(hypothetical_state, hypothetical_u, f_tau, a_tau_star) + w_tau
+
+
+
+        final_hist_entry = self.historical_trace[t]
+        g_t, f_t, a_t_star = final_hist_entry["true_dynamics"]
+        final_hypothetical_u = self.agent.policy(hypothetical_state, theta_to_eval, f_t, a_t_star)
+
+        surrogate_cost_val = self.cost_function(hypothetical_state, final_hypothetical_u, theta_to_eval)
+        return surrogate_cost_val
+
+    def evaluate(self, env: Type[Env], num_steps: int = 1000, *args, **kwargs) -> float:
+        """
+        Runs an episode for a number of steps and computes the total local regret.
+
+        Args:
+            env (Type[Env]): The non-stationary environment, which must be able to provide
+                             its true dynamics and disturbances for the evaluation.
+            num_steps (int): The total number of time steps (T) to evaluate.
+
+        Returns:
+            float: The total local regret R_L(T).
+        """
+        state, info = env.reset()
+        initial_state = torch.tensor(state, dtype=torch.float32)
+        
+        # Reset history for the new episode
+        self.historical_trace = []
+        total_local_regret = 0.0
+
+        # The policy parameter theta evolves over time
+        theta_t = self.agent.policy.theta.clone().detach().requires_grad_(True)
+
+        for t in range(num_steps):
+
+            true_dynamics_t = info.get("true_dynamics") # (g_t, f_t, a_t*)
+            disturbance_t = info.get("disturbance") # w_t
+            self.historical_trace.append({"true_dynamics": true_dynamics_t, "disturbance": disturbance_t})
+
+
+            surrogate_cost = self.compute_surrogate_cost(theta_t, t, initial_state)
+
+
+            grad_F_t = torch.autograd.grad(surrogate_cost, theta_t, retain_graph=True)[0]
+
+
+            projected_grad = self._project_gradient(grad_F_t, theta_t)
+
+
+            total_local_regret += torch.sum(projected_grad**2).item()
+
+
+            action = self.agent.act(state)
+            
+
+            next_state, reward, terminated, truncated, info = env.step(action)
+
+
+            self.agent.update(state, action, reward, next_state)
+            state = next_state
+            
+            theta_t = self.agent.policy.theta.clone().detach().requires_grad_(True)
+
+            if terminated or truncated:
+                break
+        
+        return total_local_regret
 
 
 if __name__ == "__main__":
