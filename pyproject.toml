@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ns_gym"
-version = "0.0.1"
+version = "0.0.2"
 description = "A simulation toolkit for non-stationary Markov decision processes"
 readme = "README.md"
 dependencies = [

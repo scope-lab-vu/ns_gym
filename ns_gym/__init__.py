@@ -13,6 +13,8 @@ __all__ = ["base","wrappers", "update_functions", "schedulers", "algo_utils","be
 
 from .  import wrappers, update_functions, schedulers,evaluate,benchmark_algorithms, context_switching,evaluate
 
+__version__ = "0.0.2"
+
 
 # import .utils
 # import .benchmark_algorithms
