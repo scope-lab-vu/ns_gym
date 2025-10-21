@@ -162,4 +162,13 @@ cython_debug/
 #.idea/
 
 .DS_Store
+.DS_Store/
 make_gifs.py
+todo.txt
+MISC/
+
+.ruff_cache/
+
+.vscode/
+
+build_website.sh
