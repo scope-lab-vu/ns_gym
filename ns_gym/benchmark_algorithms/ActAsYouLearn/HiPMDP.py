@@ -2,7 +2,6 @@
 General Framework for Hidden Parameter Markov Decision Processes (HiP-MDPs) and benchmarks.
 """
 from __future__ import print_function
-import argparse
 #import tensorflow as tf
 import numpy as np
 import pickle

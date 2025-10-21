@@ -1,13 +1,8 @@
 import json
 import logging
 import os
-import traceback
-from datetime import datetime
-import numpy as np
-import pandas as pd
 from kafka import KafkaProducer, KafkaConsumer, TopicPartition
-import ns_gym as nsg
-from kafka_utils import model_weights_to_str, str_to_dict
+from kafka_utils import model_weights_to_str
 from ns_gym.benchmark_algorithms.AlphaZero.alphazero import train_model
 
 logging.basicConfig(format='%(asctime)s,%(msecs)03d %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',

@@ -2,11 +2,9 @@
 import gymnasium as gym
 import numpy as np
 from copy import deepcopy
-import ns_gym as nsg
 from ns_gym import base
-import random
-from collections import defaultdict
 import torch
+from ns_gym.utils import type_mismatch_checker
 
 
 """
@@ -36,6 +34,9 @@ class DecisionNode:
 
         if isinstance(state, np.ndarray):
             state = tuple(state)
+
+
+        state = type_mismatch_checker(observation=state,reward=None)[0]
         self.state = state
         self.weight = weight  # Ground truth probability to occur given the parent (state-action pair) -- given by the environment
         self.is_terminal = is_terminal
@@ -109,8 +110,9 @@ class MCTS:
         self.d = d # depth #TODO icorportae this into simulation depth
         self.m = m # number of simulations
         self.c = c # exploration constant
-        if isinstance(state,base.Observation):
-            state = state.state
+
+        if isinstance(state, dict) and 'state' in state:
+            state = state['state']
 
         if isinstance(env.action_space,gym.spaces.Discrete):
             self.possible_actions = [x for x in range(env.action_space.n)]
@@ -179,14 +181,8 @@ class MCTS:
         Q = np.array([child.Q for child in self.v0.children])
         pi_target = stable_normalizer(counts,temp)
         V_target = np.sum((counts/np.sum(counts))*Q) #calcualte expected value of next state
-        # best_action = np.argmax(Q)
+
         best_action = np.argmax(counts)
-        # best_action = np.argmax(counts)
-
-        # print(f"Action counts: {counts}")
-        # print(f"Action values: {Q}")
-        
-
 
         if isinstance(self.v0.state, int):
             arr = torch.zeros(self.env.observation_space.n)
@@ -207,13 +203,9 @@ class MCTS:
         """
         depth = 0
         while True:
-            
-            # select the best child node based on the UCT value
-
             action = self._best_action(node) # select step based on UCT value
             chance_node = node.children[action] # select the child node based on the action
             node,backprop = self._expand_chance_node(chance_node) # step through the environment to get the next state if the node exists keep going else return the node. 
-
             if node.is_terminal or backprop or depth == self.d:
                 # return the decision node if is terminal or if it has no children. 
                 assert(type(node)==DecisionNode)
@@ -222,7 +214,6 @@ class MCTS:
     
     def _evaluate_decision_node(self,v:DecisionNode):
         """Evaluate the value of a decision node using the neural network model. (Replaces random rollout with a neural network.)
-
         Args:
             v (DecisionNode): Leaf node to evaluate.
 
@@ -246,14 +237,16 @@ class MCTS:
 
     def _expand_decision_node(self,v:DecisionNode,action):
         """Expand the tree by adding a new decision node to the tree.
+        Args:
+            v (DecisionNode): The node to expand.
+            action (int): The action to take from the node.
+        Returns:
+            new_node (ChanceNode): The new node added to the tree.
+
         """
         assert(type(v) == DecisionNode)
         if v.is_terminal:
             return v
-        
-        # for a in self.possible_actions:
-        #     new_node = ChanceNode(parent=v,action=a)
-        #     v.children.append(new_node)
 
         new_node = ChanceNode(parent=v,action=action)
         v.children.append(new_node)
@@ -298,6 +291,11 @@ class MCTS:
 
     def _backpropagation(self,R,v,depth=0):
         """Backtrack to update the number of times a node has beenm visited and the value of a node untill we reach the root node. 
+
+        Args:
+            R (float): The value to backpropagate.
+            v (Union[DecisionNode,ChanceNode]): The node to start backpropagation from
+            depth (int, optional): Current depth of the node. Defaults to 0.
         """
 
         assert(type(v) == DecisionNode)
@@ -314,9 +312,8 @@ class MCTS:
         """Update the Q values and visit counts for state-action pairs and states.
 
         Args:
-            state (Union[int,]): _description
-            action (_type_): _description_
-            reward (_type_): _description_
+            chance_node (ChanceNode): The chance node to update.
+            reward (float): The reward to update the Q value with.
         """
         assert(type(chance_node) == ChanceNode)
 
@@ -331,18 +328,18 @@ class MCTS:
         decision_node.N += 1
 
     def type_checker(self, observation, reward):
-        """Converts the observation and reward from base.Observation and base.Rewars type to the correct type if they are not already.
+        """Converts the observation and reward from dict and base.Reward type to the correct type if they are not already.
 
         Args:
-            observation (_type_): Observation to convert.
-            reward (_type_): Reward to convert.
+            observation (Union[int, np.ndarray, dict]): Observation to convert.
+            reward (Union[float, int]): Reward to convert.
 
         Returns:
             (int,np.ndarray): Converted observation.
             (float): Converted reward.
         """
-        if isinstance(observation, base.Observation):
-            observation = observation.state
+        if isinstance(observation, dict) and 'state' in observation:
+            observation = observation['state']
         if isinstance(observation, np.ndarray):
             observation = tuple(observation)
         if isinstance(reward, base.Reward):
@@ -352,8 +349,11 @@ class MCTS:
     
     def _best_action(self,v):
         """Select the best action based on the Q values of the state-action pairs.
+
+        Args:
+            v (DecisionNode): The decision node to select the action from.
         Returns:
-            best_action(int): best action to)
+            best_action(int): best action to take.
         """
         assert(type(v) == DecisionNode)
         best_action = None
@@ -374,10 +374,12 @@ class MCTS:
     
     def _network_input_checker(self, x):
         """Make sure the input to the neural network is in the correct format
-        """
 
-        if isinstance(x, base.Observation):
-            x = x.state
+        Args:
+            x (Union[int, np.ndarray, dict]): Input to the neural network.
+        """
+        if isinstance(x, dict) and 'state' in x:
+            x = x['state']
 
         s = x 
         if type(s) == int:

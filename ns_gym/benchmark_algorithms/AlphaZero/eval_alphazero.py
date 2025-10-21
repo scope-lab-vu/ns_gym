@@ -1,5 +1,5 @@
 import ns_gym as nsg
-from ns_gym.benchmark_algorithms.AlphaZero import AlphaZeroAgent, AlphaZeroNetwork
+from ns_gym.benchmark_algorithms.AlphaZero import AlphaZeroNetwork
 import numpy as np
 import random 
 import gymnasium as gym

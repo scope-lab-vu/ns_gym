@@ -3,22 +3,13 @@ import ns_gym as nsg
 import numpy as np
 import copy
 from gymnasium import spaces
-from typing import List, Optional
-import functools
+from typing import Optional
 
 
-'''
-'''
+"""
+"""
 
-MAPS = {
-    "bridge": [
-        "HHHHHHHH",
-        "FFFFFHHH",
-        "GFFFSFFG",
-        "FFFFFHHH",
-        "HHHHHHHH"
-    ]
-}
+MAPS = {"bridge": ["HHHHHHHH", "FFFFFHHH", "GFFFSFFG", "FFFFFHHH", "HHHHHHHH"]}
 
 LEFT = 0
 DOWN = 1
@@ -35,9 +26,16 @@ class Bridge(gym.Env):
     Args:
         gym (_type_): _description_
     """
-    def __init__(self,global_init_probs = [1,0,0],map_name = "bridge",epsilon = 0.5,split_probs = False):
+
+    def __init__(
+        self,
+        global_init_probs=[1, 0, 0],
+        map_name="bridge",
+        epsilon=0.5,
+        split_probs=False,
+    ):
         # super(Bridge, self).__init__()
-        self.map = np.asarray(MAPS[map_name],dtype = "c")
+        self.map = np.asarray(MAPS[map_name], dtype="c")
         self.global_init_probs = copy.copy(global_init_probs)
         self.P = global_init_probs
         self.epsilon = epsilon
@@ -46,41 +44,45 @@ class Bridge(gym.Env):
         self.nA = 4
         self.nrow = len(self.map)
         self.ncol = len(self.map[0])
-        
+
         self.observation_space = spaces.Discrete(self.nS)
         self.action_space = spaces.Discrete(self.nA)
 
-        self.left_side_prob = copy.copy(global_init_probs)   
+        self.left_side_prob = copy.copy(global_init_probs)
         self.right_side_prob = copy.copy(global_init_probs)
         self.split_probs = split_probs
         self.delta = {
             LEFT: np.array([0, -1]),
             DOWN: np.array([1, 0]),
             RIGHT: np.array([0, 1]),
-            UP: np.array([-1, 0])
+            UP: np.array([-1, 0]),
         }
 
-
     def step(self, action):
-
         if self.split_probs:
             P = self.get_loc_based_prob(self.state_to_coord(self.s))
         else:
             P = self.P
 
-        action = np.random.choice([action, (action + 1)%4, (action - 1)%4],p = self.P)
-        newstate,reward,done = self.transition(action)
-        self.s = newstate        
+        action = np.random.choice(
+            [action, (action + 1) % 4, (action - 1) % 4], p=self.P
+        )
+        newstate, reward, done = self.transition(action)
+        self.s = newstate
 
         return int(self.s), int(reward), done, False, {"prob": P}
-    
-    def reset(self,*,seed: Optional[int] = None, options: Optional[dict] = None,):
-        super().reset(seed=seed)
-        self.s = self.coord_to_state(2,4)
-        return int(self.s), {"prob": self.P[0]}
-        
 
-    def transition(self,a):
+    def reset(
+        self,
+        *,
+        seed: Optional[int] = None,
+        options: Optional[dict] = None,
+    ):
+        super().reset(seed=seed)
+        self.s = self.coord_to_state(2, 4)
+        return int(self.s), {"prob": self.P[0]}
+
+    def transition(self, a):
         coord = self.state_to_coord(self.s)
         LEFT = 0
         DOWN = 1
@@ -91,20 +93,18 @@ class Bridge(gym.Env):
             LEFT: np.array([0, -1]),
             DOWN: np.array([1, 0]),
             RIGHT: np.array([0, 1]),
-            UP: np.array([-1, 0])
+            UP: np.array([-1, 0]),
         }
 
         newcoord = coord + delta[a]
 
-
         if self.check_out_of_bound(newcoord[0], newcoord[1]):
-            newcoord= coord
+            newcoord = coord
 
         newstate = self.coord_to_state(newcoord[0], newcoord[1])
-        reward,done = self.get_reward(newcoord)
-        return newstate,reward,done
-    
-  
+        reward, done = self.get_reward(newcoord)
+        return newstate, reward, done
+
     def check_out_of_bound(self, row, col):
         if row < 0 or row >= self.nrow:
             return True
@@ -117,46 +117,48 @@ class Bridge(gym.Env):
 
     def state_to_coord(self, state):
         return np.array([state // self.ncol, state % self.ncol])
-    
-    def get_loc_basedProb(self,coord):
+
+    def get_loc_basedProb(self, coord):
         if coord[1] < 4:
             return self.left_side_prob
         else:
             return self.right_side_prob
-        
-    def get_reward(self,coord):
-        x,y = coord[0],coord[1]
 
-        if self.map[x,y] == b"H":
+    def get_reward(self, coord):
+        x, y = coord[0], coord[1]
+
+        if self.map[x, y] == b"H":
             reward = -1
             done = True
-        elif self.map[x,y] == b"G":
+        elif self.map[x, y] == b"G":
             reward = 1
             done = True
         else:
             reward = 0
             done = False
-        return reward,done
-    
+        return reward, done
+
     def render(self):
         for i in range(self.nrow):
             for j in range(self.ncol):
-                if self.state_to_coord(self.s)[0] == i and self.state_to_coord(self.s)[1] == j:
-                    print("X",end = " ")
+                if (
+                    self.state_to_coord(self.s)[0] == i
+                    and self.state_to_coord(self.s)[1] == j
+                ):
+                    print("X", end=" ")
                 else:
-                    print(self.map[i,j].decode(),end = " ")
+                    print(self.map[i, j].decode(), end=" ")
             print()
         print()
-
 
     @property
     def transition_matrix(self):
         return self._get_transition_matrix()
-    
+
     @property
     def P(self):
         return self.transition_matrix()
-        
+
     def _get_transition_matrix(self):
         table = {s: {a: [] for a in range(self.nA)} for s in range(self.nS)}
         for row in range(self.nrow):
@@ -171,7 +173,7 @@ class Bridge(gym.Env):
                         li.append((1.0, newstate, reward, done))
                         continue
                     else:
-                        for ind,b in enumerate([a,(a+1)%4,(a-1)%4]):
+                        for ind, b in enumerate([a, (a + 1) % 4, (a - 1) % 4]):
                             newcoord = np.array([row, col]) + self.delta[b]
                             if self.check_out_of_bound(newcoord[0], newcoord[1]):
                                 newcoord = np.array([row, col])
@@ -181,19 +183,17 @@ class Bridge(gym.Env):
         return table
 
 
-
 if __name__ == "__main__":
     import ns_gym as nsg
-    import gymnasium as gym 
+    import gymnasium as gym
+
     env = gym.make("ns_bench/Bridge-v0")
     # env = Bridge()
-    obs, info = env.reset()   
+    obs, info = env.reset()
     env.render()
     done = False
     while not done:
-        agent = nsg.benchmark_algorithms.MCTS(env,obs,d=100,m=100,c=1.44,gamma=0.9)
-        a,_ = agent.search()
-        obs,reward,done,truncated,info = env.step(a)
+        agent = nsg.benchmark_algorithms.MCTS(env, obs, d=100, m=100, c=1.44, gamma=0.9)
+        a, _ = agent.search()
+        obs, reward, done, truncated, info = env.step(a)
         env.render()
-
-

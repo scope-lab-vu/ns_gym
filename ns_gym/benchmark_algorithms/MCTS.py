@@ -5,7 +5,6 @@ import ns_gym as nsg
 
 import ns_gym.base as base
 import random
-from collections import defaultdict
 
 
 """
@@ -32,9 +31,18 @@ class DecisionNode:
 
         """
         self.parent = parent
+        state, _ = nsg.utils.type_mismatch_checker(observation=state,reward=None)
 
-        if isinstance(state, np.ndarray):
-            state = tuple(state)
+        assert not isinstance(state, dict), "State is still a dict after type checking."
+        # if isinstance(state, np.ndarray):
+        #     state = tuple(state)
+
+        # if isinstance(state, dict) and 'state' in state:
+        #     state = state['state']
+        # if isinstance(state, np.ndarray):
+        #     state = tuple(state)
+
+
         self.state = state
         self.weight = weight  # Probability to occur
         self.is_terminal = is_terminal
@@ -72,32 +80,35 @@ class ChanceNode:
 class MCTS(base.Agent):
     """Vanilla MCTS with Chance Nodes. Compatible with OpenAI Gym environments.
         Selection and expansion are combined into the "treepolicy method"
-        The rollout/simluation is the "default" policy. 
+        The rollout/simulation is the "default" policy.
+
+    Args:
+        env (gym.Env): The environment to run the MCTS on.
+        state (Union[int, np.ndarray]): The state to start the MCTS from.
+        d (int): The depth of the MCTS.
+        m (int): The number of simulations to run.
+        c (float): The exploration constant.
+        gamma (float): The discount factor.
+
+    Attributes:
+        v0 (DecisionNode): The root node of the tree.
+        possible_actions (list): List of possible actions in the environment.
+        Qsa (dict): Dictionary to store Q values for state-action pairs.
+        Nsa (dict): Dictionary to store visit counts for state-action pairs.
+        Ns (dict): Dictionary to store visit counts for states.
     """
     def __init__(self,env:gym.Env,state,d,m,c,gamma) -> None:
         """
-        Args:
-            env (gym.Env): The environment to run the MCTS on.
-            state (Union[int, np.ndarray]): The state to start the MCTS from.
-            d (int): The depth of the MCTS.
-            m (int): The number of simulations to run.
-            c (float): The exploration constant.
-            gamma (float): The discount factor.
-
-        Attributes:
-            v0 (DecisionNode): The root node of the tree.
-            possible_actions (list): List of possible actions in the environment.
-            Qsa (dict): Dictionary to store Q values for state-action pairs.
-            Nsa (dict): Dictionary to store visit counts for state-action pairs.
-            Ns (dict): Dictionary to store visit counts for states.
+       
 
         """
         self.env = env # This is the current state of the mdp
         self.d = d # depth 
         self.m = m # number of simulations
         self.c = c # exploration constant
-        if isinstance(state,base.Observation):
-            state = state.state
+
+
+        state, _ = nsg.utils.type_mismatch_checker(observation=state,reward=None)
         self.v0 = DecisionNode(parent=None,state=state,weight=1,is_terminal=False,reward=0)
 
         if not isinstance(env.action_space,gym.spaces.Discrete):
@@ -212,6 +223,7 @@ class MCTS(base.Agent):
         while v:
             v.value += R
             if type(v) == ChanceNode:
+                assert not isinstance(v.parent.state, dict), "Parent state is still a dict after type checking."
                 self.update_metrics_chance_node(v.parent.state,v.action,R)
             else:
                 self.update_metrics_decision_node(v.state)
@@ -223,9 +235,9 @@ class MCTS(base.Agent):
         """Update the Q values and visit counts for state-action pairs and states.
 
         Args:
-            state (Union[int,]): _description
-            action (_type_): _description_
-            reward (_type_): _description_
+            state (Union[int,np.ndarray]): The state.
+            action (Union[int,float,np.ndarray]): action taken at the state.
+            reward (float): The reward received after taking the action at the state.
         """
 
         if isinstance(state, np.ndarray):
@@ -233,6 +245,8 @@ class MCTS(base.Agent):
 
         if isinstance(action, np.ndarray):
             action = tuple(action)
+
+
         sa = (state, action)
 
         if sa in self.Qsa:
@@ -252,22 +266,26 @@ class MCTS(base.Agent):
 
 
     def type_checker(self, observation, reward):
-        """Converts the observation and reward from base.Observation and base.Rewars type to the correct type if they are not already.
+        """Converts the observation and reward from dict and base.Reward type to the correct type if they are not already.
 
         Args:
-            observation (_type_): Observation to convert.
-            reward (_type_): Reward to convert.
+            observation (Union[dict, np.ndarray]): Observation to convert.
+            reward (Union[float, base.Reward]): Reward to convert.
 
         Returns:
             (int,np.ndarray): Converted observation.
             (float): Converted reward.
         """
-        if isinstance(observation, base.Observation):
-            observation = observation.state
+        if isinstance(observation, dict) and 'state' in observation:
+            observation = observation['state']
+
         if isinstance(observation, np.ndarray):
             observation = tuple(observation)
         if isinstance(reward, base.Reward):
             reward = reward.reward
+
+        #DEBUGGING ASSERTION
+        assert not isinstance(observation, dict), "Observation is still a dict after type checking."
         return observation, reward
     
 
@@ -341,9 +359,8 @@ class MCTS(base.Agent):
         Returns:
             int: The selected action.
         """
-        # Ensure observation is in the correct format
-        if isinstance(observation, base.Observation):
-            observation = observation.state
+
+        observation,_ = nsg.utils.type_mismatch_checker(observation=observation,reward=None)
         if isinstance(observation, np.ndarray):
             observation = tuple(observation)
 
@@ -357,7 +374,6 @@ class MCTS(base.Agent):
 
 
 if __name__ == "__main__":
-    import time
 
 
     env = gym.make("CartPole-v1",max_episode_steps=500)

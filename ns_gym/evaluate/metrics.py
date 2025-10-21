@@ -1,62 +1,71 @@
 from ns_gym.base import Evaluator
-import scipy.integrate 
 import warnings
-import itertools
-from abc import ABC
 from typing import Type
 from gymnasium import Env
 import gymnasium as gym
-import os 
+import os
 import pathlib
-import importlib
 import ns_gym
 import ns_gym.schedulers
 import ns_gym.update_functions
 import ns_gym.wrappers
 import torch
 
+
 class ComparativeEvaluator(Evaluator):
-    """Superclass for evaluators that compare two environments. Handles checking that the environments are the same, etc 
-    """
+    """Superclass for evaluators that compare two environments. Handles checking that the environments are the same, etc"""
+
     def __init__(self, *args, **kwargs) -> None:
         super().__init__()
 
-    def evaluate(self, env_1: Type[Env], env_2: Type[Env],*args,**kwargs) -> float:
-        assert env_1.unwrapped.__class__.__name__ == env_2.unwrapped.__class__.__name__, "Environments must be the same"
-        assert env_1.observation_space == env_2.observation_space, "Observation spaces must be the same"
-        assert env_1.action_space == env_2.action_space, "Action spaces must be the same"
+    def evaluate(self, env_1: Type[Env], env_2: Type[Env], *args, **kwargs) -> float:
+        assert (
+            env_1.unwrapped.__class__.__name__ == env_2.unwrapped.__class__.__name__
+        ), "Environments must be the same"
+        assert env_1.unwrapped.observation_space == env_2.unwrapped.observation_space, (
+            "Observation spaces must be the same"
+        )
+        assert env_1.unwrapped.action_space == env_2.unwrapped.action_space, (
+            "Action spaces must be the same"
+        )
 
-        # loop through supported observation and action spaces...s
-
-        # It may be the case for continuous action spaces that we have to simple discritize it ... 
-
-       # Check observation space
-        assert isinstance(env_1.observation_space, (gym.spaces.Box, gym.spaces.Discrete)), \
-            "Unsupported observation space"
-        assert isinstance(env_2.observation_space, (gym.spaces.Box, gym.spaces.Discrete)), \
-            "Unsupported observation space"
+        assert isinstance(
+            env_1.unwrapped.observation_space, (gym.spaces.Box, gym.spaces.Discrete)
+        ), "Unsupported observation space"
+        assert isinstance(
+            env_2.unwrapped.observation_space, (gym.spaces.Box, gym.spaces.Discrete)
+        ), "Unsupported observation space"
 
         # Check action spacel
 
-        self.space_type = env_1.observation_space.__class__.__name__
-        self.action_type = env_1.action_space.__class__.__name__
+        self.space_type = env_1.unwrapped.observation_space.__class__.__name__
+        self.action_type = env_1.unwrapped.action_space.__class__.__name__
 
     def __call__(self):
         return self.evaluate()
 
+
 class EnsembleMetric(Evaluator):
     """
     Evaluates the difficulty of an NS-MDP by comparing mean reward over an ensemble of agents.
+
+    Args:
+        agents (dict): A dictionary of agents to evaluate. The keys are the agent names and the values are the agent objects. Defaults to an empty dictionary.
     """
-    def __init__(self,agents={}) -> None:
-        """
-        Args:
-            agents (dict): A dictionary of agents to evaluate. The keys are the agent names and the values are the agent objects. Defaults to an empty dictionary.
-        """
+
+    def __init__(self, agents={}) -> None:
         super().__init__()
         self.agents = agents
-    
-    def evaluate(self,env,M=100,include_MCTS=False,include_RL=True,include_AlphaZero=False,verbose=True):
+
+    def evaluate(
+        self,
+        env,
+        M=100,
+        include_MCTS=False,
+        include_RL=True,
+        include_AlphaZero=False,
+        verbose=True,
+    ):
         """Evaluate the difficulty of a particular NS-MDP by comparing the mean reward over an ensemble of agents.
         NS-Gym uses the following procedure to evaluate the difficulty of a particular NS-MDP:
 
@@ -77,23 +86,28 @@ class EnsembleMetric(Evaluator):
 
         """
 
-        agent_list = self._load_agents(env) # returns a list of agent names, agent objects stored in self.agents
+        agent_list = self._load_agents(
+            env
+        )  # returns a list of agent names, agent objects stored in self.agents
 
         performance = {}
 
         if not agent_list:
-            raise ValueError("No agents found in the evaluation_model_weights directory. Please train some agents first.")
-        
-        base_ensebleperformance, base_performance = self._evaluate_stable_baselines(env,agent_list,M)
+            raise ValueError(
+                "No agents found in the evaluation_model_weights directory. Please train some agents first."
+            )
 
-        for i,agent_name in enumerate(agent_list):
+        base_ensebleperformance, base_performance = self._evaluate_stable_baselines(
+            env, agent_list, M
+        )
+
+        for i, agent_name in enumerate(agent_list):
             agent = self.agents[agent_name]
             performance[agent_name] = []
             for ep in range(M):
-
                 total_reward = 0
-                obs,info = env.reset()
-                obs,_ = ns_gym.utils.type_mismatch_checker(obs,None)
+                obs, info = env.reset()
+                obs, _ = ns_gym.utils.type_mismatch_checker(obs, None)
 
                 done = False
                 truncated = False
@@ -103,71 +117,70 @@ class EnsembleMetric(Evaluator):
                     # ns_gym.utils.neural_network_checker(self.agents[i].device,obs)
                     action = agent.act(obs)
                     action = ns_gym.evaluate.action_type_checker(action)
-                    obs, reward, done, truncated,info = env.step(action)
-                    obs,reward = ns_gym.utils.type_mismatch_checker(obs,reward)
+                    obs, reward, done, truncated, info = env.step(action)
+                    obs, reward = ns_gym.utils.type_mismatch_checker(obs, reward)
                     total_reward += reward
 
                 performance[agent_name].append(total_reward)
-            
-            performance[agent_name] = sum(performance[agent_name])/M
 
-        ensemble_performance = sum(performance.values())/len(performance)
+            performance[agent_name] = sum(performance[agent_name]) / M
 
-        regret = ensemble_performance - base_ensebleperformance
-
-        agent_wise_regret = {agent_name:performance[agent_name] - base_performance[agent_name] for agent_name in agent_list}
+        ensemble_performance = sum(performance.values()) / len(performance)
 
         if verbose:
             self._print_results(ensemble_performance, performance)
 
-        return ensemble_performance, performance    
-                
+        return ensemble_performance, performance
 
-    def _load_agents(self,env):
+    def _load_agents(self, env):
         """
         Load agents from the agent_paths
         """
 
         if self.agents:
             return list(self.agents.keys())
-        
+
         else:
             env_name = env.unwrapped.__class__.__name__
-            eval_dir = pathlib.Path(__file__).parent / "evaluation_model_weights" / env_name
-            agent_paths = os.listdir(eval_dir) # this grabs the available agents for the environment (it is a list of paths to the agents)
+            eval_dir = (
+                pathlib.Path(__file__).parent / "evaluation_model_weights" / env_name
+            )
+            agent_paths = os.listdir(
+                eval_dir
+            )  # this grabs the available agents for the environment (it is a list of paths to the agents)
 
             try:
                 import stable_baselines3
-            except:
+            except ImportError:
                 raise ImportError("Stable Baselines 3 is required to load agents")
-            
+
             loaded_agents = []
             for agent in agent_paths:
-
                 agent_dir = eval_dir / agent
 
-                model  = getattr(stable_baselines3,agent)
-                weights = [x for x in agent_dir.iterdir() if x.suffix.lower()==".zip"]
+                model = getattr(stable_baselines3, agent)
+                weights = [x for x in agent_dir.iterdir() if x.suffix.lower() == ".zip"]
 
                 if not weights:
                     warnings.warn(f"No weights found for {agent}. Skipping...")
                     continue
 
                 elif len(weights) > 1:
-                    warnings.warn(f"Multiple weights found for {agent}. Using the first one.")
-                    
+                    warnings.warn(
+                        f"Multiple weights found for {agent}. Using the first one."
+                    )
+
                 model = model.load(weights[0])
 
-                wrapped_model = ns_gym.base.StableBaselineWrapper(model)  
+                wrapped_model = ns_gym.base.StableBaselineWrapper(model)
 
-                loaded_agents.append(agent)  
+                loaded_agents.append(agent)
 
-                self.agents[agent]=(wrapped_model)
+                self.agents[agent] = wrapped_model
 
             return loaded_agents
-        
 
-    def _evaluate_stable_baselines(self,env,agent_list,M):
+    def _evaluate_stable_baselines(self, env, agent_list, M):
         """
         Evaluates the baseline_performance of the environment on default environments.
         """
@@ -176,14 +189,13 @@ class EnsembleMetric(Evaluator):
 
         stationary_env = gym.make(env_name)
 
-        performance = {agent_name:[] for agent_name in agent_list}
-        
-        for i,agent_name in enumerate(agent_list):
+        performance = {agent_name: [] for agent_name in agent_list}
+
+        for i, agent_name in enumerate(agent_list):
             agent = self.agents[agent_name]
 
             for ep in range(M):
-                
-                obs,_ = stationary_env.reset()
+                obs, _ = stationary_env.reset()
                 done = False
                 truncated = False
                 total_reward = 0
@@ -194,20 +206,19 @@ class EnsembleMetric(Evaluator):
 
                 performance[agent_name].append(total_reward)
 
-            performance[agent_name] = sum(performance[agent_name])/M
+            performance[agent_name] = sum(performance[agent_name]) / M
 
-        base_ensemble_performance = sum(performance.values())/len(performance)
+        base_ensemble_performance = sum(performance.values()) / len(performance)
 
-        return base_ensemble_performance, performance        
+        return base_ensemble_performance, performance
 
-        
     def _print_results(self, ensemble_performance, performance_dict):
         """
         Print the results of the evaluation in a structured format.
 
         Args:
             ensemble_performance (float): The performance metric for the ensemble.
-            performance_dict (dict): A dictionary where keys are agent names and 
+            performance_dict (dict): A dictionary where keys are agent names and
                                     values are their corresponding performance metrics.
         """
         print("=" * 40)
@@ -220,17 +231,19 @@ class EnsembleMetric(Evaluator):
         print("=" * 40)
 
 
-
-                    
- 
 class PAMCTS_Bound(ComparativeEvaluator):
+    r"""Evaluates the difficulty of a transition between two environments using the PAMCTS-Bound metric.
+
+    .. math::
+        \forall a \in A: \mid \mid P_t(s'\mid s,a) - P_0(s'\mid a,s)\mid \mid_{\infty}
+    """
+
     def __init__(self):
         super().__init__()
-    
-    def evaluate(self,env_1, env_2,verbose=True):
+
+    def evaluate(self, env_1, env_2, verbose=True):
         """
         Evaluate the difficulty of a transition between two environments.
-        For a particular state s, $forall a in A: |P_t(s'|s,a) - P_0(s'|a,s)|_{infty}$ 
 
         Args:
             env_1 (gym.Env): The original environment
@@ -241,90 +254,80 @@ class PAMCTS_Bound(ComparativeEvaluator):
             float: The maximum difference between the transition probabilities of the two environments
         """
 
-        super().evaluate(env_1,env_2)
+        super().evaluate(env_1, env_2)
 
-        if self.space_type == 'Box' and self.action_type == 'Box':
+        if self.space_type == "Box" and self.action_type == "Box":
             raise NotImplementedError
-        
+
         elif self.space_type == "Discrete" and self.action_type == "Discrete":
-
-            # Right now we are assuming that the state space is discrete and the action space is discrete
-            # Also assuming that there exists a transition matrix P[s_prime][s][a] that is a dictionary of dictionaries that maps to the probability of transitioning to state s_prime given state s and action a
-            # This should work for environments inlcuded in the ns_gym package though it may not work for custom environments that do not have this structure...
-            # Essesntially there needs to be a standardized way to access the transition probabilities of the environment...
-
             try:
                 num_states = env_1.observation_space.n
                 num_actions = env_1.action_space.n
-
-                # P is a table of transition probabilities: keys are states. Then for each state, keys are actions, and values are dictionaries of next states and probabilities. P[s_prime][s][a] = P(s_prime | s, a)
                 P1 = env_1.unwrapped.P
                 P2 = env_2.unwrapped.P
-
-
-
                 max_diff = 0
                 for s in range(num_states):
                     for a in range(num_actions):
                         for s_prime in range(len(P1[s][a])):
-                            assert P1[s][a][s_prime][1] == P2[s][a][s_prime][1], "Transition probabilities do not match between environments"
-                            max_diff = max(max_diff, abs(P1[s][a][s_prime][0] - P2[s][a][s_prime][0])) # From state s with action a, what is the probability of transitioning to state s_prime
+                            assert P1[s][a][s_prime][1] == P2[s][a][s_prime][1], (
+                                "Transition probabilities do not match between environments"
+                            )
+                            max_diff = max(
+                                max_diff,
+                                abs(P1[s][a][s_prime][0] - P2[s][a][s_prime][0]),
+                            )  # From state s with action a, what is the probability of transitioning to state s_prime
 
-                # if verbose:
-                #     self._print_results(max_diff)
+                if verbose:
+                    self._print_results(max_diff)
 
                 return max_diff
-            
+
             except Exception as e:
                 warnings.warn(f"Error evaluating PAMCTS-Bound: {e}")
 
-
         elif self.space_type == "Box" and self.action_type == "Discrete":
             raise NotImplementedError
-        
+
         elif self.space_type == "Discrete" and self.action_type == "Box":
             raise NotImplementedError
-        
+
         else:
             raise ValueError("Observation space must be either Box or Discrete")
-        
 
-    def _print_results(max_diff):
+    def _print_results(self, max_diff):
         print("=" * 40)
         print("Evaluation Results")
         print("=" * 40)
         print(f"PAMCTS-Bound: {max_diff}")
         print("=" * 40)
 
-        
-
-
 
 class BIBO_Stablilty(Evaluator):
-    
     def __init__(self):
         super().__init__()
 
-    def evaluate(self,env1,env2):
+    def evaluate(self, env1, env2):
         """
         Evaluate the stability of the environment.
         """
         raise NotImplementedError
-    
+
+
 class LyapunovStability(Evaluator):
-    
     def __init__(self):
         super().__init__()
 
-    def evaluate(self,env1,env2):
+    def evaluate(self, env1, env2):
         """
         Evaluate the stability of the environment.
         """
         raise NotImplementedError
-    
+
 
 class LocalRegret(Evaluator):
-    def __init__(self, agent, cost_function, learning_rate_eta: float = 0.01, *args, **kwargs) -> None:
+    def __init__(
+        self, agent, cost_function, learning_rate_eta: float = 0.01, *args, **kwargs
+    ) -> None:
         """
         Initializes the LocalRegret evaluator.
 
@@ -333,7 +336,11 @@ class LocalRegret(Evaluator):
             cost_function (callable): A differentiable function representing stage cost (h_t).
                                       Should handle cost = -reward.
             learning_rate_eta (float): The eta parameter used in the projected gradient calculation.
+
+        Warning
+            This evaluator is still under construction and may not function as intended.
         """
+        raise NotImplementedError
         super().__init__(*args, **kwargs)
         self.agent = agent
         self.cost_function = cost_function
@@ -341,23 +348,26 @@ class LocalRegret(Evaluator):
 
         self.historical_trace = []
 
-    def _project_gradient(self, grad: torch.Tensor, theta: torch.Tensor) -> torch.Tensor:
+    def _project_gradient(
+        self, grad: torch.Tensor, theta: torch.Tensor
+    ) -> torch.Tensor:
         """
         [cite_start]Computes the projected gradient based on Definition 14[cite: 595].
         NOTE: This assumes the constraint set Theta is the entire space.
               For a constrained set, you would need to implement the projection Pi_Theta.
         """
-       
+
         return grad
 
-    def compute_surrogate_cost(self, theta_to_eval: torch.Tensor, t: int, initial_state: torch.Tensor) -> torch.Tensor:
+    def compute_surrogate_cost(
+        self, theta_to_eval: torch.Tensor, t: int, initial_state: torch.Tensor
+    ) -> torch.Tensor:
         """
         Computes the surrogate cost F_t(theta) by running a hypothetical simulation
         [cite_start]from time 0 to t using a fixed policy parameter theta_to_eval[cite: 103].
         [cite_start]This simulation uses the true historical dynamics and disturbances[cite: 584].
         """
         hypothetical_state = initial_state.clone()
-
 
         for tau in range(t):
             hist_entry = self.historical_trace[tau]
@@ -366,20 +376,23 @@ class LocalRegret(Evaluator):
 
             w_tau = hist_entry["disturbance"]
 
+            hypothetical_u = self.agent.policy(
+                hypothetical_state, theta_to_eval, f_tau, a_tau_star
+            )
 
-
-            hypothetical_u = self.agent.policy(hypothetical_state, theta_to_eval, f_tau, a_tau_star)
-
-
-            hypothetical_state = g_tau(hypothetical_state, hypothetical_u, f_tau, a_tau_star) + w_tau
-
-
+            hypothetical_state = (
+                g_tau(hypothetical_state, hypothetical_u, f_tau, a_tau_star) + w_tau
+            )
 
         final_hist_entry = self.historical_trace[t]
         g_t, f_t, a_t_star = final_hist_entry["true_dynamics"]
-        final_hypothetical_u = self.agent.policy(hypothetical_state, theta_to_eval, f_t, a_t_star)
+        final_hypothetical_u = self.agent.policy(
+            hypothetical_state, theta_to_eval, f_t, a_t_star
+        )
 
-        surrogate_cost_val = self.cost_function(hypothetical_state, final_hypothetical_u, theta_to_eval)
+        surrogate_cost_val = self.cost_function(
+            hypothetical_state, final_hypothetical_u, theta_to_eval
+        )
         return surrogate_cost_val
 
     def evaluate(self, env: Type[Env], num_steps: int = 1000, *args, **kwargs) -> float:
@@ -396,7 +409,7 @@ class LocalRegret(Evaluator):
         """
         state, info = env.reset()
         initial_state = torch.tensor(state, dtype=torch.float32)
-        
+
         # Reset history for the new episode
         self.historical_trace = []
         total_local_regret = 0.0
@@ -405,69 +418,36 @@ class LocalRegret(Evaluator):
         theta_t = self.agent.policy.theta.clone().detach().requires_grad_(True)
 
         for t in range(num_steps):
-
-            true_dynamics_t = info.get("true_dynamics") # (g_t, f_t, a_t*)
-            disturbance_t = info.get("disturbance") # w_t
-            self.historical_trace.append({"true_dynamics": true_dynamics_t, "disturbance": disturbance_t})
-
+            true_dynamics_t = info.get("true_dynamics")  # (g_t, f_t, a_t*)
+            disturbance_t = info.get("disturbance")  # w_t
+            self.historical_trace.append(
+                {"true_dynamics": true_dynamics_t, "disturbance": disturbance_t}
+            )
 
             surrogate_cost = self.compute_surrogate_cost(theta_t, t, initial_state)
 
-
-            grad_F_t = torch.autograd.grad(surrogate_cost, theta_t, retain_graph=True)[0]
-
+            grad_F_t = torch.autograd.grad(surrogate_cost, theta_t, retain_graph=True)[
+                0
+            ]
 
             projected_grad = self._project_gradient(grad_F_t, theta_t)
 
-
             total_local_regret += torch.sum(projected_grad**2).item()
 
-
             action = self.agent.act(state)
-            
 
             next_state, reward, terminated, truncated, info = env.step(action)
 
-
             self.agent.update(state, action, reward, next_state)
             state = next_state
-            
+
             theta_t = self.agent.policy.theta.clone().detach().requires_grad_(True)
 
             if terminated or truncated:
                 break
-        
+
         return total_local_regret
 
 
 if __name__ == "__main__":
-    import ns_gym
-    import gymnasium as gym
-    env_name = "CliffWalking-v1"
-    p = 1.0
-    env = gym.make(env_name,render_mode="rgb_array",max_episode_steps=50)
-    scheduler = ns_gym.schedulers.DiscreteScheduler({100})
-    update_function = ns_gym.update_functions.DistributionDecrementUpdate(scheduler=scheduler,k = 0.5)
-    param = "P"
-    params = {param:update_function}
-    ns_env_1 = ns_gym.wrappers.NSCliffWalkingWrapper(env, params,initial_prob_dist=[p,(1-p)/3,(1-p)/3,(1-p)/3])
-
-    ns_env_1.reset()
-
-    ns_env_1.step(0)
-
-    for p2 in [0.4,0.6,0.8]:
-        env = gym.make(env_name,render_mode="rgb_array",max_episode_steps=50)
-        scheduler = ns_gym.schedulers.DiscreteScheduler({100})
-        update_function = ns_gym.update_functions.DistributionDecrementUpdate(scheduler=scheduler,k = 0.5)
-        params = {param:update_function}
-        ns_env_2 = ns_gym.wrappers.NSCliffWalkingWrapper(env, params,initial_prob_dist=[p2,(1-p2)/3,(1-p2)/3,(1-p2)/3])
-        ns_env_2.reset()
-        ns_env_2.step(0)
-        evaluator = PAMCTS_Bound()
-
-        bound = evaluator.evaluate(ns_env_1,ns_env_2)
-        print(f"PAMCTS-Bound: {bound}")
-
-
-
+    pass

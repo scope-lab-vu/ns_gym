@@ -11,16 +11,11 @@ import ns_gym.base as base
 import os
 import ns_gym as nsg
 from collections import deque
-import copy
 ########### ALPHA ZERO NETWORK ################
 class AlphaZeroNetwork(nn.Module):
     """
     Overview:
-        This is a simple FFNN that predicts the policy and value of a particalar state
-    """
-
-    def __init__(self,action_space_dim, observation_space_dim,n_hidden_layers, n_hidden_units,activation='relu'):
-        """_summary_
+        This is a simple MLP that predicts the policy and value of a particalar state
 
         Args:
             action_space_dim (int): Size of the action space
@@ -29,7 +24,10 @@ class AlphaZeroNetwork(nn.Module):
             n_hidden_layers (int): Number of hidden layers
             n_hidden_units (int): Number of units in each hidden layer
             activation (str, optional): Activation . Defaults to 'relu'.
-        """
+    """
+
+    def __init__(self,action_space_dim, observation_space_dim,n_hidden_layers, n_hidden_units,activation='relu'):
+
         super().__init__()
 
         self.action_dim = action_space_dim
@@ -191,11 +189,18 @@ def train_model(buffer,model,lr,n_epochs,num_episodes,batch_size,weight_decay,ep
 ########## TYPE CHECKER ####################
 
 def type_checker(state,reward):
-    if isinstance(state,base.Observation):
-        state = state.state
+    """Type checker to ensure compatibility between ns_gym and Gymnasium environments.
+
+    Args:
+        state (Union[int, np.ndarray,dict]): The observation, which may be an dictionary.
+        reward (Union[float, ns_gym.base.Reward]): The reward, which may be an instance of ns_gym.base.Reward.
+    """
+    if isinstance(state, dict) and 'state' in state:
+        state = state['state']
     if isinstance(reward,base.Reward):
         reward = reward.reward
     return state,reward
+
 
 ########## ALPHA ZERO AGENT ################
 
@@ -266,18 +271,28 @@ class AlphaZeroAgent:
             temp_end = 0.8,
             temp_decay = 0.95
         ):
-        """
-        Overview:
-            We need to train the agent by iteravly performing MCTS and neural network training
-            We store each of the episode returnsy
+        """Train the AlphaZero agent
+
+        Args:
+            env (gym.Env): The environment to train on
+            n_episodes (int): Number of training episodes
+            max_episode_len (int): Maximum number of steps per episode
+            lr (float): Learning rate for the neural network
+            batch_size (int): Batch size for training
+            n_epochs (int): Number of epochs per training iteration
+            experiment_name (str): Name for saving models and logs
+            eval_window_size (int, optional): Size of the evaluation window. Defaults to 100.
+            weight_decay (float, optional): Weight decay for optimizer. Defaults to 1e-4.
+            temp_start (float, optional): Starting temperature for exploration. Defaults to 2.
+            temp_end (float, optional): Ending temperature for exploration. Defaults to 0.8.
+            temp_decay (float, optional): Decay rate for temperature. Defaults to 0.95.
+
+        Returns:
+            List[float]: List of episode returns
 
         """
 
         self.Env = env
-
-
-        # self.model = self.model.to(self.device)
-        #store episode_returns
         episode_returns = []
         t_total = 0 # total number of steps
         R_best = -np.inf
@@ -293,10 +308,7 @@ class AlphaZeroAgent:
             obs,_ = self.Env.reset(seed = seed) #init obs # TODO: add random seed
             R = 0.0
             a_store = []
-          
             buffer = ReplayBuffer(max_size= max_episode_len)
-
-            
 
             self.model.eval()
             for t in range(max_episode_len):
@@ -334,7 +346,7 @@ class AlphaZeroAgent:
 
                 if mean_reward_over_last_100_ep  > R_best:
                     print("Mean reward: ", mean_reward_over_last_100_ep)
-                    mod_name = experiment_name+f'_best_model_checkpoint.pth'
+                    mod_name = experiment_name+'_best_model_checkpoint.pth'
                     torch.save(self.model.state_dict(), mod_name)
                     R_best = mean_reward_over_last_100_ep
 
@@ -353,35 +365,26 @@ class AlphaZeroAgent:
         return episode_returns
     
     def act(self,obs,env,temp=1):
-        """Use the alpha zero agent to return best action
+        """Use the trained model to select an action
 
         Args:
-            obs (Union[np.array,int]): observation from the environment
+            obs (Union[np.array,int,dict]): observation from the environment
             env (gym.Env): The current environment.
 
         Returns:
             best_action (int)
         """
 
-        if isinstance(obs,base.Observation):
-            obs = obs.state
+        obs,_ = nsg.utils.type_mismatch_checker(observation=obs,reward=None)
 
         self.model.eval()
         mcts = self.mcts(env, state=obs, model=self.model, d=self.max_mcts_search_depth, m=self.num_mcts_simulations, c=self.c, gamma=self.gamma,alpha=self.alpha,epsilon=self.epsilon)
         mcts.search()
         state,pi,V,best_action= mcts.return_results(temp = temp)
-        # a = np.random.choice(len(pi), p = pi) # Is this right? 
+        # a = np.random.choice(len(pi), p = pi) 
         return best_action
 
-    def _self_play(self,env,):
-        """ Modified self play functions for single player games
-        - Compare performance of the agent with the original agent if >= previous best then do gradient update if not, do not do gradient update
-
-        """
-        pass
-
-         
-         
+                 
 
 def train_alpha_zero(config_file_path):
     """Train the AlphaZero agent using yaml configuration file
@@ -420,7 +423,7 @@ def train_alpha_zero(config_file_path):
     
     ############ SET UP ALPHA ZERO AGENT ############
 
-    AlphaZeroNetwork  
+
 
     alpha_config = config["alphazero_agent"]
     alphazero_agent = AlphaZeroAgent(

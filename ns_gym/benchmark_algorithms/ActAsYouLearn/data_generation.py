@@ -24,15 +24,12 @@
         self.real_buffer.add(np.reshape(np.array([state, self.__encode_action(action), reward, next_state]), [1, 4]))
 '''
 #from nsbridge_simulator.nsbridge_v0 import NSBridgeV0 as model
-import sys
 import gymnasium as gym
 from nsfrozenlake.nsfrozenlake_v0 import NSFrozenLakeV0 as model
 import numpy as np
 import pickle
-import random
 
 from ns_gym import wrappers, schedulers, update_functions
-import copy
 env = gym.make("FrozenLake-v1", is_slippery=False)
 # env = gym.make("CartPole-v1")
 fl_scheduler = schedulers.ContinuousScheduler()

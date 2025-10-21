@@ -3,8 +3,6 @@ import numpy as np
 from copy import deepcopy
 import ns_gym as nsg
 from ns_gym import base
-import random
-from collections import defaultdict
 import torch
 
 
@@ -76,9 +74,9 @@ def stable_normalizer(x,temp):
     return np.abs(x/(np.sum(x)))
 
 class MCTS:
-    """MCTS with Chance Nodes for alphazero . Compatible with OpenAI Gym environments.
+    """ MCTS with Chance Nodes for AlphaZero. Compatible with OpenAI Gym environments.
         Selection and expansion are combined into the "treepolicy method"
-        The rollout/simluation is the "default" policy. 
+        The rollout/simulation is the "default" policy.
     """
     def __init__(self,env:gym.Env,state,model,d,m,c,gamma) -> None:
         """
@@ -100,13 +98,11 @@ class MCTS:
 
         """
         self.env = env # This is the current state of the mdp
-        self.d = d # depth #TODO icorportae this into simulation depth
+        self.d = d # depth 
         self.m = m # number of simulations
         self.c = c # exploration constant
-        if isinstance(state,base.Observation):
-            state = state.state
 
-
+        state = nsg.utils.type_mismatch_checker(observation=state,reward=None)[0]
 
         if isinstance(env.action_space,gym.spaces.Discrete):
             self.possible_actions = [x for x in range(env.action_space.n)]
@@ -120,7 +116,6 @@ class MCTS:
         self.Ns = {} # stores visit counts for states, default to Ns of 0
         self.P = {} # stores the prior probabilities of the actions for a given state
         self.W = {} # unnormalized cumulative rewards for each state
-
 
         ### Deep Learning Model
         self.model = model
@@ -147,8 +142,6 @@ class MCTS:
             self.Nsa[sa] = 0
 
         self.Ns[self.v0.state] = 0
-
-
 
     def search(self):
         """Do the MCTS by doing m simulations from the current state s. 
@@ -199,9 +192,6 @@ class MCTS:
         """
 
         while True:
-            
-            # select the best child node based on the UCT value
-
             action = self._best_action(node) # select step based on UCT value
             chance_node = node.children[action] # select the child node based on the action
             node,backprop = self._expand_chance_node(chance_node) # step through the environment to get the next state if the node exists keep going else return the node. 
@@ -243,10 +233,6 @@ class MCTS:
         if v.is_terminal:
             return v
         
-        # for a in self.possible_actions:
-        #     new_node = ChanceNode(parent=v,action=a)
-        #     v.children.append(new_node)
-
         new_node = ChanceNode(parent=v,action=action)
         v.children.append(new_node)
 
@@ -338,64 +324,31 @@ class MCTS:
 
 
     def type_checker(self, observation, reward):
-        """Converts the observation and reward from base.Observation and base.Rewars type to the correct type if they are not already.
+        """Converts the observation and reward from dict and base.Reward type to the correct type if they are not already.
 
         Args:
-            observation (_type_): Observation to convert.
-            reward (_type_): Reward to convert.
+            observation (Union[int, np.ndarray, dict]): Observation to convert.
+            reward (Union[float, ns_gym.base.Reward]): Reward to convert.
 
         Returns:
-            (int,np.ndarray): Converted observation.
+            (int, np.ndarray): Converted observation.
             (float): Converted reward.
         """
-        if isinstance(observation, base.Observation):
-            observation = observation.state
+
+        if isinstance(observation, dict) and 'state' in observation:
+            observation = observation['state']
         if isinstance(observation, np.ndarray):
             observation = tuple(observation)
         if isinstance(reward, base.Reward):
             reward = reward.reward
         return observation, reward
     
-
-    # def best_child(self,v):
-    #     """Find the best child nodes based on the UCT value.
-
-    #     This method is only called for decision nodes.
-
-    #     Args:
-    #         v (DecisionNode): The parent node.
-
-    #     Returns:
-    #         Node: The best child node based on the UCT value.
-    #         action: The action that leads to the best child node.
-    #     """
-    #     assert(type(v) == DecisionNode)
-        
-    #     best_value = -np.inf
-    #     best_nodes = []
-    #     children = v.children # list of ChanceNodes
-    #     priors = v.children_priors
-    #     assert(len(children) == len(priors))
-
-    #     for child,prior in zip(children,priors):
-    #         sa = (child.parent.state, child.action)
-    #         if self.Nsa.get(sa,0) == 0:
-    #             ucb_value = np.inf
-    #         else:
-    #             ucb_value = self.Qsa.get(sa,child.parent.value) + self.c * prior* np.sqrt(np.log(self.Ns.get(sa[0], 0)) / (1+self.Nsa.get(sa,0))) # Find the UCB value to include the priors  FIXME
-
-    #         if ucb_value > best_value:
-    #             best_value = ucb_value
-    #             best_nodes = [child]
-    #         elif ucb_value == best_value:
-    #             best_nodes.append(child)
-
-    #     return random.choice(best_nodes) if best_nodes else None
-    
     def _best_action(self,v):
         """Select the best action based on the Q values of the state-action pairs.
+        Args:
+            v (DecisionNode): The parent node.
         Returns:
-            best_action(int): best action to)
+            best_action(int): best action to take
         """
         assert(type(v) == DecisionNode)
         best_action = None
@@ -415,10 +368,13 @@ class MCTS:
     
     def _network_input_checker(self, x):
         """Make sure the input to the neural network is in the correct format
+
+        Args:
+            x (Union[int, np.ndarray, dict]): Input to the neural network.
         """
 
-        if isinstance(x, base.Observation):
-            x = x.state
+        if isinstance(x, dict) and 'state' in x:
+            x = x['state']  
 
         s = x 
         if type(s) == int:
@@ -436,11 +392,6 @@ class MCTS:
     def _progressive_widening(self):
         raise NotImplementedError("Progressive widening not implemented yet")
     
-
-    
-
-
-
 
 if __name__ == "__main__":
     pass

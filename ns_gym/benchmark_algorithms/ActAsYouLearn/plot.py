@@ -1,7 +1,6 @@
-import pickle, os
+import pickle
 import numpy as np
 import matplotlib.pyplot as plt
-import seaborn as sns
 domain = 'discretegrid'
 #%%
 #with open('results/record/{}_results_latent1'.format(domain),'rb') as f:

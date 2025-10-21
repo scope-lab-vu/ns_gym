@@ -5,7 +5,6 @@ import torch
 import torch.nn as nn
 from collections import deque
 import time
-import gymnasium as gym
 
 def initialize_buffers(state_dim, action_dim, max_steps):
     """Initialize buffers for states, actions, values, rewards, and log probabilities."""
@@ -95,7 +94,13 @@ class Dist(torch.distributions.Normal):
 
 class PPOActor(nn.Module):
     """Actor network for policy approximation.
-    Outputs mean and standard deviation of the action distribution.
+
+    Outputs mean and standard deviation of the action distribution. A simple MLP.
+
+    Args:
+        s_dim: State dimension.
+        a_dim: Action dimension.
+        hidden_size: Number of hidden units in each layer.
     """
     def __init__(self, s_dim, a_dim, hidden_size=64):
         super(PPOActor, self).__init__()
@@ -129,7 +134,12 @@ class PPOActor(nn.Module):
 
 
 class PPOCritic(nn.Module):
-    """Critic network to estimate the state value function."""
+    """Critic network to estimate the state value function. A simple MLP.
+    
+    Args:
+        s_dim: State dimension.
+        hidden_size: Number of hidden units in each layer.
+    """
     def __init__(self, s_dim, hidden_size=64):
         super(PPOCritic, self).__init__()
         self.model = nn.Sequential(
@@ -146,6 +156,21 @@ class PPOCritic(nn.Module):
 
 class PPO(base.Agent):
     """PPO class
+
+    Warning:
+        You can use this if you want but honestly just use the StableBaselines3 implementation.
+
+    Args:
+        actor: Actor network.
+        critic: Critic network.
+        lr_policy: Learning rate for the policy network.
+        lr_critic: Learning rate for the critic network.
+        max_grad_norm: Maximum gradient norm for clipping.
+        ent_weight: Entropy weight for exploration.
+        clip_val: Clipping value for PPO.
+        sample_n_epoch: Number of epochs to sample minibatches.
+        sample_mb_size: Size of each minibatch.
+        device: Device to run the computations on.
     """
     def __init__(self, actor, critic, lr_policy=3e-4, lr_critic=4e-4, max_grad_norm=0.5, 
                 ent_weight=0.0, clip_val=0.2, sample_n_epoch=10, sample_mb_size=32, device='cpu'):
@@ -177,7 +202,8 @@ class PPO(base.Agent):
 
 
     def train(self, states, actions, prev_val, advantages, returns, prev_lobprobs):
-        """Train the PPO model using provided experience.
+        """Train the PPO model using provided experience. 
+
         Args:
             states: State samples.
             actions: Action samples.
