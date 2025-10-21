@@ -1,37 +1,111 @@
-.. NS-Gym documentation master file, created by
-   sphinx-quickstart on Tue Oct  8 13:25:32 2024.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
+NS-Gym
+======
 
-NS-Gym documentation
-====================
-
-Welcome to the NS-Gym documentation! NS-Gym (non-stationary Gym) is a simulation tool kit toolkit for non-stationary Markov decsion processes (NS-MDPs) that provides a tailored, standardized,
-and principled set of interfaces for non-stationary environments. It is built on top of OpenAI Gymnasium as general framwork to construct 
-and test NS-MDPs givne the breadth of treatment of non-stationary stochastic control porcesses in the literature.
-
-In many real-world applications, agents must make sequential decisions in environments where conditions are subject to change due to various exogenous factors. These
-nonstationary environments pose significant challenges to traditional decision-making models, which typically assume stationary dynamics. Non-stationary Markov decision processes
-(NS-MDPs) offer a framework to model and solve decision problems under such changing conditions. However, the lack of standardized benchmarks and simulation tools has hindered systematic evaluation and advance in this field. We
-present NS-Gym, the first simulation toolkit designed explicitly for NS-MDPs, integrated within the popular Gymnasium framework. In NS-Gym, we segregate the evolution of the
-environmental parameters that characterize non-stationarity from the agent’s decision-making module, allowing for modular and flexible adaptations to dynamic environments.
-
-In its current version, NS-Gym provides a set of wrappers to augment the classic control suite of Gymnasium environments and three gridworld environments. We refer to these Gymnasium environments (i.e., the stationary counterparts of the non-stationary
-environments we develop) as base environments. At a high level, each wrapper introduces non-stationarity by modifying some parameters that the base environment exposes. The
-modification potentially occurs at each decision epoch or through specific functions over decision epochs configured by the user. For example, in a deterministic environment
-such as the “CartPole” (we provide a detailed description of the environment in the technical appendix), an example change is varying the value of the gravity, thereby altering the dynamics of the cart. In stochastic environments, the
-probability distribution over possible next states, given the current state action pair, changes. For example, in the classic Frozen Lake environment, this change might increase (or decrease) the coefficient of friction, making the movement of the agent more (or less) uncertain.
+NS-Gym (Non-Stationary Gym) is a flexible framework providing a standardized abstraction for both modeling non-stationary Markov Decision processes (NS-MDPs) and the key problem types that a decision-making entity may encounter in such environments. NS-Gym is built on top of the popular `Gymnasium <https://gymnasium.farama.org/>`_ library and provides a set of wrappers to for several existing environments, making it easy to incorporate non-stationary dynamics and manage the nature of agent-environment interaction specific to NS-MDPs. A key feature of NS-Gym is emulating the key problem types of decision-making in a non-stationary settings; these problem types concern not only the ability to adapt to changes in the environment but also the ability to detect and characterize these changes. To get started with NS-Gym, check out our :doc:`installation` instructions and :doc:`quickstart_guide`. For a deep dive into the core concepts behind NS-Gym, visit our :doc:`core_concepts` page or take a look at our paper on `ArXiv <https://arxiv.org/abs/2501.09646>`_ published at NeurIPS 2025 Dataset and Benchmarks track. 
 
 
-Quickstart
+NeurIPS 2025 Dataset and Benchmarks Paper
+-------------------------------------------
+`NS-Gym: Open-Source Simulation Environments and Benchmarks for Non-Stationary Markov Decision Processes <https://arxiv.org/abs/2501.09646>`_.
+
+.. code-block::
+
+    @article{keplinger2025ns,
+      title={NS-Gym: Open-Source Simulation Environments and Benchmarks for Non-Stationary Markov Decision Processes},
+      author={Keplinger, Nathaniel S and Luo, Baiting and Bektas, Iliyas and Zhang, Yunuo and Wray, Kyle Hollins and Laszka, Aron and Dubey, Abhishek and Mukhopadhyay, Ayan},
+      journal={arXiv preprint arXiv:2501.09646},
+      year={2025}
+    }
+
+
+Installation
 -----------------
+To install NS-Gym, you can use pip (we'll eventually put it on PyPI but for now you can install it directly from GitHub):
+
+.. code-block::
+
+    pip install git+https://github.com/scope-lab-vu/ns_gym
 
 
+
+Decision Making Algorithm Support
+-------------------------------------------------------------
+
+NS-Gym is designed to be compatible with existing reinforcement learning libraries such as `Stable Baselines3 <https://stable-baselines3.readthedocs.io/en/master/>`_. Additionally, NS-Gym provides baseline algorithms designed explicitly for non-stationary environments, as well as a leaderboard to compare the performance of different algorithms on various non-stationary tasks. 
+
+
+
+NS-Gym in Action
+-------------------------------------------------------------
+
+Here are three examples of non-stationary environments created using NS-Gym. Each demonstrates a transition from an initial MDP :math:`\mathcal{MDP}_0` to a modified MDP :math:`\mathcal{MDP}_1` by changing environment parameters :math:`\theta_0 \rightsquigarrow \theta_1`. We show examples from the classic control suite (CartPole), stochastic gridworlds (FrozenLake), and the MuJoCo suite (Ant).
+
+Note that this type of parameter shift is just one example of how an NS-MDP can be implemented. The policy controlling the CartPole and FrozenLake agents is the NS-Gym implementation of :py:class:`Monte Carlo Tree Search <ns_gym.benchmark_algorithms.MCTS>`, while the Ant environment is controlled by a Stable-Baselines3 PPO policy.
+
+
+.. list-table::
+   :header-rows: 1
+   :widths: 40 20 40
+   :class: no-border-table
+
+   * - .. container:: text-center
+
+          Statiaonary MDP
+
+     - .. container:: text-center
+
+          :math:`\large \theta_0 \rightsquigarrow \theta_1`
+
+     - .. container:: text-center
+
+          Non-Stationary MDP
+
+   * - .. image:: /_static/images/cartpole_stationary.gif
+          :width: 300px
+          :alt: CartPole Stationary
+
+     - .. rst-class:: table-vcenter
+
+       **At timestep** :math:`t` **gravity massively increases according to a user defined step function** 
+
+     - .. image:: /_static/images/cartpole_nonstationary.gif
+          :width: 300px
+          :alt: CartPole Non-Stationary
+
+   * - .. image:: /_static/images/frozen_lake_stationary.gif
+          :width: 300px
+          :alt: FrozenLake Stationary   
+
+     - .. rst-class:: table-vcenter
+
+       **Probability of moving in the intended direction goes to 0 just before reaching the goal**
+
+     - .. image:: /_static/images/frozenlake_nonstationary.gif
+          :width: 300px
+          :alt: FrozenLake Non-Stationary
+
+   * - .. image:: /_static/images/ant_stationary.gif
+          :width: 300px
+          :alt: Ant Stationary
+
+     - .. rst-class:: table-vcenter
+
+       **Magnitude of gravity gradually decreases at each timestep following a geometric progression**
+
+     - .. image:: /_static/images/ant_non_stationary.gif
+          :width: 300px
+          :alt: Ant Non-Stationary
 
 
 .. toctree::
-   :maxdepth: 2
-   :caption: Contents: 
+  :caption: Contents
+  :maxdepth: 1
 
-   modules
-
+  installation.md
+  quickstart_guide.md
+  core_concepts.rst
+  tutorials.md
+  environments.md
+  algorithms.md
+  leaderboard.md
+  reference.md
