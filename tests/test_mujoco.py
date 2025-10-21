@@ -1,12 +1,9 @@
 import pytest
 import gymnasium as gym
 import ns_gym
-from ns_gym.schedulers import ContinuousScheduler, PeriodicScheduler
-from ns_gym.update_functions import IncrementUpdate, RandomWalk
+from ns_gym.schedulers import ContinuousScheduler
+from ns_gym.update_functions import IncrementUpdate
 import numpy as np
-import copy
-from ns_gym.wrappers import NSClassicControlWrapper
-from ns_gym.base import NSWrapper, UpdateFn # Import necessary base classes for typing/checks
 
 
 
@@ -119,9 +116,7 @@ def test_mujoco_parameter_update_on_step(env_id):
         assert np.allclose(new_value, expected_value), \
             f"Parameter '{param_name}' in '{env_id}' was not updated correctly. " \
             f"Expected: {expected_value}, Got: {new_value}"
-        
-        print(f"  ✅ SUCCESS: '{param_name}' updated correctly.")
-        
+                
         env.close()
         ns_env.close()
 
