@@ -163,3 +163,11 @@ cython_debug/
 
 .DS_Store
 make_gifs.py
+
+MUJOCO_LOG.txt
+
+build_website.sh
+reinstall.sh
+todo.txt
+MISC/
+.vscode/
