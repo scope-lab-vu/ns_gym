@@ -173,3 +173,5 @@ MISC/
 
 build_website.sh
 MUJOCO_LOG.TXT
+
+reinstall.sh
