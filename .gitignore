@@ -172,3 +172,4 @@ MISC/
 .vscode/
 
 build_website.sh
+MUJOCO_LOG.TXT
