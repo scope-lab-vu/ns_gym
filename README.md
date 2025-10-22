@@ -12,7 +12,7 @@ We currently support the Gymnasium classic control suite of environments, MuJoCo
 
 ## Project Webpage and Documentation
 
-Visit our project webpage for tutorials, core concepts, and documentation: [nsgym.io](https://nsgym.io) (to be live soon)
+Visit our project webpage for tutorials, core concepts, and documentation: [nsgym.io](https://nsgym.io) 
 
 ---
 
