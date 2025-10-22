@@ -1,6 +1,6 @@
 Core Concepts
 ==================================================
-The following sections provide an overview of the core concepts and theory informing the design of NS-Gym. The goal of NS-Gym is to provide a flexible framework for modeling non-stationary Markov decision processes and capture the key aspects of decision making in non-stationary environments.
+The following sections provide an overview of the core concepts and theory informing the design of NS-Gym. The goal of NS-Gym is to provide a flexible framework for modeling non-stationary Markov decision processes and capture the key aspects of decision making in non-stationary environments. For an even deeper dive into the theory and concepts behind NS-Gym, please refer to our `ArXiv paper <https://arxiv.org/pdf/2501.09646>`_.
 
 .. admonition:: TLDR
     
@@ -26,7 +26,7 @@ A popular framework for modeling sequential decisions under uncertainty is the M
 - :math:`P(s'\mid s,a,\theta)`: A probability distribution over the future state given current state and action and :math:`\theta \in \Theta` denotes the set of observable environmental parameters. i.e :math:`P(s' \mid s,a,\theta)`
 - :math:`\mathcal{R}`: The reward function :math:`R(s,a,s')` quantifies the instantaneous reward the agent gets by being in state :math:`s` taking action :math:`a` and transitioning to state :math:`s'`.
 
-Importantly the cannonical MDP only captures problem instances with soley endogenous uncertainty. This is because the transition function is assumed to be stationary, i.e. it does not change over time. To campture exogenous uncertainty, we need to extend the MDP framework to allow for non-stationary transition dynamics.
+Importantly the cannonical MDP only captures problem instances with soley endogenous uncertainty. This is because the transition function is assumed to be stationary, i.e. it does not change over time. To capture exogenous uncertainty, we need to extend the MDP framework to allow for non-stationary transition dynamics.
 
 .. figure:: _static/images/mdp.png
     :align: center
@@ -61,7 +61,7 @@ In the NS-Gym framework, we implement :math:`f(t)` as the "schedulers" which det
 Decision Making in Non-Stationary Environments
 -----------------------------------------------------
 
-In designing NS-Gym, we deliberately keep the definition of what constitutes an "agent" as broad as possible as the definition of what constitutes an "agent" has been in flux. However in motivated by how many decision-making agents are implemented in practice, we argue that decision-making infrastructures in non-stationary environments can be sufficiently described by three key components: the core decision-making module, a runtime monitor, and a model updater. We do not necessarily assume that every agent designed for decision-making in non-stationary environments necessarily be integrated with all three components components and could instead simply assume their existence implicitly.
+In designing NS-Gym, we deliberately keep the definition of what constitutes an "agent" as broad as possible as the definition of what constitutes an "agent" has been in flux. However motivated by how many decision-making agents are implemented in practice, we argue that decision-making infrastructures in non-stationary environments can be sufficiently described by three key components: the core decision-making module, a runtime monitor, and a model updater. We do not necessarily assume that every agent designed for decision-making in non-stationary environments necessarily be integrated with all three components and could instead simply assume their existence implicitly.
 
 .. figure:: _static/images/agent.png
     :align: center
@@ -72,7 +72,7 @@ In designing NS-Gym, we deliberately keep the definition of what constitutes an 
 
 With this agentic perspective in mind, NS-Gym provides the interface to emulate either or both a runtime monitor and model updater, thereby focusing the development toward the core decision-making module.
 
-Furthermore, given these decision-making components, we can can categorize decision-making in non-stationary environments as seen in the literature (`see our ArXiv paper<https://arxiv.org/pdf/2501.09646>_`) by answering four key questions:
+Furthermore, given these decision-making components, we can can categorize decision-making in non-stationary environments as seen in the literature (`see our ArXiv paper <https://arxiv.org/pdf/2501.09646>_`) by answering four key questions:
 
 1) What changes in the environment? 
 2) How does the environment change?
@@ -90,6 +90,9 @@ An orthogonal problem type modles the frequency of changes in :math:`\theta`:
 1) Single change within an episode: :math:`\theta_1 \rightarrow \theta_2`
 2) Multiple changes within an episode: :math:`\theta_1 \rightarrow \theta_2 \rightarrow \ldots \rightarrow \theta_n \rightarrow \ldots`
 3) Changes between episodes. 
+
+
+NS-Gym has a *notification system* that can be configured to inform the agent of changes in :math:`\theta` according to the problem types described above. This notification system can be used to emulate the presence of a runtime monitor and model updater.
 
 Evaluating Agents in Non-Stationary Environments
 ------------------------------------------------------------

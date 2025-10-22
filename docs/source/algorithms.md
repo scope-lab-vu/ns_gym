@@ -1,8 +1,10 @@
 # NS-Gym Algorithms
 
-NS-Gym has several built-in benchmark algorithms for training and evaluating agents in non-stationary environments. These algorithms are implemented in the :py:mod:`ns_gym.benchmark_algorithms <ns_gym.benchmark_algorithms>` module. 
 
 ```{eval-rst}
+NS-Gym has several built-in benchmark algorithms for training and evaluating agents in non-stationary environments. These algorithms are implemented in the :py:mod:`ns_gym.benchmark_algorithms <ns_gym.benchmark_algorithms>` module. 
+
+
 .. attention::
    :name: leaderboard
 

@@ -1,24 +1,27 @@
 # Installation
 
-There are two options to install NS-Gym, `pip` install from PyPI, or build directly from source.
+You can install NS-Gym using pip. For now please install from GitHub. We plan to release NS-Gym on PyPI in the near future.
 
-
-```bash
-pip install ns_gym
-```
-
-To install the latest development version from GitHub, use:
 
 ```bash
 pip install git+https://github.com/scope-lab-vu/ns_gym
 ```
 
-NS-Gym welcomes contributions! If you would like to contribute, please consider installing from source as well as the development dependencies (see below).
+## Development and testing
+
+We welcome any contributions to this NS-Gym project! If you find a bug or want to add a new feature, please feel free to open an issue or submit a pull request.
+
+Clone the repository, install the required dependencies in editable mode, and run the tests to ensure everything is working correctly. We use UV for package management. 
 
 ```bash
-git clone https://github.com/scope-lab-vu/ns_gym
+git clone https://github.com/scope-lab-vu/ns_gym.git
 cd ns_gym
-pip install -e .[dev]
+uv pip install -e ".[all]" 
 ```
-This will install NS-Gym in "editable" mode, meaning that any changes you make to the source code will be reflected immediately without needing to reinstall. The `[dev]` option installs additional packages useful for development, such as testing and documentation tools.
+
+To run all test in the project run:
+
+```bash
+pytest tests/
+```
 
