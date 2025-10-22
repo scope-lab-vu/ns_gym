@@ -35,6 +35,7 @@ dev = [
     "nbsphinx",
     "ipykernel",
     "myst_nb",
+    "sphinx-math-dollar"
 ]
 
 all = [
