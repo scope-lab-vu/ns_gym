@@ -43,7 +43,7 @@ vehicle_env = [
 
 all = [
     "ns_gym[dev]", 
-    "ns_gym[vehicle_env"
+    "ns_gym[vehicle_env]"
 ]
 
 [tool.setuptools.packages.find]
