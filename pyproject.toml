@@ -20,7 +20,6 @@ dependencies = [
     "pyyaml",
     "pandas",
     "stable_baselines3[extra]",
-    "gridworldenvutils @ git+https://github.com/nkepling/GridWorldEnvUtils.git"
 ]
 
 [project.optional-dependencies]
@@ -38,8 +37,13 @@ dev = [
     "sphinx-math-dollar"
 ]
 
+vehicle_env = [    
+    "gridworldenvutils @ git+https://github.com/nkepling/GridWorldEnvUtils.git"
+]
+
 all = [
     "ns_gym[dev]", 
+    "ns_gym[vehicle_env"
 ]
 
 [tool.setuptools.packages.find]
