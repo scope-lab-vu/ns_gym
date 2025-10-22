@@ -110,7 +110,7 @@ def make_env_with_context(
     else:
         raise ValueError("Invalid environment")
 
-    ns_env = gym.wrappers.TransformObservation(ns_env, lambda obs: obs.state, None)
+    ns_env = gym.wrappers.TransformObservation(ns_env, lambda obs: obs["state"], ns_env.unwrapped.observation_space)
     ns_env = gym.wrappers.TransformReward(ns_env, lambda rew: rew.reward)
 
     if seed is not None:
