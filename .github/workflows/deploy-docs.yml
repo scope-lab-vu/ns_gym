@@ -46,7 +46,7 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          uv pip install -e ".[dev]"
+          uv pip install -e ".[dev]" --system
           
       - name: Build your website
         run: |

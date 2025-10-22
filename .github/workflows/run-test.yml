@@ -34,7 +34,7 @@ jobs:
           enable-cache: true
 
       - name: Install tox and tox-uv
-        run: uv pip install tox tox-uv
+        run: uv pip install tox tox-uv --system
 
       - name: Run tox -e ${{ matrix.tox_env }}
         run: tox -e ${{ matrix.tox_env }}
