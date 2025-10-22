@@ -33,10 +33,10 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.13' 
-          
+
       - name: Install Dependencies
         run: |
-          pip install -e ".[all]"
+          pip install -e ".[dev]"
           
       - name: Build your website
         run: |
