@@ -162,12 +162,16 @@ cython_debug/
 #.idea/
 
 .DS_Store
+.DS_Store/
 make_gifs.py
-
-MUJOCO_LOG.txt
-
-build_website.sh
-reinstall.sh
 todo.txt
 MISC/
+
+.ruff_cache/
+
 .vscode/
+
+build_website.sh
+MUJOCO_LOG.TXT
+
+reinstall.sh

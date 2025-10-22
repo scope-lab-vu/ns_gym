@@ -5,7 +5,7 @@ Randomly generated NSMDP
 import logging
 import numpy as np
 from ..utils.distribution import random_tabular
-from gym import Env, error, spaces, utils
+from gym import Env, utils
 
 logger = logging.getLogger(__name__)
 

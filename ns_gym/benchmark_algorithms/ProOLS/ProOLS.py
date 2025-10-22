@@ -1,4 +1,3 @@
-import numpy as np
 import torch
 from torch import tensor, float32
 from Src.Algorithms.Agent import Agent

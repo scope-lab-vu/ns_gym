@@ -7,11 +7,9 @@ from __future__ import absolute_import
 from __future__ import print_function
 import autograd.numpy as np
 import autograd.numpy.random as npr
-import scipy.misc as osp_misc
 from autograd.scipy.special import logsumexp
 #from scipy.special import logsumexp
-from autograd import value_and_grad, grad
-from autograd.util import quick_grad_check
+from autograd import grad
 import math
 
 class WeightsParser(object):

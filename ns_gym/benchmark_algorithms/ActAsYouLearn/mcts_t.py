@@ -5,7 +5,6 @@ from nsfrozenlake.nsfrozenlake_v0 import NSFrozenLakeV0 as model
 import pickle
 from BayesianNeuralNetwork import *
 import numpy as np
-import utils.distribution as distribution
 
 class HiPMDP(object):
     """
@@ -412,7 +411,6 @@ L = []
 #for i in range(1000):
 #    child_state = categorical_sample(d, np_random)
 #    L.append(child_state)
-from collections import Counter
 #print(Counter(L))
 #state = task.observe()
 #start_state = state

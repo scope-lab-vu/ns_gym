@@ -3,6 +3,21 @@ import numpy as np
 from ns_gym import base
 
 class PAMCTS(base.Agent):
+    """ Policy augmented MCTS algorithm
+    Uses a convex combination of DDQN policy values and MCTS values to select actions.
+
+    Args:
+        alpha (float): PAMCTS convex combination parameter
+        env (gym.Env): Gymnasium style environment object
+        mcts_iter (int): Total number of MCTS iterations
+        mcts_search_depth (int): MCTS search depth
+        mcts_discount_factor (float): MCTS discount factor
+        mcts_exploration_constant (float): UCT exploration constant `c`
+        state_space_size (int): Size of environment state space. For Q-value networks.
+        action_space_size (int): Size of environment action space. For Q-value networks.
+        DDQN_model (torch.NN, optional): DDQN torch neural network object . Defaults to None.
+        DDQN_model_path (str, optional): Path to DDQN model weights. Defaults to None.
+    """
     def __init__(self,
                  alpha,
                  mcts_iter,
@@ -15,21 +30,7 @@ class PAMCTS(base.Agent):
                  DDQN_model_path = None,
                  seed = 0
                  ) -> None:
-        """ Policy augmented MCTS algorithm
-        Uses a convex combination of DDQN policy values and MCTS values to select actions.
-
-        Args:
-            alpha (float): PAMCTS convex combination parameter
-            env (gym.Env): Gymnasium style environment object
-            mcts_iter (int): Total number of MCTS iterations
-            mcts_search_depth (int): MCTS search depth
-            mcts_discount_factor (float): MCTS discount factor
-            mcts_exploration_constant (float): UCT exploration constant `c`
-            state_space_size (int): Size of environment state space. For Q-value networks.
-            action_space_size (int): Size of environment action space. For Q-value networks.
-            DDQN_model (torch.NN, optional): DDQN torch neural network object . Defaults to None.
-            DDQN_model_path (str, optional): Path to DDQN model weights. Defaults to None.
-        """
+     
         self.alpha = alpha
         self.mcts_iter = mcts_iter
         self.mcts_search_depth = mcts_search_depth

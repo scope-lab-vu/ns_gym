@@ -5,8 +5,6 @@ from nsfrozenlake.nsfrozenlake_v0 import NSFrozenLakeV0 as model
 import pickle
 from BayesianNeuralNetwork import *
 import numpy as np
-import utils.distribution as distribution
-from multiprocessing import Pool
 
 class HiPMDP(object):
     """

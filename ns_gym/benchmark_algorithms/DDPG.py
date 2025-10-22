@@ -3,7 +3,6 @@ import torch.nn as nn
 from torch.utils.data import DataLoader, Dataset
 from ns_gym import base
 
-from collections import deque
 import math
 
 
@@ -127,6 +126,19 @@ class ReplayBuffer(Dataset):
 
 
 class DDPG(base.Agent):
+    """Deep Deterministic Policy Gradient (DDPG) algorithm.
+
+    Args:
+        state_dim (int): Dimension of the state space.
+        action_dim (int): Dimension of the action space.
+        hidden_size (int): Number of hidden units in each layer of the networks.
+        lr_actor (float): Learning rate for the actor network.
+        lr_critic (float): Learning rate for the critic network.
+
+    
+    Warning:
+        This implementation works though the StableBaselines3 implementation is likely better optimized.
+    """
 
     def __init__(self,state_dim=8,action_dim=2,hidden_size=256,lr_actor=0.001,lr_critic=0.001):
         

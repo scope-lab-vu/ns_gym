@@ -3,7 +3,6 @@ from multiprocessing import Pool
 
 import code.agents.asynchronous_dp as asyndp
 import rats
-import code.envs.nsbridge_v0 as nsb
 
 
 def csv_write(row, path, mode):

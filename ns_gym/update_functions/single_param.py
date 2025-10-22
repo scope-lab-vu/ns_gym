@@ -1,9 +1,8 @@
 import ns_gym.base as base
-import ns_gym.utils as utils
-from typing import Union, Any, Optional,Type
+from typing import Union, Any, Type
 import numpy as np
 
-'''
+"""
 These are a collection of parameter update functions that can be used in the ns_bench framework.
 These classes take in a single parameter (scalars) and return a new parameter. 
 The update functions only "fire" when the scheduler returns True.
@@ -13,27 +12,62 @@ To maintain a consistent interface, the update functions can be implemented as a
 But really the only main requirement is that the update function takes in a parameter and a time step in the
 __call__() method and returns a new parameter and a boolean value indicating whether the update function fired or not.
 
-
-'''
-
-# Clean this up and add more update functions.
+"""
 
 ##### Update Functions for single parameters (scalars) #####
 
+
 class DeterministicTrend(base.UpdateFn):
+    r"""Update the parameter with a deterministic trend.
+
+    Overview:
+        .. math::
+            Y_t = Y_{t-1} + slope * t
+
+        where :math:`Y_t` is the parameter value at time step :math:`t` and slope is the slope of the trend.
+
+    Args:
+        scheduler (Type[base.Scheduler]): scheduler that determines when the update function fires.
+        slope (float): The slope of the trend.
+    """
+
     def __init__(self, scheduler: Type[base.Scheduler], slope: float) -> None:
         super().__init__(scheduler)
         self.slope = slope
 
-    def __call__(self, param: float, t: float) -> tuple[float, bool]:
-        return super().__call__(param, t)  
-
-    def update(self, param: float, t: float) -> tuple[float, bool]:
+    def _update(self, param: float, t: float) -> tuple[float, bool]:
         updated_param = param + self.slope * t
         return updated_param
-    
+
+
 class RandomWalkWithDriftAndTrend(base.UpdateFn):
-    def __init__(self, scheduler: Type[base.Scheduler], alpha: float, mu: float, sigma: float, slope: float, seed: Union[int, None] = None) -> None:
+    r"""Parameter update function that updates the parameter with white noise and a deterministic trend.
+
+    Overview:
+
+        .. math::
+            Y_t = \alpha + Y_{t-1} + \text{slope} * t + \epsilon_t
+
+        where :math:`Y_t` is the parameter value at time step :math:`t`, :math:`\alpha` is the drift term, :math:`\text{slope}` is the slope of the trend, and :math:`\epsilon` is white noise.
+
+    Args:
+        scheduler (Type[base.Scheduler]): scheduler that determines when the update function fires.
+        alpha (float): The drift term.
+        mu (float): The mean of the white noise.
+        sigma (float): The standard deviation of the white noise.
+        slope (float): The slope of the trend.
+        seed (Union[int, None], optional): Seed for the random number generator. Defaults to None.
+    """
+
+    def __init__(
+        self,
+        scheduler: Type[base.Scheduler],
+        alpha: float,
+        mu: float,
+        sigma: float,
+        slope: float,
+        seed: Union[int, None] = None,
+    ) -> None:
         super().__init__(scheduler)
         self.mu = mu
         self.sigma = sigma
@@ -41,214 +75,264 @@ class RandomWalkWithDriftAndTrend(base.UpdateFn):
         self.slope = slope
         self.rng = np.random.default_rng(seed=seed)
 
-    def __call__(self, param: float,t: float) -> Any:
-        return super().__call__(param, t)
-    
-    def update(self, param: float, t: float) -> tuple[float, bool]:
-            white_noise = self.rng.normal(self.mu, self.sigma, 1)
-            updated_param = self.alpha + param + white_noise + self.slope * t
-            return updated_param
-    
-class RandomWalk(base.UpdateFn):
-    """Parameter update function that updates the parameter with white noise.    
-    A pure random walk : Y_t = Y_{t-1} + epsilon_t where Y_t is the parameter value at time step t
-    and epsilon is white noise. 
-    """
-    def __init__(self,
-                 scheduler: Type[base.Scheduler],
-                 mu : Union[float,int] = 0,
-                 sigma : Union[float,int] = 1,
-                 seed = None) -> tuple[Any,bool]:
-        """
-        Args:
-            mu (Union[float,int], optional): _description_. Defaults to 0.
-            sigma (Union[float,int], optional): _description_. Defaults to 1.
-            seed (_type_, optional): _description_. Defaults to None.
+    def _update(self, param: float, t: float) -> tuple[float, bool]:
+        white_noise = self.rng.normal(self.mu, self.sigma, 1)
+        updated_param = self.alpha + param + white_noise + self.slope * t
+        return updated_param
 
-        Returns:
-            tuple[Any,bool]: _description_
-        """
+
+class RandomWalk(base.UpdateFn):
+    r"""Parameter update function that updates the parameter with white noise.
+
+    Overview:
+        A pure random walk : :math:`Y_t = Y_{t-1} + \epsilon_t` where :math:`Y_t` is the parameter value at time step :math:`t`
+        and :math:`\epsilon` is white noise.
+
+    Args:
+        scheduler (Type[base.Scheduler]): scheduler that determines when the update function fires.
+        mu (Union[float,int], optional): The mean of the white noise. Defaults to 0.
+        sigma (Union[float,int], optional): The standard deviation of the white noise. Defaults to 1.
+        seed (Union[int,None], optional): Seed for the random number generator. Defaults to None.
+    """
+
+    def __init__(
+        self,
+        scheduler: Type[base.Scheduler],
+        mu: Union[float, int] = 0,
+        sigma: Union[float, int] = 1,
+        seed=None,
+    ) -> tuple[Any, bool]:
         super().__init__(scheduler)
         self.mu = mu
         self.sigma = sigma
         self.rng = np.random.default_rng(seed=seed)
 
-    def __call__(self, 
-                 param:Any,
-                 t : Union[int,float]) -> tuple[float,bool]:
-        return super().__call__(param,t)
-    
-    def update(self, param: Any, t: Union[int,float]) -> Any:
+    def _update(self, param: Any, t: Union[int, float]) -> Any:
         white_noise = self.rng.normal(self.mu, self.sigma, 1)
         updated_param = param + white_noise
         return updated_param[0]
 
-class RandomWalkWithDrift(base.UpdateFn):
-    def __init__(self,
-                 scheduler: Type[base.Scheduler],
-                 alpha: float,
-                 mu: float,
-                 sigma: float,
-                 seed: Union[int,None] = None) -> None:
-        """_summary_
 
-        Args:
-            alpha (float): _description_
-            mu (float): _description_
-            sigma (float): _description_
-            seed (int): _description_
-        """
+class RandomWalkWithDrift(base.UpdateFn):
+    r"""A parameter update function that updates the parameter with white noise and a drift term.
+
+    Overview:
+
+        .. math::
+            Y_t = \alpha + Y_{t-1} + \epsilon_t
+
+        where :math:`Y_t` is the parameter value at time step :math:`t`, :math:`\alpha` is the drift term, and :math:`\epsilon` is white noise.
+
+
+    Args:
+        alpha (float): The drift term.
+        mu (float): The mean of the white noise.
+        sigma (float): The standard deviation of the white noise.
+        seed (int): Seed for the random number generator. Defaults to None.
+    """
+
+    def __init__(
+        self,
+        scheduler: Type[base.Scheduler],
+        alpha: float,
+        mu: float,
+        sigma: float,
+        seed: Union[int, None] = None,
+    ) -> None:
         super().__init__(scheduler)
         self.mu = mu
         self.sigma = sigma
         self.alpha = alpha
         self.rng = np.random.default_rng(seed=seed)
 
-    def __call__(self,
-                 param:Any,
-                 t : float) -> Any:
-        return super().__call__(param,t)
-    
-    def update(self, param: Any, t: int) -> Any:
-        white_noise = self.rng.normal(self.mu,self.sigma,1)
+    def _update(self, param: Any, t: int) -> Any:
+        white_noise = self.rng.normal(self.mu, self.sigma, 1)
         upated_param = self.alpha + param + white_noise
         return upated_param
-    
+
+
 class IncrementUpdate(base.UpdateFn):
-    """Increment the the parameter by k.
+    r"""Increment the the parameter by k.
 
-    Note:
-        If the parameter is a probability, k would update the probability of going in the intended direction.
-        Otherwise, k would be added to the parameter.
+    Overview:
+        .. math::
+            Y_t = Y_{t-1} + k
+
+        where :math:`Y_t` is the parameter value at time step :math:`t` and :math:`k` is the amount to increment the parameter by.
+
+    Args:
+        scheduler (Type[base.Scheduler]): scheduler that determines when the update function fires.
+        k (float): The amount which the parameter is updated.
+
     """
-    def __init__(self, 
-                 scheduler: Type[base.Scheduler],
-                 k: float) -> None:
-        """
-        Args:
-            scheduler (Type[base.Scheduler]): scheduler that determines when the update function fires.
-            k (float): The amount which the parameter is updated.
-        """
+
+    def __init__(self, scheduler: Type[base.Scheduler], k: float) -> None:
         super().__init__(scheduler)
         self.k = k
 
-    def __call__(self, param: Any, t: int) -> Any:
-        return super().__call__(param, t)   
-        
-    def update(self, param: Any, t: int) -> Any:
-        # check if action is in kwargs and if so set the intended direction to the action
-        param+=self.k
+    def _update(self, param: Any, t: int) -> Any:
+        param += self.k
         return param
-    
+
+
 class DecrementUpdate(base.UpdateFn):
-    """Decrment the probabilty go going in the intened direction by some k.
+    r"""Decrement the probability of going in the intended direction by some k.
+
+    Overview:
+
+        .. math::
+            Y_t = Y_{t-1} - k
+
+        where :math:`Y_t` is the parameter value at time step :math:`t` and :math:`k` is the amount to decrement the parameter by.
+
+    Args:
+        scheduler (Type[base.Scheduler]): scheduler that determines when the update function fires.
+        k (float): The amount which the parameter is updated.
     """
-    def __init__(self,scheduler,k) -> None:
+
+    def __init__(self, scheduler, k) -> None:
         super().__init__(scheduler)
         self.k = k
 
-    def __call__(self,param,t) -> Any:
-        return super().__call__(param,t)
-        
-    def update(self,param,t) -> Any:
-        param-=self.k
+    def _update(self, param, t) -> Any:
+        param -= self.k
         return param
-    
+
+
 class StepWiseUpdate(base.UpdateFn):
-    """Update the parameter at specific time steps.
+    r"""Update the parameter at specific time steps.
+
+    Overview:
+        This function updates the parameter to the next value in the `param_list` when called. If the `param_list` is empty, the parameter is not updated.
+
+    Args:
+        scheduler (Type[base.Scheduler]): scheduler that determines when the update function fires.
+        param_list (list): A list of parameters to update to.
     """
+
     def __init__(self, scheduler: Type[base.Scheduler], param_list: list) -> None:
         super().__init__(scheduler)
         self.param_list = param_list
-        
-    def update(self, param: Any, t: int) -> Any:
+
+    def _update(self, param: list, t: int) -> Any:
         try:
             param = self.param_list.pop(0)
         except AssertionError:
             "No more parameters to update"
         finally:
             return param
-        
+
 
 class NoUpdate(base.UpdateFn):
-    """Do not update the parameter but return correct interface
+    r"""Do not update the parameter but return correct interface
+
+    Overview:
+        This function does not update the parameter when called. It is useful for testing and debugging.
+
+    Args:
+        scheduler (Type[base.Scheduler]): scheduler that determines when the update function fires.
     """
 
     def __init__(self, scheduler: Type[base.Scheduler]) -> None:
         super().__init__(scheduler)
-    
-    def update(self, param: Any, t: int) -> Any:
+
+    def _update(self, param: Any, t: int) -> Any:
         return param
-    
+
 
 class OscillatingUpdate(base.UpdateFn):
-    """Update the parameter with an oscillating function.
+    r"""Update the parameter with an oscillating function.
+
+    Overview:
+
+        .. math::
+            Y_t = Y_{t-1} + \delta * sin(t)
+
+        where :math:`Y_t` is the parameter value at time step :math:`t` and :math:`\delta` is the amplitude of the sine wave.
+
+    Args:
+        scheduler (Type[base.Scheduler]): scheduler that determines when the update function fires.
+        delta (float): The amplitude of the sine wave.
     """
+
     def __init__(self, scheduler: Type[base.Scheduler], delta: float) -> None:
         super().__init__(scheduler)
         self.delta = delta
-    
-    def update(self, param: Any, t: int) -> Any:
+
+    def _update(self, param: Any, t: int) -> Any:
         oscillation = self.delta * np.sin(t)
         return param + oscillation
-    
 
-class ExponetialDecay(base.UpdateFn):
-    """Exponential decay of the parameter.
+class ExponentialDecay(base.UpdateFn):
+    r"""Exponential decay of the parameter.
+    
+    Overview:
+
+        .. math::
+            Y_t = Y_0 * exp(-\lambda * t)
+
+        where :math:`Y_t` is the parameter value at time step :math:`t`, :math:`Y_0` is the initial parameter value, and :math:`\lambda` is the rate of decay.
+
+    Args:
+        scheduler (Type[base.Scheduler]): scheduler that determines when the update function fires.
+        decay_rate (float): The rate of decay. i.e. :math:`\lambda`
     """
+
     def __init__(self, scheduler: Type[base.Scheduler], decay_rate: float) -> None:
         super().__init__(scheduler)
         self.decay_rate = decay_rate
 
-    def __call__(self, param: Any, t: int) -> Any:
-        return super().__call__(param, t)
-    
-    def update(self, param: Any, t: int) -> Any:
+    def _update(self, param: Any, t: int) -> Any:
         updated_param = param * np.exp(-self.decay_rate * t)
         return updated_param
-    
+
+
 class GeometricProgression(base.UpdateFn):
-    """Apply a geometric progression to the parameter.
+    r"""Apply a geometric progression to the parameter.
+
+    Overview:
+
+        .. math::
+            Y_t = Y_0 * r^t
+
+        where :math:`Y_t` is the parameter value at time step :math:`t`, :math:`Y_0` is the initial parameter value, and :math:`r` is the common ratio.
     """
 
     def __init__(self, scheduler, r):
         super().__init__(scheduler)
         self.r = r
 
-    def update(self, param, t):
-        # Does not rely on t because the scheduler determines when the update function fires.
+    def _update(self, param, t):
         updated_param = param * self.r
         return updated_param
 
 
 if __name__ == "__main__":
-    from ns_gym.schedulers import PeriodicScheduler,DiscreteScheduler
-    from ns_gym.update_functions.single_param import StepWiseUpdate
-    import ns_gym.wrappers as wrappers
-    import gymnasium as gym
-    import itertools
-    
-    # scheduler1 = PeriodicScheduler(period = 2)
-    scheduler1 = DiscreteScheduler({0,5})
-    update_fn = StepWiseUpdate(scheduler1,[1,0.8])
-    
-    env = gym.make("FrozenLake-v1", render_mode = "human")
-    env = wrappers.NSFrozenLakeWrapper(env,update_fn) 
+    import inspect
 
-   
+    # Run this file to automatically generate the __all__ variable. Copy and past the output bellow.
 
-    while True:
-        obs,info = env.reset()
-        print(obs)
-        print(info)
-        policy = [1,1,2,1,2,2]
-        for a in itertools.cycle(policy):
-            obs,reward,terminated,truncated,info = env.step(a)
-            print(f"t:{obs.relative_time},info:{info}")
-            if terminated:
-                break
+    public_api = [
+        name
+        for name, obj in globals().items()
+        if not name.startswith("_")
+        and (inspect.isfunction(obj) or inspect.isclass(obj))
+        and obj.__module__ == __name__
+    ]
+    print("__all__ = [")
+    for name in sorted(public_api):
+        print(f'    "{name}",')
+    print("]")
 
-        
-
-
-# daw
+__all__ = [
+    "DeterministicTrend",
+    "ExponentialDecay",
+    "GeometricProgression",
+    "IncrementUpdate",
+    "NoUpdate",
+    "OscillatingUpdate",
+    "RandomWalk",
+    "RandomWalkWithDrift",
+    "RandomWalkWithDriftAndTrend",
+    "StepWiseUpdate",
+]

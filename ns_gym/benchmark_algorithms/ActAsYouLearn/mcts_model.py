@@ -7,10 +7,8 @@ from BayesianNeuralNetwork import *
 import autograd.numpy as np
 import utils.distribution as distribution
 from collections import Counter
-import matplotlib.pyplot as plt
 import time
 from ns_gym import wrappers, schedulers, update_functions
-import copy
 import gymnasium as gym
 class HiPMDP(object):
     """
@@ -507,7 +505,6 @@ L = []
 #for i in range(1000):
 #    child_state = categorical_sample(d, np_random)
 #    L.append(child_state)
-from collections import Counter
 
 
 from multiprocessing import Pool

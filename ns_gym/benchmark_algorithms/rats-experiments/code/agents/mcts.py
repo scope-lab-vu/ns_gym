@@ -12,8 +12,6 @@ import random
 import itertools
 from ..utils.utils import assert_types
 from gym import spaces
-from math import sqrt, log
-from copy import copy
 
 def chance_node_value(node):
     """

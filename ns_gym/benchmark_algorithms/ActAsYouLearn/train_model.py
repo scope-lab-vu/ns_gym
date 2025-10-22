@@ -1,14 +1,12 @@
-import pickle, os
+import pickle
+import os
 import autograd.numpy as np
-import matplotlib.pyplot as plt
 import seaborn as sns
 sns.set_style("whitegrid",{'axes.grid' : False})
 
 from BayesianNeuralNetwork import *
 from HiPMDP import HiPMDP
 #from __future__ import print_function
-from ExperienceReplay import ExperienceReplay
-from multiprocessing import Pool
 
 if not os.path.isdir('./results'):
     os.mkdir('results')

@@ -1,0 +1,15 @@
+/* Remove borders and shadows from our special table */
+.no-border-table table,
+.no-border-table tr,
+.no-border-table th,
+.no-border-table td {
+    border: none !important;
+    box-shadow: none !important;
+    background-color: transparent !important;
+    text-align: center;
+}
+
+/* Vertically center the content in our middle column */
+.table-vcenter {
+    vertical-align: middle;
+}

@@ -2,7 +2,7 @@ import numpy as np
 import sys
 from ..utils.distribution import *
 from random import randint
-from six import StringIO, b
+from six import StringIO
 from gym import Env, spaces, utils
 
 LEFT = 0
@@ -49,7 +49,7 @@ def random_map(map_size):
     m[-1][-1] = "G" # Generate goal
     while nH > 0: # Generate holes
         i, j = (randint(0, nR-1), randint(0, nC-1))
-        if m[i][j] is "F":
+        if m[i][j] == "F":
             m[i][j] = "H"
             nH -= 1
     for i in range(nR): # Formating
@@ -102,7 +102,7 @@ class NSFrozenLakeV0(Env):
         if desc is None and map_name is None:
             raise ValueError('Must provide either desc or map_name')
         elif desc is None:
-            if map_name is "random":
+            if map_name == "random":
                 desc = random_map(map_size)
             else:
                 desc = MAPS[map_name]

@@ -36,7 +36,7 @@ def delete_topics(topic_names):
     try:
         admin_client.delete_topics(topics=topic_names)
         print("Topic Deleted Successfully")
-    except Exception as e:
+    except Exception:
         print("Topic Doesn't Exist")
 
 

@@ -1,11 +1,7 @@
 import numpy as np
-import code.agents.asynchronous_dp as asyndp
-import code.envs.nsbridge_v0 as nsb
-import code.envs.nsfrozenlake_v0 as nsf
 import rats
 import gymnasium as gym
 from ns_gym import wrappers, schedulers, update_functions
-from copy import deepcopy
 
 def add_action(actions, action):
     if action == 0:
