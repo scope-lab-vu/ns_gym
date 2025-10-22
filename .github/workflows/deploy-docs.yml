@@ -39,9 +39,14 @@ jobs:
         with:
           python-version: '3.13' 
 
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
       - name: Install Dependencies
         run: |
-          pip install -e ".[dev]"
+          uv pip install -e ".[dev]" --system
           
       - name: Build your website
         run: |

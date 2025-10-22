@@ -23,6 +23,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+
 dev = [
     "pytest",
     "pytest-cov",
@@ -34,7 +35,9 @@ dev = [
     "nbsphinx",
     "ipykernel",
     "myst_nb",
-    "sphinx-math-dollar"
+    "sphinx-math-dollar",
+    "tox",
+    "tox-uv"
 ]
 
 vehicle_env = [    
@@ -52,8 +55,4 @@ include = ["ns_gym", "ns_gym.*"]
 [tool.setuptools.dynamic]
 version = {attr = "ns_gym.__version__"} 
 
-[dependency-groups]
-dev = [
-    "pytest>=8.4.2",
-    "ruff>=0.14.0",
-]
+

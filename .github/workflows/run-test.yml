@@ -1,0 +1,40 @@
+name: Python package Tests
+
+on:
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  test: # Changed job name to be more descriptive
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - python: "3.10"
+            tox_env: py310
+          - python: "3.11"
+            tox_env: py311
+          - python: "3.12"
+            tox_env: py312
+          - python: "3.13"
+            tox_env: py313 # Make sure you have a py313 env defined in tox.ini
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Setup Python ${{ matrix.python }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - name: Install tox and tox-uv
+        run: uv pip install tox tox-uv --system
+
+      - name: Run tox -e ${{ matrix.tox_env }}
+        run: tox -e ${{ matrix.tox_env }}
