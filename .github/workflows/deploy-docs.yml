@@ -50,7 +50,7 @@ jobs:
         with:
           # This MUST be the folder your build command (above)
           # outputs your site to (e.g., where index.html is)
-          path: 'docs/_build/html/' # Example for Sphinx
+          path: 'docs/_build/' # Example for Sphinx
           # path: 'public/' # Example for Hexo
 
   # Deployment job
