@@ -72,7 +72,7 @@ Here are three examples of non-stationary environments created using NS-Gym. Eac
 
 
 # Quickstart
-Suppose we want to model a non-stationary environment in the classical CartPole environment, where the pole’s mass increases by 0.1 units at each time step, and the system’s gravity increases through a random walk every three time steps. Furthermore, we want the decision-making agent to have a basic notification level. The following code snippet shows the general experimental setup in this CartPole Gymnasium environment using NS-Gym.
+Suppose we want to model a non-stationary environment in the classical CartPole environment, where the pole’s mass increases by 0.1 units at each time step, and the system’s gravity increases through a random walk every three time steps. NS-Gym let's us emulate "runtime" monitors tha can detect changes in the environment (but not the magnitude of the changes) and a "model updater" the tells us the magnitude of the changes. In this case we simple want the decision making entity to be notified that there has been a change in the environment but not know to what extent. The corresponds to the decision-making agent to having a "basic notification level". The following code snippet shows the general experimental setup in this CartPole Gymnasium environment using NS-Gym.
 
 ```python
 
@@ -135,6 +135,32 @@ while not (done or truncated):
 
 print("Episode Reward: ", episode_reward)
 ```
+
+If we run this code snippet the environment obversvation and reward at timestep 0 may look like this:
+
+```python
+Timestep:  0
+
+obs:  {'state': array([-0.03006991,  0.19717823,  0.02711801, -0.3215324 ], dtype=float32), 
+        'env_change': {'masspole': 1, 'gravity': 1}, 
+        'delta_change': {'masspole': 0.0, 'gravity': 0.0}, 
+        'relative_time': 1}
+
+reward:  Reward(reward=1.0, 
+                env_change={'masspole': 1, 'gravity': 1}, 
+                delta_change={'masspole': 0.0, 'gravity': 0.0}, 
+                relative_time=1)
+
+```
+
+The `obs` dictionary of the following terms:
+
+- `state`: the standard Gymnasium observation of the environment.
+- `env_change`: a dictionary indicating whether this parameter has changed (1 indicates a change, 0 indicates no change). This is only available if `change_notification=True` is set in the wrapper.
+- `delta_change`: a dictionary indicating the magnitude of change for each parameter. This is only available if `delta_change_notification=True` is set in the wrapper. Defaults to zero if not set.
+- `relative_time`: Current time step of environment.
+
+The `reward` object is a data class rather than a dictionary that contains the same terms. While the observation is a dictionary to maintain compatibility with Gymnasium, the reward is a dataclass to allow for easier extension in the future for non-stationary rewards while working with a more robust data structure.
 
 # Tutorial:
 
