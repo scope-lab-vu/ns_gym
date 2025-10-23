@@ -32,7 +32,7 @@ We'll eventually release NS-Gym on PyPI for easier installation.
 
 **NS-Gym: Open-Source Simulation Environments and Benchmarks for Non-Stationary Markov Decision Processes**
 
-[Read the the preprint on ArXiv](https://arxiv.org/abs/2501.09646) (An updated version to be published at NeurIPS 2025 Dataset and Benchmarks track is coming soon).
+[Read the the preprint on ArXiv](https://arxiv.org/abs/2501.09646) (An updated version to be published at NeurIPS 2025 Dataset and Benchmarks track is coming soon). See tag `submission/ns_gymv0` for benchmarking code used in the paper.
 
 ### Citation
 
