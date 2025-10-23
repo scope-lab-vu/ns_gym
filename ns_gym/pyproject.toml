@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ns_gym"
+version = "0.0.1"
+description = "A simulation toolkit for non-stationary Markov decision processes"
+readme = "README.md"
+dependencies = [
+    "numpy==1.26.4",
+    "gymnasium",
+    "pygame",  
+    "torch",
+    "scipy",
+    "matplotlib",
+    "tensorboard",
+    "pyyaml",
+    "pandas",
+    "stable_baselines3[extra]"
+]
+requires-python = ">=3.10"
+
+[tool.setuptools.packages.find]
+include = ["ns_gym", "ns_gym.*"]

@@ -1,0 +1,29 @@
+gym_env:
+  max_episode_steps: 100
+
+wrapper:
+  change_notification: True
+  delta_change_notification: False
+  in_sim_change: False
+  param_name: 'P'
+  initial_prob_dist: [0.7,0.15,0.15]
+
+agent:
+  mcts_depth: 100
+  c: 1.41412356237
+  gamma: 0.99
+  num_mcts_simulations: 500
+  action_size: 4
+  state_size: 40
+  num_layers: 3
+  num_units: 64
+  max_mcts_search_depth: 100
+  model_path: "/media/--/home/n--/ns_bench/experiments/NS_Bridge/alphazero_ns_bridge_3layers_64_units_08_04_2024_best_model_checkpoint.pth"
+
+experiment:
+  experiment_name: 'Bridge_AlphaZero_single_change_with_notification'
+  num_samples: 100
+  p: [0.8,0.6,0.4]
+
+
+

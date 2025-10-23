@@ -1,0 +1,26 @@
+#####################
+# CartPole DDQN Single discrete change
+
+gym_env:
+  name: 'CartPole-v1'
+  max_episode_steps: 2500
+
+wrapper:
+  param_name: "masspole"
+  change_notification: False
+  delta_change_notification: False
+  in_sim_change: False
+
+
+agent: ## DDQN agent
+  state_size: 4
+  action_size: 2
+  num_hidden_units: 64
+  num_layers: 3
+  model_path: "---" # Fill this out
+
+experiment:
+  num_experiments: 50
+  experiment_name: "CartPole_DDQN_single_transition_increasingMass_trial_1"
+  num_samples: 150
+  mass: [0.1, 1.0, 1.2, 1.3, 1.5]

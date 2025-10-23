@@ -1,0 +1,50 @@
+# PPO Configs
+
+lr_policy: 0.001
+lr_critic: 0.001
+max_grad_norm: 0.5
+ent_weight: 0.0
+clip_val: 0.2
+
+
+s_dim: 2
+a_dim: 1
+
+## Training Configs
+sample_n_epoch: 10
+sample_mb_size: 32
+
+# Training parameters from Config
+max_episodes: 10000
+batch_size: 2048
+minibatch_size: 64
+n_epochs: 10
+hidden_size: 128 # was 64
+max_steps: 1600
+gamma: 0.9
+lamb: 0.95
+device: 'cuda'
+
+save_path: "models/ppo_mountaincar/"
+actor_weights_path: "ns_gym_experiments/models/ppo_pendulumPendulum-v1_actor_weights.pt"
+
+num_workers: 2
+
+## Environment Configs
+env_name: "MountainCarContinuous-v0"
+
+# Single change env configs
+tunable_params: "m"
+change_notification: True
+# Continuous Change env configs
+
+# ## Experiment Configs
+experiment_name: "ppo_mountaincar_eval_default"
+num_exp: 500
+results_dir: "ns_gym_experiments/results/ppo_moutaincar_eval_continuous"
+logs_dir: "ns_gym_experiments/logs/ppo_mountaincar_eval_continuous"
+
+
+
+
+

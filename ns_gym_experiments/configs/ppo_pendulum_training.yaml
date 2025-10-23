@@ -1,0 +1,46 @@
+# PPO Configs
+
+lr_policy: 0.0001
+lr_critic: 0.001
+max_grad_norm: 0.5
+ent_weight: 0.0
+clip_val: 0.1
+
+
+
+
+## Training Configs
+sample_n_epoch: 10
+sample_mb_size: 32
+
+# Training parameters from Config
+max_episodes: 5000
+batch_size: 2048
+minibatch_size: 64
+n_epochs: 10
+hidden_size: 128 # was 64
+max_steps: 1600
+gamma: 0.99
+lamb: 0.95
+device: 'cuda'
+
+save_path: "models/ppo_pendulum"
+
+
+num_workers: 2
+
+
+## Environment Configs
+env_name: "Pendulum-v1"
+
+
+## Experiment Configs
+experiment_name: "ppo_pendulum_eval_2025_01_03"
+num_exp: 1000
+results_dir: "ns_gym_experiments/results/ppo_pendulum_eval_2025_01_03"
+logs_dir: "ns_gym_experiments/logs/ppo_pendulum_eval_2025_01_03"
+
+
+
+
+

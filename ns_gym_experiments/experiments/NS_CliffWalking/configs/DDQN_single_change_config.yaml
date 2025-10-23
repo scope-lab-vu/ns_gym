@@ -1,0 +1,22 @@
+gym_env:
+  max_episode_steps: 200
+
+wrapper:
+  change_notification: True
+  delta_change_notification: False
+  in_sim_change: False
+  param_name: 'P'
+  modified_rewards: {"H":-100,"G":100,"F":-1,"S":-1}
+  terminal_cliff: False
+
+agent:
+  state_size: 48
+  action_size: 4
+  num_hidden_units: 64
+  num_layers: 3
+  model_path: '---'
+
+experiment:
+  experiment_name: 'CliffWalking_DDQN_single_change_with_notification'
+  num_samples: 100
+  p: [0.8,0.6,0.4]  # List of p values to use in the experiment

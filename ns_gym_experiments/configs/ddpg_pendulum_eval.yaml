@@ -1,0 +1,21 @@
+num_experiments: 500
+results_dir: "/Users/--/Documents/--/Research/ns_gym_project/ns_gym_experiments/results/ddpg_mountaincar_eval_default"
+experiment_name: "ddpg_defualt_baseline"
+logs_dir: "/Users/--/Documents/--/Research/ns_gym_project/ns_gym_experiments/logs/ddpg_pendulum_eval_default"
+
+model_path: "/Users/--/Documents/--/Research/ns_gym_project/ns_gym_experiments/models/ddpg_pendulum/ddpg_pendulum_default"
+
+num_exp: 500
+
+num_workers: 5
+
+env_name: "Pendulum-v1"
+
+device: "cpu"
+
+tunable_params: "m"
+
+tunable_params: "m"
+change_notification: True
+
+max_steps: 1600

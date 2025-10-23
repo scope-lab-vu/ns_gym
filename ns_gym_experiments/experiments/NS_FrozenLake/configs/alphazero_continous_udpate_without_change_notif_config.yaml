@@ -1,0 +1,60 @@
+########################################
+# AlphaZero FrozenLake Eval Config#
+# Config file to evaluate AlphaZero agent on FrozenLake environment with continous update of the environment.
+#######################################
+
+experiment_dir: 
+#experiment_name: 'AlphaZero_FrozenLake_single_parameter_change_without_notification_with_negative_reward_trail_1'
+experiment_name: 'alphazero_frozenlake_continous_update_without_change_notif_config'
+
+# Configurations for the FrozenLake environment
+gym_env:
+  name: 'FrozenLake-v1'
+  is_slippery: False
+  render_mode: "ansi"
+  max_episode_steps: 100
+
+# Parameters for the NSFrozenLakeWrapper
+wrapper:
+  change_notification: False
+  delta_change_notification: False
+  in_sim_change: False
+  initial_prob_dist: [1,0,0]
+  modified_rewards: {"H": -1, "G": 1, "F": 0, "S": 0}
+
+# Parameters for the AlphaZero agent, MCTS, and the neural network
+alphazero_agent:
+  action_space_dim: 4
+  observation_space_dim: 16
+  model: 'AlphaZeroNetwork'
+  model_checkpoint_path: "/home/cc/ns_bench/ns_bench/benchmark_algorithms/AlphaZero/AlphaZeroFrozenLake/DeterministicFrozenLake_2_hidden_layers_64_units_trial_2best_model_checkpoint.pth"  #Fill this out ---- 
+  lr: 0.001
+  mcts: 'MCTSv3'
+  n_hidden_layers: 2
+  n_hidden_units: 64
+  gamma: [0.99]
+  c: [1.41421356237]  # sqrt(2)
+  max_mcts_search_depth: 500
+
+
+# Training parameters
+training:
+  n_episodes: 1000
+  max_episode_len: 1000
+  lr: 0.001
+  batch_size: 32
+  n_epochs: 10
+  num_inter: 100
+  gamma: 0.99
+  c: 1.41421356237  # sqrt(2)
+  max_mcts_search_depth: 500
+
+# Evaluation parameters
+
+experiment:
+  num_samples: 100
+  num_iter: [25, 100, 1000, 3000]
+  num_experiments: 400
+  max_experiment_steps: 100
+
+

@@ -1,0 +1,48 @@
+#######################################
+experiment_dir: 'ns_bench/benchmark_algorithms/ProWLS'
+
+gym_env:
+  name: 'Acrobot-v1'
+  max_episode_steps: 500
+
+wrapper:
+  change_notification: False
+  delta_change_notification: False
+  in_sim_change: False
+  param: "LINK_LENGTH_1"
+
+agent:
+  action_space_dim: 3
+  observation_space_dim: 6
+  device: "cuda"  # "cuda" or "cpu"
+  buffer_size: 100000
+  delta: 0.1
+  extrapolator_basis: "Fourier"
+  fourier_k: 10
+  batch_size: 64
+  max_inner: 10
+  gamma: 0.99
+  importance_clip: 1.0
+  entropy_lambda: 0.01
+  cont_actions: False
+  restore: False
+  save_model: True
+  paths:
+    ckpt: './checkpoints/'
+  raw_basis: True
+  fourier_order: 0
+  fourier_coupled: False
+  feature_dim: [64, 64]
+  state_lr: 0.001
+  optim: "Adam"
+  actor_lr: 0.001
+  max_horizon: 500
+
+training:
+  num_episodes: 1000
+  max_episode_len: 1000
+  lr: 0.001
+  batch_size: 32
+  n_epochs: 10
+  experiment_name: "ProWLS_Experiment"
+#######################################

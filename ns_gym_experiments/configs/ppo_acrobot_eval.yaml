@@ -1,0 +1,22 @@
+num_experiments: 500
+
+
+results_dir: "/Users/--/Documents/--/Research/ns_gym_project/ns_gym_experiments/results/ppo_acrobot_eval_default"
+experiment_name: "ppo_default_baseline"
+logs_dir: "/Users/--/Documents/--/Research/ns_gym_project/ns_gym_experiments/logs/ppo_acrobot_eval_default"
+
+model_path: "/Users/--/Documents/--/Research/ns_gym_project/ns_gym_experiments/models/ppo_acrobot/ppo_acrobot_default"
+
+num_exp: 500
+
+num_workers: 5
+
+env_name: "Acrobot-v1"
+
+device: "cpu"
+
+tunable_params: "LINK_MASS_1"
+
+change_notification: True
+
+max_steps: 999

@@ -1,0 +1,46 @@
+Measuring average step time and standard error over 10000 calls...
+
+--- Testing Environment: FrozenLake-v1 ---
+Environment: FrozenLake-v1
+Total wall-clock time for 10000 steps: 0.1633 seconds
+Average step() time: 10.8298 ± 0.0099 µs (n=10000)
+--------------------------------------
+
+--- Testing Environment: CliffWalking-v0 ---
+Environment: CliffWalking-v0
+Total wall-clock time for 10000 steps: 0.1416 seconds
+Average step() time: 10.1290 ± 0.0053 µs (n=10000)
+----------------------------------------
+
+--- Testing Environment: Acrobot-v1 ---
+Environment: Acrobot-v1
+Total wall-clock time for 10000 steps: 0.9652 seconds
+Average step() time: 90.8967 ± 0.0262 µs (n=10000)
+-----------------------------------
+
+--- Testing Environment: MountainCar-v0 ---
+Environment: MountainCar-v0
+Total wall-clock time for 10000 steps: 0.2194 seconds
+Average step() time: 17.2203 ± 0.0121 µs (n=10000)
+---------------------------------------
+
+--- Testing Environment: CartPole-v1 ---
+Environment: CartPole-v1
+Total wall-clock time for 10000 steps: 0.1878 seconds
+Average step() time: 14.1086 ± 0.0081 µs (n=10000)
+------------------------------------
+
+--- Testing Environment: Pendulum-v1 ---
+Environment: Pendulum-v1
+Total wall-clock time for 10000 steps: 0.7820 seconds
+Average step() time: 32.3381 ± 0.0118 µs (n=10000)
+------------------------------------
+
+
+--- Summary (Mean ± SEM in µs) ---
+- FrozenLake-v1  : 10.8298 ± 0.0099 µs (n=10000)
+- CliffWalking-v0: 10.1290 ± 0.0053 µs (n=10000)
+- Acrobot-v1     : 90.8967 ± 0.0262 µs (n=10000)
+- MountainCar-v0 : 17.2203 ± 0.0121 µs (n=10000)
+- CartPole-v1    : 14.1086 ± 0.0081 µs (n=10000)
+- Pendulum-v1    : 32.3381 ± 0.0118 µs (n=10000)

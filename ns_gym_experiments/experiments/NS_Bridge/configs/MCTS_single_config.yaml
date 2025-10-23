@@ -1,0 +1,20 @@
+gym_env:
+  max_episode_steps: 200
+
+wrapper:
+  change_notification: True
+  delta_change_notification: False
+  in_sim_change: False
+  param_name: 'P'
+  initial_prob_dist: [0.7,0.15,0.15]
+
+agent:
+  mcts_depth: 100
+  c: 1.41412356237
+  gamma: 0.99
+  num_mcts_simulations: 500
+
+experiment:
+  experiment_name: 'Bridge_MCTS_single_change_with_notification'
+  num_samples: 100
+  p: [0.8,0.6,0.4]  # List of p values to use in the experiment

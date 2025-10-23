@@ -1,0 +1,20 @@
+num_experiments: 500
+results_dir: "/Users/--/Documents/--/Research/ns_gym_project/ns_gym_experiments/results/a2c_mountaincar_eval_default"
+experiment_name: "a2c_default_baseline"
+logs_dir: "/Users/--/Documents/--/Research/ns_gym_project/ns_gym_experiments/logs/a2c_mountaincar_eval"
+
+model_path: "/Users/--/Documents/--/Research/ns_gym_project/ns_gym_experiments/models/a2c_mountaincar/a2c_mountaincar"
+
+num_exp: 500
+
+num_workers: 5
+
+env_name: "MountainCarContinuous-v0"
+
+device: "cpu"
+
+tunable_params: "power"
+
+change_notification: True
+
+max_steps: 999

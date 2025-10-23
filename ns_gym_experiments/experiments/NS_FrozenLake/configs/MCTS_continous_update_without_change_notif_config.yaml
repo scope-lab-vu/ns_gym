@@ -1,0 +1,39 @@
+#######################################
+# MCTS FrozenLake Eval Config#
+# Updated: 2024-05-23
+
+# Config file to evaluate AlphaZero agent on FrozenLake environment with single parameter change
+#######################################
+
+experiment_dir: "Experiment_Directory"
+experiment_name: 'FrozenLake_MCTS_continous_update_without_chang_nofig_config'
+
+# Configurations for the FrozenLake environment
+gym_env:
+  name: 'FrozenLake-v1'
+  is_slippery: False
+  render_mode: "ansi"
+  max_episode_steps: 100
+
+# Parameters for the NSFrozenLakeWrapper
+wrapper:
+  change_notification: False
+  delta_change_notification: False
+  in_sim_change: False
+  initial_prob_dist: [1,0,0]
+
+# Parameters for the MCTS
+agent:
+  gamma: [0.99]
+  c: [1.41421356237]  # sqrt(2)
+  max_mcts_search_depth: 500
+
+
+
+
+experiment:
+  p : [0.4, 0.5, 0.6, 0.8, 0.9, 1]
+  num_samples: 100
+  num_iter: [25, 100, 1000, 3000]
+
+

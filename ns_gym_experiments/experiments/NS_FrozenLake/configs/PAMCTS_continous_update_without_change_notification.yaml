@@ -1,0 +1,37 @@
+
+######################################
+# FrozenLake PAMCTS Experiment
+#########################################
+
+gym_env:
+  name: 'FrozenLake-v1'
+  is_slippery: False
+  render_mode: "ansi"
+  max_episode_steps: 100
+
+# Parameters for the NSFrozenLakeWrapper
+wrapper:
+  change_notification: True
+  delta_change_notification: False
+  in_sim_change: False
+  initial_prob_dist: [1,0,0]
+
+
+agent: ## PAMCTS agent
+  state_size: 16
+  action_size: 4
+  num_hidden_units: 64
+  num_layers: 2
+  model_path: "--"
+  alpha: [0.25,0.5,75]
+  mcts_search_depth: 500
+  gamma: [0.5]
+  c: [1.41421356237] # sqrt(2)
+
+experiment:
+  num_experiments: 100
+  num_iter: [25, 100, 1000, 3000]
+  experiment_name: "FrozenLake_PAMCTS_continous_update_without_change_notif"
+  num_samples: 100
+  max_experiment_steps: 100
+

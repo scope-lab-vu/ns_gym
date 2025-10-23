@@ -1,0 +1,51 @@
+#######################################
+# AlphaZero FrozenLake Training Config#
+# Updated: 2024-05-23
+
+# Config file to train the AlphaZero agent on determenistic FrozenLake environment
+#######################################
+
+experiment_dir: '---' 
+
+
+# Configurations for the FrozenLake environment
+gym_env:
+  name: 'ns_bench/Bridge-v0'
+  max_episode_steps: 100
+
+
+# Parameters for 
+wrapper:
+  change_notification: False
+  delta_change_notification: False
+  in_sim_change: False
+  param: "P"
+
+
+
+
+# Parameters for the AlphaZero agent, MCTS, and the neural network
+agent:
+  action_space_dim: 4
+  observation_space_dim: 40
+  n_hidden_layers: 3
+  n_hidden_units: 64 
+  gamma: 0.99
+  c: 1.41421356237  # sqrt(2)
+  num_mcts_simulations: 500
+  max_mcts_search_depth: 200
+
+# Training parameters
+training:
+  num_episodes: 1000
+  max_episode_len: 200
+  lr: 0.001
+  batch_size: 32
+  n_epochs: 1
+  experiment_name: 'alphazero_ns_bridge_3layers_64_units_08_04_2024'
+  eval_window_size: 25
+  weight_decay: 0.001
+  alpha: 0.05
+  epsilon: 0.25
+
+

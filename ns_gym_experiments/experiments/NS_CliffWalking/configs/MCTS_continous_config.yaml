@@ -1,0 +1,19 @@
+gym_env:
+  max_episode_steps: 200
+
+wrapper:
+  change_notification: True
+  delta_change_notification: False
+  in_sim_change: False
+  param_name: 'P'
+
+agent:
+  mcts_depth: 200
+  c: [1.41412356237]
+  gamma: [0.999]
+
+experiment:
+  experiment_name: 'CliffWalking_MCTS_continous_change_with_notification'
+  num_samples: 100
+  num_iter: [1000]
+

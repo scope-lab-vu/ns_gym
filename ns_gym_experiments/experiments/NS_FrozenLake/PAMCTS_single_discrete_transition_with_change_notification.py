@@ -1,0 +1,190 @@
+import json 
+import os
+import sys
+import argparse
+import csv
+import numpy as np
+import gymnasium as gym
+import ns_gym as nsb 
+import time
+import logging
+import pickle
+import random
+from multiprocessing import Pool
+import multiprocessing
+import datetime
+import itertools
+from pathlib import Path
+
+
+"""
+PAMCTS -- single discrete change in NS FrozenLake environment without change notification.
+
+MCTS does know the ground truth transition function. 
+"""
+
+
+current_datetime = datetime.datetime.now()
+formatted_date = current_datetime.strftime('%Y-%m-%d_%H:%M:%S')
+experiment_name = f"PAMCTS_single_discrete_change_with_ChangNotif_{formatted_date}"
+os.makedirs("logs",exist_ok=True)
+logsdir = os.path.join(os.path.dirname(os.path.abspath(__file__)),"logs")
+log_name = experiment_name + ".log"
+
+logging.basicConfig(format='%(asctime)s,%(msecs)03d %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
+                datefmt='%Y-%m-%d:%H:%M:%S', level=logging.INFO,
+                handlers=[logging.FileHandler(os.path.join(logsdir,log_name), mode='w')])
+logger = logging.getLogger()
+
+script_path = Path(__file__)
+script_dir = script_path.parent
+model_path = "/media/--/home/n--/ns_gym2/ns_gym/ns_gym/benchmark_algorithms/DDQN/DDQN_models/FrozenLake_DDQN_Determenistic_3Layers_64_Units_07_30_24.pth"
+
+def make_env(p,change_notification,delta_change_notification,in_sim_change):
+    """Make non-stationary FrozenLake environment.
+    """
+    env = gym.make('FrozenLake-v1',is_slippery = False,render_mode = "ansi",max_episode_steps=1000)
+    fl_scheduler = nsb.schedulers.DiscreteScheduler({0})
+    fl_updateFn = nsb.update_functions.DistributionStepWiseUpdate(fl_scheduler,[[p,(1-p)/2,(1-p)/2]])
+    param = {"P":fl_updateFn}
+
+    realworld_env = nsb.wrappers.NSFrozenLakeWrapper(env,
+                                                     param,
+                                                     change_notification = change_notification, 
+                                                     delta_change_notification = delta_change_notification, 
+                                                     in_sim_change = in_sim_change,
+                                                     initial_prob_dist=[0.7,0.15,0.15])
+    return realworld_env
+
+
+def run_single_experiment(p,alpha,gamma,c,num_iter,sample_id,seed):
+    """Run a single experiment with the given parameters.
+    Args:
+        p (float): Probability of the agent moving in the intended direction.
+        gamma (float): Discount factor.
+        c (float): Exploration constant.
+        num_iter (int): Number of iterations.
+        num_samples (int): Number of samples/seeds to run on this trail.
+
+    Returns:
+        dict: Dictionary containing the results of the experiment.
+    """
+    realworld_env = make_env(p = p, change_notification = True, delta_change_notification = False, in_sim_change = False)
+    obs,_ = realworld_env.reset(seed=seed)
+    done = False
+    DDQN_model = nsb.benchmark_algorithms.DDQN.DQN(state_size=16,action_size=4,seed=seed,num_hidden_units=64,num_layers=2)
+    PAMCTS_agent = nsb.benchmark_algorithms.PAMCTS(alpha=alpha,
+                                                               mcts_iter=num_iter,
+                                                               mcts_search_depth=500,
+                                                               mcts_discount_factor=gamma,
+                                                               mcts_exploration_constant=c,
+                                                               state_space_size=16,
+                                                               action_space_size=4,
+                                                               DDQN_model=DDQN_model,
+                                                               DDQN_model_path=model_path)
+    episode_reward = 0
+    truncated = False
+    while not done and not truncated:
+        planning_env = realworld_env.get_planning_env()
+        action,action_values = PAMCTS_agent.act(obs,planning_env)
+        obs,reward,done, truncated, info = realworld_env.step(action)
+        episode_reward += reward.reward
+    return episode_reward
+
+
+def run_all_experiments(p,alpha, gamma, c, num_iter, sample_id,q,seed):
+    """Run all experiments with the given gridsearch over parameters.
+    Args:
+        p (list): List of probabilities.
+        gamma (list): List of discount factors.
+        c (list): List of exploration constants.
+        num_iter (list): List of number of iterations.
+        num_samples (list): List of number of samples.
+        q (multiprocessing.Queue): Queue to store the results.
+    """
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    try:
+        logger.info(f"STARTING: Experiment with p: {p}, alpha: {alpha},gamma: {gamma}, c: {c}, num_iter: {num_iter}, num_samples: {sample_id},seed: {seed}")
+        start_time = time.time()
+        episode_reward = run_single_experiment(p, alpha, gamma, c, num_iter, sample_id,seed=seed)
+        total_time = time.time() - start_time
+        logger.info(f"FINISHED: Experiment with p: {p}, alpha {alpha},gamma: {gamma}, c: {c}, num_iter: {num_iter}, num_samples: {sample_id},seed: {seed} in {total_time} seconds.")
+        result = [sample_id,episode_reward,"Vanilla MCTS with change notif,negative reward.",p,gamma,c,num_iter,alpha,total_time,seed]
+        q.put(result)
+
+    except Exception as e:
+        logger.error(f"Error in running experiment: {e}", exc_info=True)
+        print(f"Error in running experiment: {e}")
+        return None
+    
+def write_results_to_file(q,outfile):
+    """Write results to file.
+    Args:
+        q (multiprocessing.Queue): Queue containing the results.
+        outfile (str): Path to the output file.
+    """
+    try:
+        with open(outfile, mode='a', newline='') as file:
+            writer = csv.writer(file)
+            while True:
+                result = q.get()
+                if result == 'DONE':  # Check for sentinel value
+                    break
+                writer.writerow(result)
+        logger.info(f"Results written to file")
+    except Exception as e:
+        print(f"Error in writing results to file: {e}")
+
+def main():
+    manager = multiprocessing.Manager()
+    queue = manager.Queue()
+    p = [0.4, 0.5, 0.6, 0.8, 0.9, 1]
+    alpha = [0.25,0.5,0.75]
+    gamma = [0.99]
+    c = [np.sqrt(2)]
+    num_iter = [1000]
+    sample_id= [x for x in range(100)]
+    num_experiments = len(p) * len(alpha)*len(gamma) * len(c) * len(num_iter) * len(sample_id)
+    seeds = random.sample(range(100000), num_experiments)
+    #seeds = np.random.randint(0, 10000, size=num_experiments)
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    results_dir = os.path.join(script_dir, "results")
+    os.makedirs(results_dir,exist_ok=True)
+    outfile = os.path.join(results_dir,experiment_name + ".csv")
+
+    with open(outfile, mode='w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(["sample_id","reward","experiment_name","p","gamma","c","num_iter","alpha","total_time","seed"])
+
+    writer_process = multiprocessing.Process(target=write_results_to_file, args=(queue,outfile))
+    writer_process.start()
+
+    parameter_combinations = itertools.product(p, alpha,gamma, c, num_iter, sample_id)
+    input = [(*params,queue,seeds[i]) for i,params in enumerate(parameter_combinations)]
+    
+    with Pool(15) as p:
+        p.starmap(run_all_experiments, input)
+
+    print("number of experiments",num_experiments)
+    queue.put("DONE")
+    writer_process.join()
+
+
+if __name__ == "__main__":
+    print("Starting Exp")
+    main()
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+

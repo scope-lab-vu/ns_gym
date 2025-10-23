@@ -1,0 +1,46 @@
+#######################################
+# AlphaZero FrozenLake Training Config#
+# Updated: 2024-05-23
+
+# Config file to train the AlphaZero agent on determenistic FrozenLake environment
+#######################################
+
+experiment_dir: 'ns_bench/benchmark_algorithms/AlphaZero' 
+
+
+# Configurations for the FrozenLake environment
+gym_env:
+  name: 'Acrobot-v1'
+  max_episode_steps: 1000
+
+
+# Parameters for 
+wrapper:
+  change_notification: True
+  delta_change_notification: False
+  in_sim_change: False
+  param: "LINK_LENGTH_1"
+
+# Parameters for the AlphaZero agent, MCTS, and the neural network
+agent:
+  action_space_dim: 3
+  observation_space_dim: 6
+  model: 'AlphaZeroNetwork'
+  lr: 0.001
+  mcts: 'MCTSv3'
+  n_hidden_layers: 3
+  n_hidden_units: 64 
+  gamma: 0.99
+  c: 1.41421356237  # sqrt(2)
+  num_mcts_simulations: 100
+  max_mcts_search_depth: 500
+
+# Training parameters
+training:
+  num_episodes: 1000
+  max_episode_len: 1000
+  lr: 0.001
+  batch_size: 32
+  n_epochs: 10
+  experiment_name: 'Deterministic_Acrobot_3_layers_64_units_trial_1_CNTrue'
+

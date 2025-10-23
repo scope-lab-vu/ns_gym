@@ -1,0 +1,24 @@
+###############################################
+# MCTS hyperparameter search for Acrobot Env #
+
+gym_env:
+  name: 'Acrobot-v1'
+  max_episode_steps: 500
+
+wrapper:
+  param: "g"
+
+agent: ## MCTS agent
+  gamma: [0.9999]
+  c: [1.41421356237]
+  max_mcts_search_depth: 1000
+
+
+experiment:
+  experiment_name: 'MCTS_Acrobot_hyperparameter_search_2'
+  num_samples: 3
+  num_iter: [10000]
+
+
+
+

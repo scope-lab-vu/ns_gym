@@ -1,0 +1,27 @@
+gym_env:
+  max_episode_steps: 200
+
+wrapper:
+  change_notification: True
+  delta_change_notification: False
+  in_sim_change: False
+  param_name: 'P'
+  modified_rewards: {"H":-100,"F":-1,"S":-1,"G":100}
+
+
+agent:
+  state_size: 48
+  action_size: 4
+  num_hidden_units: 128
+  num_layers: 2
+  model_path: '/media/--/home/n--/ns_bench/ns_bench/benchmark_algorithms/DDQN/DDQN_models/CliffWalking_DDQN_Determenistic_2Layers_128_Units_modified_reward.pth'
+  c: [1.41421356237] # sqrt(2)
+  gamma: [0.999]
+  alpha: [0.25, 0.5, 0.75]
+  mcts_search_depth: 200
+
+experiment:
+  experiment_name: 'CliffWalking_PAMCTS_single_change_with_notification'
+  num_samples: 100
+  num_iter: [1000]
+  p: [0.8,0.6,0.4]  # List of p values to use in the experiment

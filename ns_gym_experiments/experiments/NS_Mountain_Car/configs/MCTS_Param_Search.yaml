@@ -1,0 +1,28 @@
+###############################################
+# MCTS hyperparameter search for MountianCar Env #
+
+gym_env:
+  name: 'MountainCar-v0'
+
+wrapper:
+  param: "g"
+
+agent: ## MCTS agent
+  gamma: [0.5,0.8,0.99,1]
+  c: [0.5, 0.8, 1, 1.41421356237, 2, 5]
+  max_mcts_search_depth: 500
+
+
+experiment:
+  experiment_name: 'MCTS_MountainCar_hyperparameter_search'
+  num_samples: 100
+  num_iter: [100]
+
+
+
+
+
+
+
+  
+

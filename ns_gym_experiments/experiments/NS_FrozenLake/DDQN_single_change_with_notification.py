@@ -1,0 +1,186 @@
+import os
+import csv
+import numpy as np
+import gymnasium as gym
+import ns_gym as nsb 
+from ns_gym.benchmark_algorithms.DDQN.DDQN import do_gradient_updates
+import time
+import logging
+from pathlib import Path
+import random
+from multiprocessing import Pool
+import multiprocessing
+import datetime
+import itertools
+import yaml
+
+"""
+Continuous change in the cliffwalking environment 
+"""
+
+
+def read_config_file(config_file):
+    with open(config_file) as file:
+        config = yaml.load(file, Loader=yaml.FullLoader)
+    return config["gym_env"],config["wrapper"],config["agent"],config["experiment"]
+
+
+########### Parse the config file and set up the logger ################################
+config_file_path = "---"
+
+gym_config,wrapper_config,agent_config,exp_config = read_config_file(config_file_path)
+
+
+script_path = Path(__file__)
+script_dir = script_path.parent
+
+current_datetime = datetime.datetime.now()
+formatted_date = current_datetime.strftime('%Y-%m-%d')
+experiment_name = exp_config["experiment_name"]+f"_{formatted_date}"
+
+logsdir = os.path.join(os.path.dirname(os.path.abspath(__file__)),"logs")
+log_name = experiment_name + ".log"
+os.makedirs(logsdir,exist_ok=True)
+logging.basicConfig(format='%(asctime)s,%(msecs)03d %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
+                datefmt='%Y-%m-%d:%H:%M:%S', level=logging.INFO,
+                handlers=[logging.FileHandler(os.path.join(logsdir,log_name), mode='w')])
+logger = logging.getLogger()
+
+##########################################################################################
+
+
+def make_env(p,gym_config,wrapper_config):
+    """Make non-stationary Classic Control environment.
+    """
+
+
+    env = gym.make("CliffWalking-v0",max_episode_steps=gym_config["max_episode_steps"])
+
+    change_notification = wrapper_config["change_notification"]
+    delta_change_notification = wrapper_config["delta_change_notification"]
+    in_sim_change = wrapper_config["in_sim_change"]
+    param_name = wrapper_config["param_name"] 
+
+
+    scheduler = nsb.schedulers.DiscreteScheduler({0})
+    updateFn = nsb.update_functions.DistributionStepWiseUpdate(scheduler,update_values=[[p,(1-p)/3,(1-p)/3,(1-p)/3]])
+    params = {param_name:updateFn}
+    realworld_env = nsb.wrappers.NSCliffWalkingWrapper(env,
+                                                         params,
+                                                         change_notification=change_notification,
+                                                         delta_change_notification=delta_change_notification,
+                                                         in_sim_change=in_sim_change)
+    return realworld_env
+
+
+def run_all_experiments(p,sample_id,q,seed,agent_config,wrapper_config,gym_config):
+    """Run all experiments with the given gridsearch over parameters.
+    """
+    try:
+        logger.info(f"STARTING: Experiment with p:{p},num_samples: {sample_id},seed: {seed}")
+
+        ########## Setup the environment ##########
+        realworld_env = make_env(p,gym_config=gym_config,wrapper_config=wrapper_config)
+
+        state_size =agent_config["state_size"]
+        action_size = agent_config["action_size"]
+        num_hidden_units = agent_config["num_hidden_units"]
+        num_layers = agent_config["num_layers"]
+        model_path = agent_config["model_path"]
+        max_episode_steps = gym_config["max_episode_steps"]
+
+        ############# Run the experiment #############
+        episode_reward = 0
+        start_time = time.time()
+        done = False
+        truncated = False
+        obs,_= realworld_env.reset(seed=seed)
+        count = 0
+        
+        
+        DDQN_model = nsb.benchmark_algorithms.DDQN.DQN(state_size=state_size,action_size=action_size,seed=seed,num_hidden_units=num_hidden_units,num_layers=num_layers)
+        DDQN_agent = nsb.benchmark_algorithms.DDQN.DQNAgent(state_size,action_size,seed=seed,model=DDQN_model,model_path=model_path)
+
+        while not done and not truncated and count < max_episode_steps:
+            action , _ = DDQN_agent.act(obs)
+            obs,reward,done, truncated, info = realworld_env.step(action)
+            planning_env = realworld_env.get_planning_env()
+            do_gradient_updates(obs,planning_env,DDQN_agent,time_budget=agent_config["time_budget"])
+            episode_reward += reward.reward
+            count += 1
+
+        total_time = time.time() - start_time
+
+        logger.info(f"FINISHED: Experiment with p: {p},num_samples: {sample_id},seed: {seed}")
+        result = [p,sample_id,episode_reward,experiment_name,total_time,seed]
+        q.put(result)
+
+    except Exception as e:
+        logger.error(f"Error in running experiment: {e}", exc_info=True)
+        print(f"Error in running experiment: {e}")
+        return None
+    
+
+def write_results_to_file(q,outfile):
+    """Write results to file.
+    Args:
+        q (multiprocessing.Queue): Queue containing the results.
+        outfile (str): Path to the output file.
+    """
+    try:
+        with open(outfile, mode='a', newline='') as file:
+            writer = csv.writer(file)
+            while True:
+                result = q.get()
+                if result == 'DONE':  # Check for sentinel value
+                    break
+                writer.writerow(result)
+        logger.info(f"Results written to file")
+    except Exception as e:
+        print(f"Error in writing results to file: {e}")
+
+
+def main():
+    manager = multiprocessing.Manager()
+    queue = manager.Queue()
+
+
+
+
+    sample_id= [x for x in range(exp_config["num_samples"])]
+    p = exp_config["p"] 
+
+    num_experiments = len(sample_id) * len(p)
+
+    seeds = random.sample(range(100000), num_experiments)
+
+    results_dir = os.path.join(script_dir, "results")
+
+    os.makedirs(results_dir,exist_ok=True)
+    outfile = os.path.join(results_dir,experiment_name + ".csv")
+
+    with open(outfile, mode='w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(["p","sample_id","reward","experiment_name","total_time","seed"])
+
+    writer_process = multiprocessing.Process(target=write_results_to_file, args=(queue,outfile))
+    writer_process.start()
+
+    parameter_combinations = itertools.product(p,sample_id)
+    input = [(*params,queue,seeds[i],agent_config,wrapper_config,gym_config) for i,params in enumerate(parameter_combinations)]
+    
+    with Pool(multiprocessing.cpu_count()) as p:
+        p.starmap(run_all_experiments, input)
+
+    print("number of experiments",num_experiments)
+    queue.put("DONE")
+    writer_process.join()
+
+
+if __name__ == "__main__":
+    print("Starting experiment")
+    main()
+    print("Experiment finished")
+
+
+

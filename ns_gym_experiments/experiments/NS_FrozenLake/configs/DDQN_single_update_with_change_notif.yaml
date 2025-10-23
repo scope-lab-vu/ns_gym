@@ -1,0 +1,21 @@
+gym_env:
+  max_episode_steps: 100
+
+wrapper:
+  change_notification: True
+  delta_change_notification: False
+  in_sim_change: False
+  param_name: 'P'
+
+agent:
+  state_size: 16
+  action_size: 4
+  num_hidden_units: 64
+  num_layers: 2
+  model_path: '---'
+  time_budget: 3.5 # Time budget for each episode in seconds
+
+experiment:
+  experiment_name: 'FrozenLake_DDQN_single_change_with_notification'
+  num_samples: 100
+  p: [0.8,0.6,0.4]  # List of p values to use in the experiment

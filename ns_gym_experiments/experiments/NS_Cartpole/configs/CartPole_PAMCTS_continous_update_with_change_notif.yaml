@@ -1,0 +1,32 @@
+
+######################################
+# Configurations for CartPole MCTS where the cartmass contiounsly increases until it episode finishes. 
+#########################################
+
+gym_env:
+  name: 'CartPole-v1'
+  max_episode_steps: 2500
+
+wrapper:
+  param_name: "masspole"
+  change_notification: True
+  delta_change_notification: False
+  in_sim_change: False
+
+agent: ## DDQN agent
+  state_size: 4
+  action_size: 2
+  num_hidden_units: 64
+  num_layers: 3
+  model_path: "ns_bench/benchmark_algorithms/DDQN/DDQN_models/Cartpole_DDQN_Determenistic_3Layers_64_Units.pth" # Fill this out
+  alpha: [0.25,0.50,75]
+  mcts_search_depth: 500
+  gamma: [0.5]
+  c: [1.41421356237] # sqrt(2)
+
+experiment:
+  num_experiments: 50
+  num_iter: [50,100,300]
+  experiment_name: "CartPole_PAMCTS_IncreasingMass_trial_1_with_change_notif"
+  num_samples: 1
+# num_samples: 150

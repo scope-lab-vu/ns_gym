@@ -1,0 +1,22 @@
+gym_env:
+  max_episode_steps: 200
+
+wrapper:
+  change_notification: False
+  delta_change_notification: False
+  in_sim_change: False
+  param_name: 'P'
+  modified_rewards: {"H":-100,"G":100,"F":-1,"S":-1}
+  terminal_cliff: False
+
+agent:
+  state_size: 48
+  action_size: 4
+  num_hidden_units: 128
+  num_layers: 2
+  model_path: '/media/--/home/n--/ns_bench/ns_bench/benchmark_algorithms/DDQN/DDQN_models/CliffWalking_DDQN_Determenistic_2Layers_128_Units_modified_reward.pth'
+
+experiment:
+  experiment_name: 'Bridge_DDQN_continuous_change_without_notification'
+  num_samples: 100
+

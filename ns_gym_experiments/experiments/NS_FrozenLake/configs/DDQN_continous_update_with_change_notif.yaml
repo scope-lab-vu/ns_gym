@@ -1,0 +1,31 @@
+
+experiment_name: 'FrozenLake_MCTS_continous_update_without_chang_nofig_config'
+
+
+gym_env:
+  name: 'FrozenLake-v1'
+  is_slippery: False
+  render_mode: "ansi"
+  max_episode_steps: 100
+
+wrapper:
+  change_notification: True
+  delta_change_notification: False
+  in_sim_change: False
+  initial_prob_dist: [1,0,0]
+  modified_rewards: {"H": -1, "G": 1, "F": 0, "S": 0}
+
+agent:
+  state_size: 48
+  action_size: 4
+  num_hidden_units: 64
+  num_layers: 3
+  model_path: '---'
+  time_budget: 3.5 
+
+  experiment:
+    experiment_name: 'FrozenLake_DDQN_single_change_with_notification'
+    num_samples: 100
+
+
+

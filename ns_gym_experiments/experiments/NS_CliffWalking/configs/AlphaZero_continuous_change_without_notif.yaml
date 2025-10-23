@@ -1,0 +1,29 @@
+gym_env:
+  max_episode_steps: 200
+
+wrapper:
+  change_notification: False
+  delta_change_notification: False
+  in_sim_change: False
+  param_name: 'P'
+  initial_prob_dist: [1,0,0,0]
+  modified_rewards: {"H":-100,"F":-1,"S":-1,"G":100}
+
+agent:
+  mcts_depth: 100
+  c: 10
+  gamma: 0.999
+  num_mcts_simulations: 300
+  action_size: 4
+  state_size: 48
+  num_layers: 3
+  num_units: 64
+  max_mcts_search_depth: 200
+  alpha: 5
+  epsilon: 0.75
+  model_path: "/media/--/home/n--/ns_bench/experiments/NS_CliffWalking/model_weights/CliffWalking_3_layers_64_units_alpha_10_epsilon_0.25_temp_modulation_2ep_210_model_checkpoint.pth"
+experiment:
+  experiment_name: 'CliffWalking_AlphaZero_continous_change_without_notification'
+  num_samples: 100
+
+

@@ -1,0 +1,22 @@
+gym_env:
+  max_episode_steps: 100
+
+wrapper:
+  change_notification: False
+  delta_change_notification: False
+  in_sim_change: False
+  param_name: 'P'
+  initial_prob_dist: [1,0,0]
+
+agent:
+  mcts_depth: 100
+  c: 1.41412356237
+  gamma: 0.99
+  num_mcts_simulations: 500
+
+experiment:
+  experiment_name: 'Bridge_MCTS_continous_change_without_notification'
+  num_samples: 100
+
+
+

@@ -1,0 +1,55 @@
+#######################################
+# AlphaZero FrozenLake Training Config#
+# Updated: 2024-05-23
+
+# Config file to train the AlphaZero agent on determenistic FrozenLake environment
+#######################################
+
+experiment_dir: '/home/cc/ns_bench/ns_bench/benchmark_algorithms/AlphaZero' 
+
+
+# Configurations for the FrozenLake environment
+gym_env:
+  name: 'CliffWalking-v0'
+  max_episode_steps: 1000
+
+
+# Parameters for 
+wrapper:
+  change_notification: False
+  delta_change_notification: False
+  in_sim_change: False
+  param: "P"
+  terminal_cliff: False
+  modified_rewards: {"S":-1,"H":-100,"G":100,"F":-1}
+
+
+# Parameters for the AlphaZero agent, MCTS, and the neural network
+agent:
+  action_space_dim: 4
+  observation_space_dim: 48
+  n_hidden_layers: 2
+  n_hidden_units: 64 
+  gamma: 0.999
+  c: 3 # sqrt(2)
+  num_mcts_simulations: 1000
+  max_mcts_search_depth: 200
+  alpha: 10
+  epsilon: 0.1
+
+# Training parameters
+training:
+  num_episodes: 1000
+  max_episode_len: 200
+  lr: 0.001
+  batch_size: 32
+  n_epochs: 1
+  experiment_name: 'CliffWalking_3_layers_64_units_alpha_10_epsilon_0.25_temp_modulation_7'
+  eval_window_size: 25
+  weight_decay: 0.001
+  temp_start: 1.2
+  temp_end: 0.2
+  temp_decay: 0.999
+
+
+
