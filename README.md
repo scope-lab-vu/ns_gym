@@ -170,7 +170,7 @@ A more comprehensive tutorial can be found [here](tutorial.ipynb)
 
 We welcome any contributions to this NS-Gym project! If you find a bug or want to add a new feature, please feel free to open an issue or submit a pull request.
 
-Clone the repository, install the required dependencies in editable mode, and run the tests to ensure everything is working correctly. We use UV for package management. 
+Fork and clone the repository, install the required dependencies in editable mode, and run the tests to ensure everything is working correctly. We use UV for package management. (note the  instead of scope-lab-vu, use your own github username if you fork the repo):
 
 ```bash
 git clone https://github.com/scope-lab-vu/ns_gym.git
@@ -178,11 +178,30 @@ cd ns_gym
 uv pip install -e ".[all]" --force-reinstall
 ```
 
-To run all test in the project run: 
+To run all test in the project run:
 
 ```bash
 pytest tests/
 ```
+or to test against all supported python versions using tox, simply run:
+
+```bash
+tox
+```
+
+to generate documentation locally, run:
+
+```bash
+sphinx-build -M clean docs/source docs/_build
+sphinx-build -b html docs/source docs/_build
+python -m http.server -d docs/_build
+```
+
+Then open your browser and navigate to `http://localhost:8000` to view the documentation or whatever port it spits out.
+
+
+
+
 
 
 

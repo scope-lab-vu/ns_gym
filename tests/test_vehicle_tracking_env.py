@@ -18,9 +18,9 @@ def multi_pursuer_env():
         'ns_gym/VehicleTracking-v0',
         num_pursuers=2,
         obstacle_map=np.zeros((10, 10), dtype=bool),    
-        starting_pursuer_position=[(0, 0), (9, 9)],
-        starting_evader_position=(5, 5),
-        goal_locations=[(0, 9), (9, 0)],
+        starting_pursuer_position=np.array([(0, 0), (9, 9)]),
+        starting_evader_position=np.array((5, 5)),
+        goal_locations=np.array([(0, 9), (9, 0)]),
         fov_distance=20,
         fov_angle=2*np.pi/180,
     )

@@ -47,13 +47,13 @@ class VehicleTrackingEnv(gym.Env):
         |
         (0,y)
 
-
     """
 
     metadata = {"render_modes": ["ansi", "human"], "render_fps": 1}
 
     def __init__(self, **kwargs) -> None:
         super().__init__()
+
 
         self.obstacle_map = kwargs.get("obstacle_map", np.zeros((5, 5)))
         self.map_dimensions = self.obstacle_map.shape

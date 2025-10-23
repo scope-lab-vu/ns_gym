@@ -227,7 +227,7 @@ class NSWrapper(Wrapper):
 
         self.tunable_params = tunable_params
 
-        self.init_initial_params = copy.deepcopy(self.tunable_params)
+        self.init_initial_params_values = copy.deepcopy(self.tunable_params)
         self.change_notification = change_notification
         self.delta_change_notification = delta_change_notification
         self.in_sim_change = in_sim_change
