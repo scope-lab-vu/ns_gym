@@ -98,6 +98,8 @@ class VehicleTrackingEnv(gym.Env):
             "allow_diagonal_evader_movement", False
         )
 
+        self.flatten_obs = kwargs.get("flatten_obs", False)
+
         self._directions = [
             np.array([1, 0]),
             np.array([1, 1]),
@@ -109,6 +111,7 @@ class VehicleTrackingEnv(gym.Env):
             np.array([1, -1]),
         ]
 
+
         self.pursuer_positions = [np.copy(p) for p in self.starting_pursuer_positions]
         self.pursuer_dir_idxs = [0] * self.num_pursuers  # All start facing East
         self.pursuer_dirs = [self._directions[i] for i in self.pursuer_dir_idxs]
@@ -118,20 +121,39 @@ class VehicleTrackingEnv(gym.Env):
 
         num_states_per_cell = self.map_dimensions[0] * self.map_dimensions[1]
 
-        self.observation_space = spaces.Dict(
-            {
-                "pursuer_position": spaces.MultiDiscrete(
-                    [num_states_per_cell] * self.num_pursuers
-                ),
-                "evader_position": spaces.Box(
-                    low=-1, high=num_states_per_cell - 1, shape=(), dtype=np.int64
-                ),
-                "goal_position": spaces.MultiDiscrete(
-                    [num_states_per_cell] * len(self.goal_locations)
-                ),
-            }
-        )
 
+        if self.flatten_obs:
+            self.observation_space = spaces.Dict( 
+                {
+                    "pursuer_position": spaces.MultiDiscrete(
+                        [num_states_per_cell] * self.num_pursuers
+                    ),
+                    "evader_position": spaces.Box(
+                        low=-1, high=num_states_per_cell - 1, shape=(), dtype=np.int64
+                    ),
+                    "goal_position": spaces.MultiDiscrete(
+                        [num_states_per_cell] * len(self.goal_locations)
+                    ),
+                    "is_evader_in_view": spaces.Discrete(2),
+                }
+            )
+        else:
+            self.observation_space = spaces.Dict( 
+                {
+                    "pursuer_position": spaces.Box(
+                        low=0, high=num_states_per_cell - 1, shape=(self.num_pursuers, 2), dtype=np.int64
+                    ),
+                    "evader_position": spaces.Box(
+                        low=-1, high=num_states_per_cell - 1, shape=(2,), dtype=np.int64
+                    ),
+                    "goal_position": spaces.Box(
+                        low=0, high=num_states_per_cell - 1, shape=(len(self.goal_locations), 2), dtype=np.int64
+                    ),
+                    "is_evader_in_view": spaces.Discrete(2),
+                }
+            )
+
+    
         self.action_space = spaces.MultiDiscrete([len(Actions)] * self.num_pursuers)
 
     def step(self, actions):
@@ -331,16 +353,32 @@ class VehicleTrackingEnv(gym.Env):
         Args:
             is_in_view (bool): Whether the evader is currently in view of any pursuer.
         """
-        pursuer_flat = [self._to_flattened(p_pos) for p_pos in self.pursuer_positions]
-        return {
-            "pursuer_position": np.array(pursuer_flat, dtype=np.int64),
-            "evader_position": self._to_flattened(self.evader_position)
-            if is_in_view
-            else -1,
-            "goal_position": np.array(
-                [self._to_flattened(g) for g in self.goal_locations], dtype=np.int64
-            ),
-        }
+
+        if not self.flatten_obs:
+            return {
+                "pursuer_position": np.array(
+                    self.pursuer_positions, dtype=np.int64
+                ),
+                "evader_position": self.evader_position
+                if is_in_view
+                else np.array([-1, -1], dtype=np.int64),
+                "goal_position": np.array(
+                    self.goal_locations, dtype=np.int64
+                ),
+                "is_evader_in_view": int(self._evader_inview()),
+            }
+        else:  # flattened observation
+            pursuer_flat = [self._to_flattened(p_pos) for p_pos in self.pursuer_positions]
+            return {
+                "pursuer_position": np.array(pursuer_flat, dtype=np.int64),
+                "evader_position": self._to_flattened(self.evader_position)
+                if is_in_view
+                else -1,
+                "goal_position": np.array(
+                    [self._to_flattened(g) for g in self.goal_locations], dtype=np.int64
+                ),
+                "is_evader_in_view": int(self._evader_inview()),
+            }
 
     def _to_flattened(self, position):
         return position[0] * self.map_dimensions[1] + position[1]
