@@ -53,7 +53,7 @@ Note that this type of parameter shift is just one example of how an NS-MDP can 
 
    * - .. container:: text-center
 
-          Statiaonary MDP
+          Stationary MDP
 
      - .. container:: text-center
 
