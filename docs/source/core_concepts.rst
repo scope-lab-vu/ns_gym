@@ -72,7 +72,7 @@ In designing NS-Gym, we deliberately keep the definition of what constitutes an 
 
 With this agentic perspective in mind, NS-Gym provides the interface to emulate either or both a runtime monitor and model updater, thereby focusing the development toward the core decision-making module.
 
-Furthermore, given these decision-making components, we can can categorize decision-making in non-stationary environments as seen in the literature (`see our ArXiv paper <https://arxiv.org/pdf/2501.09646>_`) by answering four key questions:
+Furthermore, given these decision-making components, we can can categorize decision-making in non-stationary environments as seen in the literature (`see our ArXiv paper <https://arxiv.org/pdf/2501.09646>`_) by answering four key questions:
 
 1) What changes in the environment? 
 2) How does the environment change?
