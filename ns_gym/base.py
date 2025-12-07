@@ -497,7 +497,7 @@ def _generate_tunable_params():
 
     env_ids_to_inspect = [
         "FrozenLake-v1",
-        "CliffWalking-v1",
+        "CliffWalking-v0",
         "CartPole-v1",
         "Acrobot-v1",
         "MountainCar-v0",
