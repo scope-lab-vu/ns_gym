@@ -40,13 +40,9 @@ dev = [
     "tox-uv"
 ]
 
-vehicle_env = [    
-    "gridworldenvutils @ git+https://github.com/nkepling/GridWorldEnvUtils.git"
-]
 
 all = [
-    "ns_gym[dev]", 
-    "ns_gym[vehicle_env]"
+    "ns_gym[dev]"
 ]
 
 [tool.setuptools.packages.find]

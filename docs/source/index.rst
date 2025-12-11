@@ -111,4 +111,5 @@ Note that this type of parameter shift is just one example of how an NS-MDP can 
   environments.md
   algorithms.md
   leaderboard.md
+  aamas2026_competition.md
   reference.md
