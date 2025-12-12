@@ -7,18 +7,20 @@ NS-Gym (Non-Stationary Gym) is a flexible framework providing a standardized abs
 Paper
 -------------------------------------------
 
-Please take a look at our pre-print paper on ArXiv. An updated version of the paper accepted to the NeurIPS 2025 Dataset and Benchmarks will be available soon!
+Please take a look at our paper accepted to the NeurIPS 2025 Dataset and Benchmarks Track for more details on NS-Gym:
 
-`NS-Gym: Open-Source Simulation Environments and Benchmarks for Non-Stationary Markov Decision Processes <https://arxiv.org/abs/2501.09646>`_.
+`NS-Gym: Open-Source Simulation Environments and Benchmarks for Non-Stationary Markov Decision Processes <https://openreview.net/pdf?id=YOXZuRy40U>`_.
 
 .. code-block::
 
-    @article{keplinger2025ns,
-      title={NS-Gym: Open-Source Simulation Environments and Benchmarks for Non-Stationary Markov Decision Processes},
-      author={Keplinger, Nathaniel S and Luo, Baiting and Bektas, Iliyas and Zhang, Yunuo and Wray, Kyle Hollins and Laszka, Aron and Dubey, Abhishek and Mukhopadhyay, Ayan},
-      journal={arXiv preprint arXiv:2501.09646},
-      year={2025}
-    }
+     @inproceedings{
+          keplinger2025nsgym,
+          title={{NS}-Gym: A Comprehensive and Open-Source Simulation Framework for Non-Stationary Markov Decision Processes},
+          author={Nathaniel S Keplinger and Baiting Luo and Yunuo Zhang and Kyle Hollins Wray and Aron Laszka and Abhishek Dubey and Ayan Mukhopadhyay},
+          booktitle={The Thirty-ninth Annual Conference on Neural Information Processing Systems Datasets and Benchmarks Track},
+          year={2025},
+          url={https://openreview.net/forum?id=YOXZuRy40U}
+     }
 
 
 Installation
@@ -111,4 +113,5 @@ Note that this type of parameter shift is just one example of how an NS-MDP can 
   environments.md
   algorithms.md
   leaderboard.md
+  aamas2026_competition.md
   reference.md
