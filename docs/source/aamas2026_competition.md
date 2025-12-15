@@ -1,16 +1,18 @@
-# AAMAS 2026 Competition on Evaluating Adaptive Decision-Making Agents under Non-Stationarity
+<table style="width:100%; border:none;">
+  <tr style="border:none;">
+    <td style="border:none; vertical-align:top;">
+      <h1 style="margin-top:0;">
+        AAMAS 2026 Competition:<br>
+        Evaluating Adaptive Decision Agents<br>
+        under Non-Stationarity
+      </h1>
+    </td>
+    <td style="border:none; width:240px; vertical-align:top; text-align:right;">
+      <img src="_static/images/AAMAS2026.jpg" alt="AAMAS 2026 logo" style="width:220px; height:auto;">
+    </td>
+  </tr>
+</table>
 
-<img
-  src="_static/images/AAMAS2026.jpg"
-  alt="AAMAS 2026 logo"
-  style="
-    float: right;
-    width: 260px;
-    height: auto;
-    margin-left: 24px;
-    margin-bottom: 12px;
-  "
-/>
 
 Welcome to the AAMAS 2026 Non-Stationarity Challenge Page! This competition, co-located with [AAMAS 2026](https://cyprusconferences.org/aamas2026/), invites researchers and practitioners to develop and evaluate decision-making agents that can effectively adapt to non-stationary environments using the NS-Gym framework. Participants will design agents capable of detecting, adapting to, and recovering from dynamic environmental shifts. The solution method is open to any approach, including but not limited to reinforcement learning, online planning, meta-learning, and continuous learning. The competition aims to foster innovation in adaptive decision-making and provide insights into the challenges of non-stationary environments. Results will be presented at the AAMAS 2026 conference.
 
