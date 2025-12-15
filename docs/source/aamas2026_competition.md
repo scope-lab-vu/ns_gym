@@ -69,3 +69,90 @@ We will evaluate all submitted agents on a suite of non-stationary environments 
 ## Contact Information
 
 Please feel free to reach out with any questions or concerns regarding the competition. You can contact the competition organizers at **nathaniel.s.keplinger** [at] **vanderbilt.edu** and **ayan.mukhopadhyay** [at] **vanderbilt.edu**
+
+
+<hr>
+
+<h2 style="text-align:center;">Competition Organizers</h2>
+
+<div style="
+  display: flex;
+  justify-content: center;
+  gap: 40px;
+  flex-wrap: wrap;
+  margin-top: 30px;
+">
+
+  <!-- Organizer 1 -->
+  <div style="text-align: center; max-width: 160px;">
+    <img src="_static/images/keplinger.jpg"
+         alt="Nathaniel Keplinger"
+         style="
+           width: 120px;
+           height: 120px;
+           border-radius: 50%;
+           object-fit: cover;
+           margin-bottom: 10px;
+         ">
+    <div style="font-weight: 600;">Nathaniel S. Keplinger</div>
+    <div style="font-size: 0.9em; color: #555;">Graduate Student, Vanderbilt University</div>
+    <a href="https://nkepling.github.io" target="_blank" style="font-size: 0.9em;">
+      Website
+    </a>
+  </div>
+
+  <!-- Organizer 2 -->
+  <div style="text-align: center; max-width: 160px;">
+    <img src="_static/images/mukhopadhyay.jpg"
+         alt="Ayan Mukhopadhyay"
+         style="
+           width: 120px;
+           height: 120px;
+           border-radius: 50%;
+           object-fit: cover;
+           margin-bottom: 10px;
+         ">
+    <div style="font-weight: 600;">Ayan Mukhopadhyay</div>
+    <div style="font-size: 0.9em; color: #555;">Assistant Professor, College of William and Mary</div>
+    <a href="https://www.ayanmukhopadhyay.com/" target="_blank" style="font-size: 0.9em;">
+      Website
+    </a>
+  </div>
+
+  <!-- Organizer 3 -->
+  <div style="text-align: center; max-width: 160px;">
+    <img src="_static/images/dubey.jpg"
+         alt="Abhishek Dubey"
+         style="
+           width: 120px;
+           height: 120px;
+           border-radius: 50%;
+           object-fit: cover;
+           margin-bottom: 10px;
+         ">
+    <div style="font-weight: 600;">Abhishek Dubey</div>
+    <div style="font-size: 0.9em; color: #555;">Associate Professor, Vanderbilt University</div>
+    <a href="https://abhishekdubey.bio/" target="_blank" style="font-size: 0.9em;">
+      Website
+    </a>
+  </div>
+
+  <!-- Organizer 4 -->
+  <div style="text-align: center; max-width: 160px;">
+    <img src="_static/images/laszka.jpg"
+         alt="Aron Laszka"
+         style="
+           width: 120px;
+           height: 120px;
+           border-radius: 50%;
+           object-fit: cover;
+           margin-bottom: 10px;
+         ">
+    <div style="font-weight: 600;">Aron Laszka</div>
+    <div style="font-size: 0.9em; color: #555;">Assistant Professor, Pennsylvania State University</div>
+    <a href="https://aronlaszka.com/" target="_blank" style="font-size: 0.9em;">
+      Website
+    </a>
+  </div>
+
+</div>
