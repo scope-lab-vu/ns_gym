@@ -2,13 +2,13 @@
 
 <img
   src="_static/images/AAMAS2026.jpg"
-  alt="AAMAS 2026 Paphos Cyprus logo"
+  alt="AAMAS 2026 logo"
   style="
     float: right;
     width: 260px;
-    max-width: 40%;
     height: auto;
-    margin: 0 0 12px 18px;
+    margin-left: 24px;
+    margin-bottom: 12px;
   "
 />
 
