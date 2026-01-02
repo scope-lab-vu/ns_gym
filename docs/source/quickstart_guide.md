@@ -6,10 +6,16 @@ Create a virtual environment (optional but recommended). Here we use `uv` for de
 
 ```bash
 uv venv
-source venv/bin/activate 
+source .venv/bin/activate 
 ```
 
-To install NS-Gym, you can use pip. 
+To install NS-Gym, you can use pip (remove the `uv` prefix if not using UV):
+
+```bash
+uv pip install ns-gym
+```
+
+for nightly builds, you can install directly from the GitHub repository:
 
 ```bash
 uv pip install git+https://github.com/scope-lab-vu/ns_gym

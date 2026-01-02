@@ -32,16 +32,18 @@ We'll eventually release NS-Gym on PyPI for easier installation.
 
 **NS-Gym: Open-Source Simulation Environments and Benchmarks for Non-Stationary Markov Decision Processes**
 
-[Read the the preprint on ArXiv](https://arxiv.org/abs/2501.09646) (An updated version to be published at NeurIPS 2025 Dataset and Benchmarks track is coming soon). See tag `submission/ns_gymv0` for benchmarking code used in the paper.
+[Read our paper published in NeurIPS 2025 Dataset and Benchmarks track](https://openreview.net/pdf?id=YOXZuRy40U). See tag `submission/ns_gymv0` for benchmarking code used in the paper.
 
 ### Citation
 
 ```bibtex
-@article{keplinger2025ns,
-  title={NS-Gym: Open-Source Simulation Environments and Benchmarks for Non-Stationary Markov Decision Processes},
-  author={Keplinger, Nathaniel S and Luo, Baiting and Bektas, Iliyas and Zhang, Yunuo and Wray, Kyle Hollins and Laszka, Aron and Dubey, Abhishek and Mukhopadhyay, Ayan},
-  journal={arXiv preprint arXiv:2501.09646},
-  year={2025}
+@inproceedings{
+keplinger2025nsgym,
+title={{NS}-Gym: A Comprehensive and Open-Source Simulation Framework for Non-Stationary Markov Decision Processes},
+author={Nathaniel S Keplinger and Baiting Luo and Yunuo Zhang and Kyle Hollins Wray and Aron Laszka and Abhishek Dubey and Ayan Mukhopadhyay},
+booktitle={The Thirty-ninth Annual Conference on Neural Information Processing Systems Datasets and Benchmarks Track},
+year={2025},
+url={https://openreview.net/forum?id=YOXZuRy40U}
 }
 ```
 
@@ -170,7 +172,7 @@ A more comprehensive tutorial can be found [here](tutorial.ipynb)
 
 We welcome any contributions to this NS-Gym project! If you find a bug or want to add a new feature, please feel free to open an issue or submit a pull request.
 
-Clone the repository, install the required dependencies in editable mode, and run the tests to ensure everything is working correctly. We use UV for package management. 
+Fork then clone the repository, install the required dependencies in editable mode, and run the tests to ensure everything is working correctly. We use UV for package management. 
 
 ```bash
 git clone https://github.com/scope-lab-vu/ns_gym.git
@@ -183,6 +185,8 @@ To run all test in the project run:
 ```bash
 pytest tests/
 ```
+
+After forking the repo make a new branch for your feature or bugfix (e.g, `git checkout -b feature/new-non-stationary-env`), commit your changes, and push the branch to your fork. Then, open a pull request against the main repository's `main` branch.
 
 
 
