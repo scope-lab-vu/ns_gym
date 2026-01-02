@@ -18,7 +18,13 @@ Visit our project webpage for tutorials, core concepts, and documentation: [nsgy
 
 ## Installation
 
-To install NS-Gym, you can use `pip` directly from GitHub. uv is recommended but not required:
+To install NS-Gym, you can use `pip`. uv is recommended but not required (replace `uv pip` with `pip` if you don't use uv):
+
+```bash
+uv pip install ns-gym
+```
+
+You can also install the latest development version directly from the GitHub repository:
 
 ```bash
 uv pip install git+https://github.com/scope-lab-vu/ns_gym
