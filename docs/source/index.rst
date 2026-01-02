@@ -25,8 +25,12 @@ Please take a look at our paper accepted to the NeurIPS 2025 Dataset and Benchma
 
 Installation
 -----------------
-To install NS-Gym, you can use pip (we'll eventually put it on PyPI but for now you can install it directly from GitHub):
+To install NS-Gym, you can use pip:
 
+.. code-block::
+     pip install ns_gym
+
+Alternatively, you can install the latest development version directly from the GitHub repository:
 .. code-block::
 
     pip install git+https://github.com/scope-lab-vu/ns_gym
