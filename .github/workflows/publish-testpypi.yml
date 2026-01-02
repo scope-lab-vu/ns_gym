@@ -1,0 +1,65 @@
+name: Publish to TestPyPI
+
+on:
+  push:
+    tags:
+      - 'v*dev'
+
+jobs:
+
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - python: "3.10"
+            tox_env: py310
+          - python: "3.11"
+            tox_env: py311
+          - python: "3.12"
+            tox_env: py312
+          - python: "3.13"
+            tox_env: py313
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python ${{ matrix.python }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v7
+
+      - name: Install tox and tox-uv
+        run: uv pip install tox tox-uv --system
+
+      - name: Run tox
+        run: tox -e ${{ matrix.tox_env }}
+
+  
+  release:
+    needs: test 
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v7
+
+      - name: Build package
+        run: uv build
+
+      - name: Publish to TestPyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          password: ${{ secrets.TEST_PYPI_API_TOKEN }}
