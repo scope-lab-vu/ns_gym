@@ -33,7 +33,7 @@ __all__ = [
 
 # from .  import wrappers, update_functions, schedulers,evaluate,benchmark_algorithms, context_switching,evaluate
 
-__version__ = "1.0.1"
+
 
 # import .utils
 # import .benchmark_algorithms

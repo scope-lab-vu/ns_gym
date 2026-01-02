@@ -1,0 +1,69 @@
+name: Publish to PyPI
+
+on:
+  push:
+    tags:
+      - 'v*'        # Triggers on v1.0.0, v2.1.3
+      - '!v*dev'    # IMPORTANT: Excludes tags ending in 'dev'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - python: "3.10"
+            tox_env: py310
+          - python: "3.11"
+            tox_env: py311
+          - python: "3.12"
+            tox_env: py312
+          - python: "3.13"
+            tox_env: py313
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python ${{ matrix.python }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v7
+
+      - name: Install tox and tox-uv
+        run: uv pip install tox tox-uv --system
+
+      - name: Run tox
+        run: tox -e ${{ matrix.tox_env }}
+
+  release:
+    needs: test
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/ns_gym
+    permissions:
+      id-token: write  # valid for trusted publishing, harmless if using token
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v7
+
+      - name: Build package
+        run: uv build
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+            verbose: true
