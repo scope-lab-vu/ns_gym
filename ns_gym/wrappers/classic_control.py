@@ -68,9 +68,11 @@ class NSClassicControlWrapper(base.NSWrapper):
         """
 
         if self.is_sim_env and not self.in_sim_change:
+
+            env_change = {p: 0 for p in self.tunable_params.keys()}
+            delta_change = {p: 0.0 for p in self.tunable_params.keys()}
             obs, reward, terminated, truncated, info = super().step(
-                action, env_change=None, delta_change=None
-            )
+                action, env_change=env_change, delta_change=delta_change)
         else:
             env_change = {}
             delta_change = {}
@@ -134,6 +136,20 @@ class NSClassicControlWrapper(base.NSWrapper):
 
     def __deepcopy__(self, memo):
 
+        base_class_name = self.unwrapped.__class__.__name__
+        
+        # Standard Classic Control Mappings
+        id_map = {
+            "CartPoleEnv": "CartPole-v1",
+            "MountainCarEnv": "MountainCar-v0",
+            "Continuous_MountainCarEnv": "MountainCarContinuous-v0",
+            "PendulumEnv": "Pendulum-v1",
+            "AcrobotEnv": "Acrobot-v1",
+        }
+
+        # Fallback to spec.id only if we don't recognize the class
+        base_id = id_map.get(base_class_name, self.unwrapped.spec.id)
+
         if self.unwrapped.__class__.__name__ in ["MountainCarEnv", "MountainCarContinuousEnv"]:
             warnings.warn(
                 f"Deepcopy for {self.unwrapped.__class__.__name__} has a known "
@@ -144,7 +160,7 @@ class NSClassicControlWrapper(base.NSWrapper):
                 UserWarning
             )
         env_kwargs = self.unwrapped.spec.kwargs
-        sim_env = gym.make(self.unwrapped.spec.id,**env_kwargs)
+        sim_env = gym.make(base_id, **env_kwargs)
         sim_env = NSClassicControlWrapper(
             sim_env,
             deepcopy(self.tunable_params),
@@ -176,12 +192,8 @@ class NSClassicControlWrapper(base.NSWrapper):
         Returns:
             constraint_dict (dict[str,bool]): Dictionary of parameters and their constraint violation status. True is a constraint is violated, False otherwise.
         Note:
-            Since each environement has different physical contraints, I can either create a new class for of each environment or just implement this method in the wrapper
-            that check the base environment name.
+            Since each environement has different physical contraints, I can either create a new class for of each environment or just implement this method in the wrapper than check the base environment name.
 
-        - Relook at contrains to see if they make sense, no division by zero, no negative values, etc.
-        - Make sure all dependent parameters are updated accordingly.
-        - Should we store the previous values of the parameters?
         """
         constraint_dict: dict[str, bool] = {}
 

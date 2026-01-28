@@ -167,8 +167,11 @@ class NSCliffWalkingWrapper(base.NSWrapper):
             tuple[dict, base.Reward, bool, bool, dict[str, Any]]: The observation, reward, termination signal, truncation signal, and additional information.       
         """
         if self.is_sim_env and not self.in_sim_change:
+            env_change = {"P": 0}
+            delta_change = {"P": 0.0}
+
             obs, reward, terminated, truncated, info = super().step(
-                action, env_change=None, delta_change=None
+                action, env_change=env_change, delta_change=delta_change
             )
         else:
             self.transition_prob, env_change_flag, delta_change = self.update_fn(
@@ -217,7 +220,9 @@ class NSCliffWalkingWrapper(base.NSWrapper):
         return planning_env
 
     def __deepcopy__(self, memo):
-        env_id = self.unwrapped.spec.id
+        # env_id = self.unwrapped.spec.id
+
+        env_id = "CliffWalking-v1"
         sim_env = NSCliffWalkingWrapper(
             gym.make(env_id, max_episode_steps=1000),
             tunable_params=deepcopy(self.tunable_params, memo),
@@ -343,8 +348,10 @@ class NSFrozenLakeWrapper(base.NSWrapper):
 
         if self.is_sim_env and not self.in_sim_change:
             # action = self._get_action(action)
+            env_change = {"P": 0}
+            delta_change = {"P": 0.0}
             obs, reward, terminated, truncated, info = super().step(
-                action, env_change=None, delta_change=None
+                action, env_change=env_change, delta_change=delta_change
             )
         else:
             self.transition_prob, env_change_flag, delta_change = self.update_fn(
@@ -468,9 +475,11 @@ class NSFrozenLakeWrapper(base.NSWrapper):
         return planning_env
 
     def __deepcopy__(self, memo):
-        env_id = self.unwrapped.spec.id
+        # env_id = self.unwrapped.spec.id
+        env_id = "FrozenLake-v1"
+
         sim_env = gym.make(
-            env_id, is_slippery=False, max_episode_steps=1000, render_mode="ansi"
+            env_id, is_slippery=False, render_mode="ansi", 
         )
         sim_env = NSFrozenLakeWrapper(
             sim_env,
