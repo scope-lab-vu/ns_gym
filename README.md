@@ -195,5 +195,10 @@ pytest tests/
 After forking the repo make a new branch for your feature or bugfix (e.g, `git checkout -b feature/new-non-stationary-env`), commit your changes, and push the branch to your fork. Then, open a pull request against the main repository's `main` branch.
 
 
+To run tox tests to test against multiple Python versions, navigate to the root directory of the project and run:
 
+```bash
+tox 
+```
 
+To versioning is handled via `setuptools_scm`. When we tag a new release, the version number will be automatically updated based on the latest tag. 

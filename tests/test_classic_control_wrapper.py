@@ -7,7 +7,7 @@ import copy
 from ns_gym.wrappers import NSClassicControlWrapper
 from ns_gym.base import UpdateFn # Import necessary base classes for typing/check
 from ns_gym.base import TUNABLE_PARAMS
-
+from gymnasium import register, registry
 
 SUPPORTED_CLASSIC_CONTROL_ENV_IDS = [
     "CartPole-v1",
@@ -149,6 +149,34 @@ def test_deepcopy(classic_control_params, env_id):
 
     assert not np.array_equal(sim_obs['state'], obs['state'])  # States should differ after a step
 
+
+
+def validate_wrapper_order(env):
+
+        # Check 1: Outermost Wrapper
+    assert isinstance(env, NSClassicControlWrapper), (
+        f"Expected outermost wrapper to be {NSClassicControlWrapper.__name__}, "
+        f"but got {type(env).__name__}"
+    )
+
+    # Check 2: No Double Wraps
+    current_layer = env.env 
+    stack_depth = 1
+    
+    while hasattr(current_layer, "env"):
+        assert not isinstance(current_layer, NSClassicControlWrapper), (
+            f"Double wrap detected! Found {NSClassicControlWrapper.__name__} again "
+            f"at depth {stack_depth}."
+        )
+        current_layer = current_layer.env
+        stack_depth += 1
+
+    # Check the final base environment (root)
+    assert not isinstance(current_layer, NSClassicControlWrapper), (
+        f"Double wrap detected! Found {NSClassicControlWrapper.__name__} as the base environment."
+    )
+
+
 @pytest.mark.parametrize("env_id", SUPPORTED_CLASSIC_CONTROL_ENV_IDS)
 def test_get_planning_env(classic_control_params, env_id):
 
@@ -174,6 +202,9 @@ def test_get_planning_env(classic_control_params, env_id):
     obs, reward, terminated, truncated, info = ns_env.step(action)
 
     planning_env = ns_env.get_planning_env()
+
+    validate_wrapper_order(planning_env)
+
     assert isinstance(planning_env, NSClassicControlWrapper)
     assert env_name == planning_env.unwrapped.__class__.__name__
     assert planning_env.is_sim_env == True
@@ -197,6 +228,10 @@ def test_get_planning_env(classic_control_params, env_id):
     action = ns_env.action_space.sample()
     obs, reward, terminated, truncated, info = ns_env.step(action)
     planning_env = ns_env.get_planning_env()
+
+    validate_wrapper_order(planning_env)
+
+
     assert isinstance(planning_env, NSClassicControlWrapper)
     assert env_name == planning_env.unwrapped.__class__.__name__
     assert planning_env.is_sim_env == True
@@ -282,3 +317,59 @@ def test_valid_tunable_param(env_id):
         ns_env = NSClassicControlWrapper(env, tunable_params, change_notification=False)
         assert isinstance(ns_env, NSClassicControlWrapper)
 
+
+
+
+@pytest.mark.parametrize("env_id", SUPPORTED_CLASSIC_CONTROL_ENV_IDS)
+def test_registration(classic_control_params, env_id):
+    """
+    Tests that a custom registered environment using the NS wrapper 
+    maintains the correct wrapper stack (Outermost = NSWrapper)
+    and that get_planning_env() preserves this structure.
+    """
+
+    tunable_params = classic_control_params[env_id]
+    
+    def _make_custom_env(**kwargs):
+        base_env = gym.make(env_id, **kwargs) 
+        return NSClassicControlWrapper(base_env, tunable_params, change_notification=False, delta_change_notification=False, in_sim_change=False)
+
+    # We use a unique ID for testing to avoid collisions
+    custom_id = f"Test-NS-{env_id}"
+    
+    # Idempotency: Remove if already registered from a previous run
+    if custom_id in registry:
+        del registry[custom_id]
+        
+    register(
+        id=custom_id,
+        entry_point=_make_custom_env,
+        # CRITICAL: This ensures gym.make() doesn't add outer OrderEnforcing/PassiveChecker
+        disable_env_checker=True ,
+        order_enforce=False
+    )
+
+    try:
+        # 3. Create the environment via gym.make
+        # We rely on the registration's disable_env_checker=True here
+        ns_env = gym.make(custom_id)
+
+        # 4. Validate Stack Integrity (gym.make)
+        # Should be: <NSWrapper<...>> NOT <OrderEnforcing<NSWrapper<...>>>
+        validate_wrapper_order(ns_env)
+        
+        # 5. Validate Stack Integrity (get_planning_env)
+        ns_env.reset(seed=123)
+        planning_env = ns_env.get_planning_env()
+        
+        # The planning env must also be cleanly wrapped
+        validate_wrapper_order(planning_env)
+        
+        # Standard sanity checks on the planning env
+        assert planning_env.is_sim_env
+        assert isinstance(planning_env.unwrapped, gym.Env)
+
+    finally:
+        # Cleanup registration to avoid polluting the global registry
+        if custom_id in registry:
+            del registry[custom_id]

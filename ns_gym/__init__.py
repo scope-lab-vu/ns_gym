@@ -9,6 +9,14 @@ from . import context_switching
 from . import utils
 from . import envs
 
+from importlib.metadata import version, PackageNotFoundError
+
+try:
+    __version__ = version("ns_gym")
+except PackageNotFoundError:
+    # package is not installed
+    __version__ = "0.0.0-unknown"
+
 register(
     id='ns_gym/Bridge-v0',
     entry_point='ns_gym.envs:Bridge',

@@ -255,8 +255,10 @@ class NSWrapper(Wrapper):
             }
         )
 
+        setattr(self.unwrapped, "get_planning_env", self.get_planning_env)
+
     def step(
-        self, action: Any, env_change: dict[str, bool], delta_change: dict[str, bool]
+        self, action: Any, env_change: dict[str, Union[bool, int]], delta_change: dict[str, Union[bool, int, float]]
     ):
         """Step function for the environment. Augments observations and rewards with additional information about changes in the environment and transition function.
 
@@ -278,6 +280,10 @@ class NSWrapper(Wrapper):
         default_env_change = {p: 0 for p in self.tunable_params.keys()}
         default_delta_change = {p: 0.0 for p in self.tunable_params.keys()}
 
+        calculated_env_change = {k: int(v) for k, v in env_change.items()}
+
+        calculated_delta_change = {k: float(v) for k, v in delta_change.items()}
+
         if (
             not self.change_notification
             or self.frozen
@@ -285,7 +291,7 @@ class NSWrapper(Wrapper):
         ):
             final_env_change = default_env_change
         else:
-            calculated_env_change = {k: int(v) for k, v in env_change.items()}
+            
             final_env_change = {**default_env_change, **calculated_env_change}
 
         if (
@@ -295,7 +301,7 @@ class NSWrapper(Wrapper):
         ):
             final_delta_change = default_delta_change
         else:
-            calculated_delta_change = {k: float(v) for k, v in delta_change.items()}
+            
             final_delta_change = {**default_delta_change, **calculated_delta_change}
 
         obs = {
@@ -311,6 +317,10 @@ class NSWrapper(Wrapper):
             delta_change=final_delta_change,
             relative_time=self.t,
         )
+
+
+        info["Ground Truth Env Change"] = calculated_env_change
+        info["Ground Truth Delta Change"] = calculated_delta_change
 
         return obs, rew, terminated, truncated, info
 
@@ -340,6 +350,9 @@ class NSWrapper(Wrapper):
             "delta_change": delta_change,
             "relative_time": self.t,
         }
+
+        info["Ground Truth Env Change"] = env_change
+        info["Ground Truth Delta Change"] = delta_change
 
         return obs, info
 
@@ -1010,8 +1023,6 @@ SUPPORTED_GRID_WORLD_ENV_IDS = [
     "FrozenLake-v1",
     # "ns_gym/Bridge-v0" 
 ]
-
-
 
 """
 Tunable parameters dictionary. Keys are environment names and values are dictionaries of parameter names and their initial values.
