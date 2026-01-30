@@ -159,7 +159,15 @@ class NSClassicControlWrapper(base.NSWrapper):
                 "`assert not np.array_equal(sim_obs['state'], obs['state'])` fails.",
                 UserWarning
             )
-        env_kwargs = self.unwrapped.spec.kwargs
+        # Filter out NSWrapper-level kwargs that aren't valid for the base env
+        _ns_wrapper_keys = {
+            'change_notification', 'delta_change_notification',
+            'in_sim_change', 'scalar_reward', 'tunable_params',
+        }
+        env_kwargs = {
+            k: v for k, v in self.unwrapped.spec.kwargs.items()
+            if k not in _ns_wrapper_keys
+        }
         sim_env = gym.make(base_id, **env_kwargs)
         sim_env = NSClassicControlWrapper(
             sim_env,
