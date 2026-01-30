@@ -45,6 +45,7 @@ class NSCliffWalkingWrapper(base.NSWrapper):
             change_notification=change_notification,
             delta_change_notification=delta_change_notification,
             in_sim_change=in_sim_change,
+            **kwargs,
         )
 
         self.shape = self.unwrapped.shape
@@ -230,6 +231,7 @@ class NSCliffWalkingWrapper(base.NSWrapper):
             delta_change_notification=self.delta_change_notification,
             in_sim_change=self.in_sim_change,
             initial_prob_dist=self.initial_prob_dist,
+            scalar_reward=self.scalar_reward,
         )
         memo[id(self)] = sim_env
 
@@ -489,6 +491,7 @@ class NSFrozenLakeWrapper(base.NSWrapper):
             in_sim_change=self.in_sim_change,
             initial_prob_dist=self.initial_prob_dist,
             modified_rewards=self.modified_rewards,
+            scalar_reward=self.scalar_reward,
         )
         sim_env.reset()
         sim_env.unwrapped.s = deepcopy(self.unwrapped.s)
@@ -516,6 +519,7 @@ class NSBridgeWrapper(base.NSWrapper):
         in_sim_change: bool = False,
         initial_prob_dist=[1, 0, 0],
         modified_rewards: Union[dict[str, int], None] = None,
+        **kwargs: Any,
     ):
         super().__init__(
             env=env,
@@ -523,6 +527,7 @@ class NSBridgeWrapper(base.NSWrapper):
             change_notification=change_notification,
             delta_change_notification=delta_change_notification,
             in_sim_change=in_sim_change,
+            **kwargs,
         )
 
         self.initial_prob_dist = initial_prob_dist
@@ -584,6 +589,7 @@ class NSBridgeWrapper(base.NSWrapper):
             delta_change_notification=self.delta_change_notification,
             in_sim_change=self.in_sim_change,
             initial_prob_dist=self.initial_prob_dist,
+            scalar_reward=self.scalar_reward,
         )
         sim_env.reset()
         sim_env.unwrapped.s = deepcopy(self.unwrapped.s)

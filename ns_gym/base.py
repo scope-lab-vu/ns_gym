@@ -197,6 +197,7 @@ class NSWrapper(Wrapper):
         change_notification: bool = False,
         delta_change_notification: bool = False,
         in_sim_change: bool = False,
+        scalar_reward: bool = True,
         **kwargs: Any,
     ):
         """
@@ -206,6 +207,7 @@ class NSWrapper(Wrapper):
             change_notification (bool): Sets a basic notification level. Returns a boolean flag to indicate whether to notify the agent of changes in the environment. Defaults to False.
             delta_change_notification (bool): Sets detailed notification levle. Returns Flag to indicate whether to notify the agent of changes in the transition function. Defaults to False.
             in_sim_change (bool): Flag to indicate whether to allow changes in the environment during simulation (e.g MCTS rollouts). Defaults to False.
+            scalar_reward (bool): If True, step() returns a scalar reward. If False, step() returns a Reward dataclass containing the reward, env_change, delta_change, and relative_time. Defaults to True.
 
         Attributes:
             frozen (bool): Flag to indicate whether the environment is frozen or not.
@@ -213,6 +215,8 @@ class NSWrapper(Wrapper):
 
         """
         Wrapper.__init__(self, env)
+
+        self.scalar_reward = scalar_reward
 
         if delta_change_notification:
             assert change_notification, (
@@ -311,13 +315,15 @@ class NSWrapper(Wrapper):
             "relative_time": self.t,
         }
 
-        rew = Reward(
-            reward=reward,
-            env_change=final_env_change,
-            delta_change=final_delta_change,
-            relative_time=self.t,
-        )
-
+        if self.scalar_reward:
+            rew = reward
+        else:
+            rew = Reward(
+                reward=reward,
+                env_change=final_env_change,
+                delta_change=final_delta_change,
+                relative_time=self.t,
+            )
 
         info["Ground Truth Env Change"] = calculated_env_change
         info["Ground Truth Delta Change"] = calculated_delta_change
