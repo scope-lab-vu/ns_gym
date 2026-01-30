@@ -167,6 +167,7 @@ class NSClassicControlWrapper(base.NSWrapper):
             self.change_notification,
             self.delta_change_notification,
             self.in_sim_change,
+            scalar_reward=self.scalar_reward,
         )
         sim_env.reset()
         sim_env.unwrapped.state = deepcopy(self.unwrapped.state)
