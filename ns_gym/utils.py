@@ -1,14 +1,12 @@
 # import ns_bench.base as base
 import math
 import numpy as np
-from scipy.stats import wasserstein_distance
 import ns_gym.base as base
 import yaml
 import argparse
 from pathlib import Path
 import datetime
 import warnings
-import torch
 
 
 def state_action_update(transitions: list, new_probs: list):
@@ -65,6 +63,7 @@ def wasserstein_dual(u: np.ndarray, v: np.ndarray):
     Returns:
         _type_: _description_
     """
+    from scipy.stats import wasserstein_distance
 
     dist = wasserstein_distance(u, v)
     return dist
@@ -211,6 +210,7 @@ def neural_network_checker(agent_device, obs):
     """
     Helper function to check if model and inputs are on the same device
     """
+    import torch
 
     if isinstance(obs, np.ndarray):
         obs = torch.from_numpy(obs).float()

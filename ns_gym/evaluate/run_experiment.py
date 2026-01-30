@@ -7,9 +7,7 @@ from multiprocessing import Pool
 import logging
 import itertools
 import time
-import pandas as pd
 import numpy as np
-import torch
 import ns_gym.utils
 
 """
@@ -42,6 +40,7 @@ def read_experiment_results(file_path):
     Returns:
         pd.Dataframe: A pandas dataframe containing the results.
     """
+    import pandas as pd
 
     df = pd.read_csv(file_path)
 
@@ -64,6 +63,8 @@ def array_to_list_if_array(x):
     Returns:
         list, single value, or original object.
     """
+    import torch
+
     if isinstance(x, np.ndarray):
         if x.size == 1:  # If array has only one element
             return x.item()  # Return the single value
@@ -77,6 +78,8 @@ def array_to_list_if_array(x):
 
 
 def action_type_checker(action):
+    import torch
+
     if isinstance(action, torch.Tensor):
         return action.numpy()
 

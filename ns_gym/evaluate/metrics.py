@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from ns_gym.base import Evaluator
 import warnings
 from typing import Type
@@ -9,7 +11,6 @@ import ns_gym
 import ns_gym.schedulers
 import ns_gym.update_functions
 import ns_gym.wrappers
-import torch
 
 
 class ComparativeEvaluator(Evaluator):
@@ -407,6 +408,8 @@ class LocalRegret(Evaluator):
         Returns:
             float: The total local regret R_L(T).
         """
+        import torch
+
         state, info = env.reset()
         initial_state = torch.tensor(state, dtype=torch.float32)
 
