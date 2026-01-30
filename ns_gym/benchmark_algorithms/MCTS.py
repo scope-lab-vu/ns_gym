@@ -34,13 +34,12 @@ class DecisionNode:
         state, _ = nsg.utils.type_mismatch_checker(observation=state,reward=None)
 
         assert not isinstance(state, dict), "State is still a dict after type checking."
-        # if isinstance(state, np.ndarray):
-        #     state = tuple(state)
+   
 
-        # if isinstance(state, dict) and 'state' in state:
-        #     state = state['state']
-        # if isinstance(state, np.ndarray):
-        #     state = tuple(state)
+        if isinstance(state, dict) and 'state' in state:
+            state = state['state']
+        if isinstance(state, np.ndarray):
+            state = tuple(state)
 
 
         self.state = state
