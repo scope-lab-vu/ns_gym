@@ -30,7 +30,11 @@ You can also install the latest development version directly from the GitHub rep
 uv pip install git+https://github.com/scope-lab-vu/ns_gym
 ```
 
-We'll eventually release NS-Gym on PyPI for easier installation.
+-----
+
+## AAMAS 2026 Competition: Evaluating Adaptive Decision Agents under Non-Stationarity
+
+We are using NS-Gym to host competition on designing apative decision agents for under Non-Stationarity! Learn more [here](https://nsgym.io/aamas2026_competition.html)
 
 -----
 
@@ -138,7 +142,7 @@ while not (done or truncated):
         print("########")
         print("\n")
     planning_env = ns_env.get_planning_env()
-    episode_reward += reward.reward
+    episode_reward += reward
     timestep += 1
 
 print("Episode Reward: ", episode_reward)
@@ -154,12 +158,10 @@ obs:  {'state': array([-0.03006991,  0.19717823,  0.02711801, -0.3215324 ], dtyp
         'delta_change': {'masspole': 0.0, 'gravity': 0.0}, 
         'relative_time': 1}
 
-reward:  Reward(reward=1.0, 
-                env_change={'masspole': 1, 'gravity': 1}, 
-                delta_change={'masspole': 0.0, 'gravity': 0.0}, 
-                relative_time=1)
-
 ```
+
+By default the reward is a simple scalar value. 
+
 
 The `obs` dictionary of the following terms:
 
@@ -168,7 +170,7 @@ The `obs` dictionary of the following terms:
 - `delta_change`: a dictionary indicating the magnitude of change for each parameter. This is only available if `delta_change_notification=True` is set in the wrapper. Defaults to zero if not set.
 - `relative_time`: Current time step of environment.
 
-The `reward` object is a data class rather than a dictionary that contains the same terms. While the observation is a dictionary to maintain compatibility with Gymnasium, the reward is a dataclass to allow for easier extension in the future for non-stationary rewards while working with a more robust data structure.
+
 
 # Tutorial:
 
@@ -197,7 +199,7 @@ After forking the repo make a new branch for your feature or bugfix (e.g, `git c
 
 To run tox tests to test against multiple Python versions, navigate to the root directory of the project and run:
 
-```bash
+```**bash**
 tox 
 ```
 
