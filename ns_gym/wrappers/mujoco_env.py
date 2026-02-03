@@ -89,8 +89,11 @@ class MujocoWrapper(base.NSWrapper):
     def step(self, action: Any) -> tuple[Any, Any, bool, bool, dict[str, Any]]:
         """Applies physics changes and then steps the environment."""
         if self.is_sim_env and not self.in_sim_change:
+
+            env_change = {p: 0 for p in self.tunable_params.keys()}
+            delta_change = {p: 0.0 for p in self.tunable_params.keys()}
             obs, reward, terminated, truncated, info = super().step(
-                action, env_change=None, delta_change=None
+                action, env_change=env_change, delta_change=delta_change
             )
         else:
             env_change = {}
@@ -140,6 +143,75 @@ class MujocoWrapper(base.NSWrapper):
         self._dependency_resolver()
         self.t = 0
         return obs, info
+
+    def get_planning_env(self):
+        """Return a copy of the environment for planning.
+
+        NOTE:
+            - If the environment is a simulation environment, the function returns a deepcopy of the simulation environment.
+            - If change notification is enabled, the function returns a deepcopy of the current environment because the decision making agent needs to be aware of the changes in the environment.
+            - If change notification is disabled, the function returns a deepcopy of the environment with the initial parameters.
+        """
+        assert self.has_reset, (
+            "The environment must be reset before getting the planning environment."
+        )
+        if self.is_sim_env or self.delta_change_notification:
+            return deepcopy(self)
+        elif not self.delta_change_notification:
+            planning_env = deepcopy(self)
+            for k, v in self.initial_params.items():
+                planning_env._set_param_value(k, deepcopy(v))
+            planning_env._dependency_resolver()
+            return planning_env
+
+    def __deepcopy__(self, memo):
+        base_class_name = self.unwrapped.__class__.__name__
+
+        id_map = {
+            "AntEnv": "Ant-v5",
+            "HalfCheetahEnv": "HalfCheetah-v5",
+            "HopperEnv": "Hopper-v5",
+            "HumanoidEnv": "Humanoid-v5",
+            "HumanoidStandupEnv": "HumanoidStandup-v5",
+            "InvertedPendulumEnv": "InvertedPendulum-v5",
+            "InvertedDoublePendulumEnv": "InvertedDoublePendulum-v5",
+            "ReacherEnv": "Reacher-v5",
+            "SwimmerEnv": "Swimmer-v5",
+            "PusherEnv": "Pusher-v5",
+        }
+
+        base_id = id_map.get(base_class_name, self.unwrapped.spec.id)
+
+        sim_env = gym.make(base_id)
+        sim_env = MujocoWrapper(
+            sim_env,
+            deepcopy(self.tunable_params),
+            self.change_notification,
+            self.delta_change_notification,
+            self.in_sim_change,
+            scalar_reward=self.scalar_reward,
+        )
+        sim_env.reset()
+
+        # Copy full MuJoCo integration state (time, qpos, qvel, act,
+        # qacc_warmstart) using the built-in state API for exact continuation
+        spec = mujoco.mjtState.mjSTATE_INTEGRATION
+        state_size = mujoco.mj_stateSize(self.unwrapped.model, spec)
+        state = np.empty(state_size)
+        mujoco.mj_getState(self.unwrapped.model, self.unwrapped.data, state, spec)
+        mujoco.mj_setState(sim_env.unwrapped.model, sim_env.unwrapped.data, state, spec)
+
+        # Copy wrapper state
+        sim_env.t = deepcopy(self.t)
+
+        # Copy current tunable parameter values into the new model
+        for k in self.tunable_params:
+            sim_env._set_param_value(k, deepcopy(self._get_param_value(k)))
+
+        # Recompute all derived MuJoCo quantities from the copied state
+        sim_env._dependency_resolver()
+        sim_env.is_sim_env = True
+        return sim_env
 
 
 def param_look_up(env_name: str, tunable_param: str) -> tuple[Callable, Callable]:
