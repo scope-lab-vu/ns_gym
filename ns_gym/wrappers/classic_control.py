@@ -126,9 +126,9 @@ class NSClassicControlWrapper(base.NSWrapper):
         assert self.has_reset, (
             "The environment must be reset before getting the planning environment."
         )
-        if self.is_sim_env or self.change_notification:
+        if self.is_sim_env or self.delta_change_notification:
             return deepcopy(self)
-        elif not self.change_notification:
+        elif not self.delta_change_notification:
             planning_env = deepcopy(self)
             for k, v in self.initial_params.items():
                 setattr(planning_env.unwrapped, k, deepcopy(v))
