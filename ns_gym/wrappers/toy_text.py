@@ -212,9 +212,9 @@ class NSCliffWalkingWrapper(base.NSWrapper):
         assert self.has_reset, (
             "The environment must be reset before getting the planning environment."
         )
-        if self.is_sim_env or self.change_notification:
+        if self.is_sim_env or self.delta_change_notification:
             return deepcopy(self)
-        elif not self.change_notification:
+        elif not self.delta_change_notification:
             planning_env = deepcopy(self)
             planning_env.transition_prob = deepcopy(self.initial_prob_dist)
             setattr(planning_env.unwrapped, "P", self.intial_p)
@@ -468,9 +468,9 @@ class NSFrozenLakeWrapper(base.NSWrapper):
         assert self.has_reset, (
             "The environment must be reset before getting the planning environment."
         )
-        if self.is_sim_env or self.change_notification:
+        if self.is_sim_env or self.delta_change_notification:
             return deepcopy(self)
-        elif not self.change_notification:
+        elif not self.delta_change_notification:
             planning_env = deepcopy(self)
             planning_env.transition_prob = deepcopy(self.initial_prob_dist)
             setattr(planning_env.unwrapped, "P", self.intial_p)
@@ -573,9 +573,9 @@ class NSBridgeWrapper(base.NSWrapper):
         assert self.has_reset, (
             "The environment must be reset before getting the planning environment."
         )
-        if self.is_sim_env or self.change_notification:
+        if self.is_sim_env or self.delta_change_notification:
             return deepcopy(self)
-        elif not self.change_notification:
+        elif not self.delta_change_notification:
             planning_env = deepcopy(self)
             setattr(planning_env.unwrapped, "P", deepcopy(self.initial_prob_dist))
         return planning_env
