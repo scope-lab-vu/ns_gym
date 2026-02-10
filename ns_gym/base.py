@@ -1,5 +1,5 @@
 import numpy as np
-from abc import ABC
+from abc import ABC, abstractmethod
 from typing import Union, Any, Type
 from dataclasses import dataclass
 from gymnasium import Env, Wrapper
@@ -65,14 +65,34 @@ class Scheduler(ABC):
         self.end = end
 
     def __call__(self, t: int) -> bool:
-        """Call method to determine whether to update the parameter or not. Subclasses must implement this method.
+        """Determine whether to update the parameter at timestep t.
+
+        Checks that t is within the [start, end] range, then delegates
+        to the subclass's :meth:`_check` method.
+
         Args:
             t (int): MDP timestep
 
         Returns:
             bool: Boolean flag indicating whether to update the parameter or not.
         """
-        return NotImplementedError("Subclasses must implement this method")
+        if self.start <= t <= self.end:
+            return self._check(t)
+        return False
+
+    @abstractmethod
+    def _check(self, t: int) -> bool:
+        """Core scheduling logic. Subclasses must implement this method.
+
+        This method is only called when t is within [start, end].
+
+        Args:
+            t (int): MDP timestep
+
+        Returns:
+            bool: Whether the event should fire at this timestep.
+        """
+        ...
 
 
 class UpdateFn(ABC):
