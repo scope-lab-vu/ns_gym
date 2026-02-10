@@ -1014,71 +1014,122 @@ class TestCallInterface:
 
 
 # ============================================================
-# Regression: RandomWalk* must return scalar, not numpy array
-# https://github.com/scope-lab-vu/ns_gym/issues/XX
-# rng.normal(mu, sigma, 1) returns a 1-element array which
-# causes ValueError in downstream dynamics (e.g. Acrobot).
+# Parametrized common-property tests for all single_param UpdateFns
 # ============================================================
 
-class TestRandomWalkReturnsScalar:
-    """All RandomWalk* update functions must return a plain Python scalar,
-    not a numpy array, so they can be used directly in environment dynamics."""
+_single_param_factories = [
+    pytest.param(lambda s: NoUpdate(s), id="NoUpdate"),
+    pytest.param(lambda s: IncrementUpdate(s, k=1.0), id="IncrementUpdate"),
+    pytest.param(lambda s: DecrementUpdate(s, k=1.0), id="DecrementUpdate"),
+    pytest.param(lambda s: DeterministicTrend(s, slope=1.0), id="DeterministicTrend"),
+    pytest.param(lambda s: RandomWalk(s, mu=0, sigma=1, seed=42), id="RandomWalk"),
+    pytest.param(
+        lambda s: RandomWalkWithDrift(s, alpha=1.0, mu=0, sigma=1, seed=42),
+        id="RandomWalkWithDrift",
+    ),
+    pytest.param(
+        lambda s: RandomWalkWithDriftAndTrend(s, alpha=1.0, mu=0, sigma=1, slope=0.5, seed=42),
+        id="RandomWalkWithDriftAndTrend",
+    ),
+    pytest.param(
+        lambda s: StepWiseUpdate(s, param_list=[float(i) for i in range(20)]),
+        id="StepWiseUpdate",
+    ),
+    pytest.param(lambda s: OscillatingUpdate(s, delta=1.0), id="OscillatingUpdate"),
+    pytest.param(lambda s: ExponentialDecay(s, decay_rate=0.5), id="ExponentialDecay"),
+    pytest.param(lambda s: GeometricProgression(s, r=2.0), id="GeometricProgression"),
+    pytest.param(
+        lambda s: OrnsteinUhlenbeck(s, theta=0.5, mu=10.0, sigma=0.1, seed=42),
+        id="OrnsteinUhlenbeck",
+    ),
+    pytest.param(
+        lambda s: SigmoidTransition(s, a=1.0, b=10.0, k=1.0, t0=50),
+        id="SigmoidTransition",
+    ),
+    pytest.param(
+        lambda s: CyclicUpdate(s, value_list=[10.0, 20.0, 30.0]),
+        id="CyclicUpdate",
+    ),
+    pytest.param(
+        lambda s: BoundedRandomWalk(s, mu=0, sigma=1, lo=-100, hi=100, seed=42),
+        id="BoundedRandomWalk",
+    ),
+    pytest.param(lambda s: PolynomialTrend(s, coeffs=[1.0]), id="PolynomialTrend"),
+    pytest.param(
+        lambda s: LinearInterpolation(s, start_val=0.0, end_val=10.0, T=100),
+        id="LinearInterpolation",
+    ),
+]
 
-    def test_random_walk_returns_scalar(self):
-        fn = RandomWalk(_always_scheduler(), mu=0, sigma=1, seed=42)
-        param, _, _ = fn(10.0, 0)
-        assert np.isscalar(param), (
-            f"RandomWalk returned {type(param)}, expected scalar"
-        )
 
-    def test_random_walk_with_drift_returns_scalar(self):
-        fn = RandomWalkWithDrift(
-            _always_scheduler(), alpha=1.0, mu=0, sigma=1, seed=42
-        )
-        param, _, _ = fn(10.0, 0)
-        assert np.isscalar(param), (
-            f"RandomWalkWithDrift returned {type(param)}, expected scalar"
-        )
+class TestSingleParamCommonProperties:
+    """Parametrized tests for properties every single_param UpdateFn must satisfy."""
 
-    def test_random_walk_with_drift_and_trend_returns_scalar(self):
-        fn = RandomWalkWithDriftAndTrend(
-            _always_scheduler(), alpha=1.0, mu=0, sigma=1, slope=0.5, seed=42
-        )
+    @pytest.mark.parametrize("make_fn", _single_param_factories)
+    def test_returns_scalar(self, make_fn):
+        """Output param must be a scalar, not a numpy array."""
+        fn = make_fn(_always_scheduler())
         param, _, _ = fn(10.0, 1)
         assert np.isscalar(param), (
-            f"RandomWalkWithDriftAndTrend returned {type(param)}, expected scalar"
+            f"{fn.__class__.__name__} returned {type(param)}, expected scalar"
         )
 
-    def test_random_walk_scalar_survives_multiple_steps(self):
-        """Ensure the scalar type is preserved across multiple update steps."""
-        fn = RandomWalk(_always_scheduler(), mu=0, sigma=1, seed=42)
+    @pytest.mark.parametrize("make_fn", _single_param_factories)
+    def test_returns_three_tuple(self, make_fn):
+        """__call__ must return a (param, changed, delta_change) 3-tuple."""
+        fn = make_fn(_always_scheduler())
+        result = fn(10.0, 1)
+        assert len(result) == 3, (
+            f"{fn.__class__.__name__} returned {len(result)}-tuple, expected 3"
+        )
+
+    @pytest.mark.parametrize("make_fn", _single_param_factories)
+    def test_changed_flag_is_zero_or_one(self, make_fn):
+        """The changed flag must be 0 or 1."""
+        fn = make_fn(_always_scheduler())
+        _, changed, _ = fn(10.0, 1)
+        assert changed in (0, 1), (
+            f"{fn.__class__.__name__} returned changed={changed}, expected 0 or 1"
+        )
+
+    @pytest.mark.parametrize("make_fn", _single_param_factories)
+    def test_delta_change_is_numeric(self, make_fn):
+        """The delta_change element must be a number."""
+        fn = make_fn(_always_scheduler())
+        _, _, delta = fn(10.0, 1)
+        assert isinstance(delta, (int, float, np.integer, np.floating)), (
+            f"{fn.__class__.__name__} returned delta type {type(delta)}, expected numeric"
+        )
+
+    @pytest.mark.parametrize("make_fn", _single_param_factories)
+    def test_changed_is_one_when_scheduler_fires(self, make_fn):
+        """When the scheduler fires, changed must be 1."""
+        fn = make_fn(_always_scheduler())
+        _, changed, _ = fn(10.0, 1)
+        assert changed == 1, (
+            f"{fn.__class__.__name__} returned changed={changed}, expected 1"
+        )
+
+    @pytest.mark.parametrize("make_fn", _single_param_factories)
+    def test_no_update_when_scheduler_false(self, make_fn):
+        """When the scheduler does not fire: param unchanged, changed=0, delta=0."""
+        fn = make_fn(_never_scheduler())
+        param, changed, delta = fn(10.0, 0)
+        assert param == 10.0, (
+            f"{fn.__class__.__name__} changed param to {param} when scheduler was off"
+        )
+        assert changed == 0
+        assert delta == 0.0
+
+    @pytest.mark.parametrize("make_fn", _single_param_factories)
+    def test_scalar_survives_multiple_steps(self, make_fn):
+        """Param must stay scalar across 10 consecutive update steps."""
+        fn = make_fn(_always_scheduler())
         param = 10.0
         for t in range(10):
             param, _, _ = fn(param, t)
             assert np.isscalar(param), (
-                f"RandomWalk returned {type(param)} at step {t}, expected scalar"
-            )
-
-    def test_random_walk_with_drift_scalar_survives_multiple_steps(self):
-        fn = RandomWalkWithDrift(
-            _always_scheduler(), alpha=0.5, mu=0, sigma=1, seed=42
-        )
-        param = 10.0
-        for t in range(10):
-            param, _, _ = fn(param, t)
-            assert np.isscalar(param), (
-                f"RandomWalkWithDrift returned {type(param)} at step {t}, expected scalar"
-            )
-
-    def test_random_walk_with_drift_and_trend_scalar_survives_multiple_steps(self):
-        fn = RandomWalkWithDriftAndTrend(
-            _always_scheduler(), alpha=0.5, mu=0, sigma=1, slope=0.1, seed=42
-        )
-        param = 10.0
-        for t in range(10):
-            param, _, _ = fn(param, t)
-            assert np.isscalar(param), (
-                f"RandomWalkWithDriftAndTrend returned {type(param)} at step {t}, expected scalar"
+                f"{fn.__class__.__name__} returned {type(param)} at step {t}, expected scalar"
             )
 
 

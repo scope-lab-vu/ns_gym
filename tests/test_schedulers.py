@@ -588,5 +588,123 @@ class TestWindowScheduler:
         assert sched(14) is False
 
 
+# ============================================================
+# Parametrized common-property tests for all Schedulers
+# ============================================================
+
+_scheduler_factories = [
+    pytest.param(
+        lambda: ContinuousScheduler(start=10, end=50),
+        id="ContinuousScheduler",
+    ),
+    pytest.param(
+        lambda: DiscreteScheduler(event_list={15, 30, 45}, start=10, end=50),
+        id="DiscreteScheduler",
+    ),
+    pytest.param(
+        lambda: PeriodicScheduler(period=5, start=10, end=50),
+        id="PeriodicScheduler",
+    ),
+    pytest.param(
+        lambda: RandomScheduler(probability=0.5, start=10, end=50, seed=42),
+        id="RandomScheduler",
+    ),
+    pytest.param(
+        lambda: CustomScheduler(event_function=lambda t: True, start=10, end=50),
+        id="CustomScheduler",
+    ),
+    pytest.param(
+        lambda: MemorylessScheduler(p=0.5, start=10, end=50, seed=42),
+        id="MemorylessScheduler",
+    ),
+    pytest.param(
+        lambda: BurstScheduler(on_duration=3, off_duration=2, start=10, end=50),
+        id="BurstScheduler",
+    ),
+    pytest.param(
+        lambda: DecayingProbabilityScheduler(
+            initial_probability=0.5, decay_rate=0.01, start=10, end=50, seed=42
+        ),
+        id="DecayingProbabilityScheduler",
+    ),
+    pytest.param(
+        lambda: WindowScheduler(windows=[(10, 50)], start=10, end=50),
+        id="WindowScheduler",
+    ),
+]
+
+
+class TestSchedulerCommonProperties:
+    """Parametrized tests for properties every Scheduler must satisfy."""
+
+    @pytest.mark.parametrize("make_sched", _scheduler_factories)
+    def test_returns_bool_type_in_range(self, make_sched):
+        """Result must be a bool when t is within [start, end]."""
+        sched = make_sched()
+        result = sched(15)
+        assert isinstance(result, (bool, np.bool_)), (
+            f"{sched.__class__.__name__} returned {type(result)}, expected bool"
+        )
+
+    @pytest.mark.parametrize("make_sched", _scheduler_factories)
+    def test_returns_false_before_start(self, make_sched):
+        """Must return False when t < start."""
+        sched = make_sched()
+        assert sched(0) is False, (
+            f"{sched.__class__.__name__} did not return False for t=0 < start=10"
+        )
+
+    @pytest.mark.parametrize("make_sched", _scheduler_factories)
+    def test_returns_false_after_end(self, make_sched):
+        """Must return False when t > end."""
+        sched = make_sched()
+        assert sched(100) is False, (
+            f"{sched.__class__.__name__} did not return False for t=100 > end=50"
+        )
+
+    @pytest.mark.parametrize("make_sched", _scheduler_factories)
+    def test_result_is_never_none(self, make_sched):
+        """__call__ must never return None — always True or False."""
+        sched = make_sched()
+        for t in [0, 5, 10, 15, 30, 50, 60]:
+            result = sched(t)
+            assert result is not None, (
+                f"{sched.__class__.__name__} returned None at t={t}"
+            )
+
+    @pytest.mark.parametrize("make_sched", _scheduler_factories)
+    def test_outside_range_returns_python_bool(self, make_sched):
+        """The base class returns literal `False` outside range — must be Python bool."""
+        sched = make_sched()
+        result = sched(0)
+        assert type(result) is bool, (
+            f"{sched.__class__.__name__} returned {type(result)} outside range, expected bool"
+        )
+
+    @pytest.mark.parametrize("make_sched", _scheduler_factories)
+    def test_has_start_and_end_attributes(self, make_sched):
+        """Every scheduler must expose .start and .end."""
+        sched = make_sched()
+        assert hasattr(sched, "start")
+        assert hasattr(sched, "end")
+        assert sched.start == 10
+        assert sched.end == 50
+
+    @pytest.mark.parametrize("make_sched", _scheduler_factories)
+    def test_boundary_start_is_in_range(self, make_sched):
+        """t == start should be considered in range (not return False from bounds check)."""
+        sched = make_sched()
+        result = sched(10)
+        # Can't assert True (stochastic schedulers may return False), but must not be None
+        assert isinstance(result, (bool, np.bool_))
+
+    @pytest.mark.parametrize("make_sched", _scheduler_factories)
+    def test_boundary_end_is_in_range(self, make_sched):
+        """t == end should be considered in range (not return False from bounds check)."""
+        sched = make_sched()
+        result = sched(50)
+        assert isinstance(result, (bool, np.bool_))
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
