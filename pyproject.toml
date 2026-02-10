@@ -27,6 +27,9 @@ dependencies = [
     "pyyaml",
     "pandas",
     "stable_baselines3[extra]",
+    "werkzeug>=3.1.5",
+    "filelock>=3.20.3",
+    "urllib3>=2.6.3",
 ]
 
 [project.optional-dependencies]
@@ -44,7 +47,8 @@ dev = [
     "myst_nb",
     "sphinx-math-dollar",
     "tox",
-    "tox-uv"
+    "tox-uv",
+    "fonttools>=4.60.2"
 ]
 
 
