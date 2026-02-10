@@ -76,7 +76,7 @@ class RandomWalkWithDriftAndTrend(base.UpdateFn):
         self.rng = np.random.default_rng(seed=seed)
 
     def _update(self, param: float, t: float) -> tuple[float, bool]:
-        white_noise = self.rng.normal(self.mu, self.sigma, 1)
+        white_noise = self.rng.normal(self.mu, self.sigma)
         updated_param = self.alpha + param + white_noise + self.slope * t
         return updated_param
 
@@ -108,9 +108,9 @@ class RandomWalk(base.UpdateFn):
         self.rng = np.random.default_rng(seed=seed)
 
     def _update(self, param: Any, t: Union[int, float]) -> Any:
-        white_noise = self.rng.normal(self.mu, self.sigma, 1)
+        white_noise = self.rng.normal(self.mu, self.sigma)
         updated_param = param + white_noise
-        return updated_param[0]
+        return updated_param
 
 
 class RandomWalkWithDrift(base.UpdateFn):
@@ -146,7 +146,7 @@ class RandomWalkWithDrift(base.UpdateFn):
         self.rng = np.random.default_rng(seed=seed)
 
     def _update(self, param: Any, t: int) -> Any:
-        white_noise = self.rng.normal(self.mu, self.sigma, 1)
+        white_noise = self.rng.normal(self.mu, self.sigma)
         upated_param = self.alpha + param + white_noise
         return upated_param
 
@@ -307,6 +307,207 @@ class GeometricProgression(base.UpdateFn):
         return updated_param
 
 
+class OrnsteinUhlenbeck(base.UpdateFn):
+    r"""Mean-reverting update via the Ornstein-Uhlenbeck process.
+
+    Overview:
+
+        .. math::
+            Y_t = Y_{t-1} + \theta (\mu - Y_{t-1}) + \sigma \epsilon_t
+
+        where :math:`Y_t` is the parameter value at time step :math:`t`,
+        :math:`\theta` controls the speed of mean reversion,
+        :math:`\mu` is the long-run mean, and :math:`\sigma` scales the noise.
+
+    Args:
+        scheduler (Type[base.Scheduler]): scheduler that determines when the update function fires.
+        theta (float): Speed of mean reversion.
+        mu (float): Long-run equilibrium value.
+        sigma (float): Volatility / noise scale.
+        seed (Union[int, None], optional): Seed for the random number generator. Defaults to None.
+    """
+
+    def __init__(
+        self,
+        scheduler: Type[base.Scheduler],
+        theta: float,
+        mu: float,
+        sigma: float = 0.0,
+        seed: Union[int, None] = None,
+    ) -> None:
+        super().__init__(scheduler)
+        self.theta = theta
+        self.mu = mu
+        self.sigma = sigma
+        self.rng = np.random.default_rng(seed=seed)
+
+    def _update(self, param: Any, t: int) -> Any:
+        noise = self.rng.normal(0, self.sigma) if self.sigma > 0 else 0.0
+        return param + self.theta * (self.mu - param) + noise
+
+
+class SigmoidTransition(base.UpdateFn):
+    r"""Smooth transition between two values via a logistic sigmoid.
+
+    Overview:
+
+        .. math::
+            Y_t = a + \frac{b - a}{1 + \exp(-k (t - t_0))}
+
+        The output replaces the current parameter value entirely (it is
+        independent of :math:`Y_{t-1}`), producing a smooth S-curve from
+        :math:`a` to :math:`b` centred at :math:`t_0`.
+
+    Args:
+        scheduler (Type[base.Scheduler]): scheduler that determines when the update function fires.
+        a (float): Starting value (as :math:`t \to -\infty`).
+        b (float): Ending value (as :math:`t \to +\infty`).
+        k (float): Steepness of the transition. Larger = sharper.
+        t0 (float): Midpoint time of the transition.
+    """
+
+    def __init__(
+        self,
+        scheduler: Type[base.Scheduler],
+        a: float,
+        b: float,
+        k: float,
+        t0: float,
+    ) -> None:
+        super().__init__(scheduler)
+        self.a = a
+        self.b = b
+        self.k = k
+        self.t0 = t0
+
+    def _update(self, param: Any, t: Union[int, float]) -> Any:
+        sigmoid = 1.0 / (1.0 + np.exp(-self.k * (t - self.t0)))
+        return self.a + (self.b - self.a) * sigmoid
+
+
+class CyclicUpdate(base.UpdateFn):
+    r"""Cycle through a list of values, wrapping around when exhausted.
+
+    Overview:
+        Each time the update fires, the parameter is set to the next value
+        in ``value_list``.  After reaching the end, the index wraps back to 0.
+
+    Args:
+        scheduler (Type[base.Scheduler]): scheduler that determines when the update function fires.
+        value_list (list): Values to cycle through.
+    """
+
+    def __init__(self, scheduler: Type[base.Scheduler], value_list: list) -> None:
+        super().__init__(scheduler)
+        self.value_list = value_list
+        self._index = 0
+
+    def _update(self, param: Any, t: int) -> Any:
+        val = self.value_list[self._index]
+        self._index = (self._index + 1) % len(self.value_list)
+        return val
+
+
+class BoundedRandomWalk(base.UpdateFn):
+    r"""Random walk clamped to ``[lo, hi]``.
+
+    Overview:
+
+        .. math::
+            Y_t = \text{clip}(Y_{t-1} + \epsilon_t,\; lo,\; hi)
+
+        where :math:`\epsilon_t \sim \mathcal{N}(\mu, \sigma^2)`.
+
+    Args:
+        scheduler (Type[base.Scheduler]): scheduler that determines when the update function fires.
+        mu (float): Mean of the noise.
+        sigma (float): Standard deviation of the noise.
+        lo (float): Lower bound.
+        hi (float): Upper bound.
+        seed (Union[int, None], optional): Seed for the random number generator. Defaults to None.
+    """
+
+    def __init__(
+        self,
+        scheduler: Type[base.Scheduler],
+        mu: float,
+        sigma: float,
+        lo: float,
+        hi: float,
+        seed: Union[int, None] = None,
+    ) -> None:
+        super().__init__(scheduler)
+        self.mu = mu
+        self.sigma = sigma
+        self.lo = lo
+        self.hi = hi
+        self.rng = np.random.default_rng(seed=seed)
+
+    def _update(self, param: Any, t: int) -> Any:
+        noise = self.rng.normal(self.mu, self.sigma)
+        return float(np.clip(param + noise, self.lo, self.hi))
+
+
+class PolynomialTrend(base.UpdateFn):
+    r"""Deterministic polynomial trend.
+
+    Overview:
+
+        .. math::
+            Y_t = Y_{t-1} + \sum_{i=1}^{n} a_i \, t^{i}
+
+        where ``coeffs = [a_1, a_2, ..., a_n]``.  A single-element list
+        ``[slope]`` is equivalent to :class:`DeterministicTrend`.
+
+    Args:
+        scheduler (Type[base.Scheduler]): scheduler that determines when the update function fires.
+        coeffs (list[float]): Polynomial coefficients ``[a_1, a_2, ...]`` for powers ``t, t^2, ...``.
+    """
+
+    def __init__(self, scheduler: Type[base.Scheduler], coeffs: list) -> None:
+        super().__init__(scheduler)
+        self.coeffs = coeffs
+
+    def _update(self, param: Any, t: Union[int, float]) -> Any:
+        trend = sum(a * t ** (i + 1) for i, a in enumerate(self.coeffs))
+        return param + trend
+
+
+class LinearInterpolation(base.UpdateFn):
+    r"""Linearly interpolate from ``start_val`` to ``end_val`` over ``T`` steps.
+
+    Overview:
+
+        .. math::
+            Y_t = start\_val + (end\_val - start\_val) \cdot \min\!\left(\frac{t}{T},\; 1\right)
+
+        The output replaces the current parameter value entirely.
+        After ``t >= T`` the value is clamped at ``end_val``.
+
+    Args:
+        scheduler (Type[base.Scheduler]): scheduler that determines when the update function fires.
+        start_val (float): Value at ``t = 0``.
+        end_val (float): Value at ``t = T``.
+        T (int): Number of steps over which to interpolate.
+    """
+
+    def __init__(
+        self,
+        scheduler: Type[base.Scheduler],
+        start_val: float,
+        end_val: float,
+        T: int,
+    ) -> None:
+        super().__init__(scheduler)
+        self.start_val = start_val
+        self.end_val = end_val
+        self.T = T
+
+    def _update(self, param: Any, t: Union[int, float]) -> Any:
+        frac = min(t / self.T, 1.0)
+        return self.start_val + (self.end_val - self.start_val) * frac
+
+
 if __name__ == "__main__":
     import inspect
 
@@ -325,14 +526,21 @@ if __name__ == "__main__":
     print("]")
 
 __all__ = [
+    "BoundedRandomWalk",
+    "CyclicUpdate",
+    "DecrementUpdate",
     "DeterministicTrend",
     "ExponentialDecay",
     "GeometricProgression",
     "IncrementUpdate",
+    "LinearInterpolation",
     "NoUpdate",
+    "OrnsteinUhlenbeck",
     "OscillatingUpdate",
+    "PolynomialTrend",
     "RandomWalk",
     "RandomWalkWithDrift",
     "RandomWalkWithDriftAndTrend",
+    "SigmoidTransition",
     "StepWiseUpdate",
 ]

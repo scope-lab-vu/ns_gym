@@ -233,6 +233,131 @@ class DistributionNoUpdate(base.UpdateDistributionFn):
         return param
 
 
+class UniformDrift(base.UpdateDistributionFn):
+    r"""Drift the distribution toward uniform at a fixed rate.
+
+    Overview:
+
+        .. math::
+            p_t = (1 - \alpha) \, p_{t-1} + \alpha \, \mathbf{u}
+
+        where :math:`\mathbf{u}` is the uniform distribution and
+        :math:`\alpha \in [0, 1]` is the drift rate.  Since this is a convex
+        combination of two valid distributions, the result is always a valid
+        distribution.
+
+    Args:
+        scheduler (base.Scheduler): scheduler that determines when the update function fires.
+        rate (float): Mixing rate toward uniform.  0 = no change, 1 = fully uniform.
+    """
+
+    def __init__(self, scheduler: base.Scheduler, rate: float) -> None:
+        super().__init__(scheduler)
+        self.rate = rate
+
+    def _update(self, param: list[float], t: int) -> Any:
+        n = len(param)
+        uniform = 1.0 / n
+        return [
+            (1 - self.rate) * p + self.rate * uniform for p in param
+        ]
+
+
+class TargetReversion(base.UpdateDistributionFn):
+    r"""Mean-revert toward a target distribution (OU analog for distributions).
+
+    Overview:
+
+        .. math::
+            p_t = p_{t-1} + \theta \, (\text{target} - p_{t-1})
+
+        which simplifies to :math:`(1 - \theta) p_{t-1} + \theta \, \text{target}`,
+        a convex combination that stays on the probability simplex for
+        :math:`\theta \in [0, 1]`.
+
+    Args:
+        scheduler (base.Scheduler): scheduler that determines when the update function fires.
+        target (list[float]): The target distribution to revert toward.
+        theta (float): Reversion speed.  0 = no change, 1 = jump to target.
+    """
+
+    def __init__(
+        self, scheduler: base.Scheduler, target: list, theta: float
+    ) -> None:
+        super().__init__(scheduler)
+        self.target = target
+        self.theta = theta
+
+    def _update(self, param: list[float], t: int) -> Any:
+        return [
+            p + self.theta * (tgt - p)
+            for p, tgt in zip(param, self.target)
+        ]
+
+
+class DistributionLinearInterpolation(base.UpdateDistributionFn):
+    r"""Linearly interpolate between two distributions over ``T`` steps.
+
+    Overview:
+
+        .. math::
+            p_t = \text{start} + (\text{end} - \text{start}) \cdot \min\!\left(\frac{t}{T},\; 1\right)
+
+        The output replaces the current distribution entirely.
+        After ``t >= T`` the distribution is clamped at ``end_dist``.
+
+    Args:
+        scheduler (base.Scheduler): scheduler that determines when the update function fires.
+        start_dist (list[float]): Distribution at ``t = 0``.
+        end_dist (list[float]): Distribution at ``t = T``.
+        T (int): Number of steps over which to interpolate.
+    """
+
+    def __init__(
+        self,
+        scheduler: base.Scheduler,
+        start_dist: list,
+        end_dist: list,
+        T: int,
+    ) -> None:
+        super().__init__(scheduler)
+        self.start_dist = start_dist
+        self.end_dist = end_dist
+        self.T = T
+
+    def _update(self, param: list[float], t: int) -> Any:
+        frac = min(t / self.T, 1.0)
+        return [
+            s + (e - s) * frac
+            for s, e in zip(self.start_dist, self.end_dist)
+        ]
+
+
+class DistributionCyclicUpdate(base.UpdateDistributionFn):
+    r"""Cycle through a list of distributions, wrapping around when exhausted.
+
+    Overview:
+        Each time the update fires, the distribution is set to the next entry
+        in ``dist_list``.  After reaching the end, the index wraps back to 0.
+
+    Args:
+        scheduler (base.Scheduler): scheduler that determines when the update function fires.
+        dist_list (list[list[float]]): Distributions to cycle through.
+    """
+
+    def __init__(
+        self, scheduler: base.Scheduler, dist_list: list
+    ) -> None:
+        super().__init__(scheduler)
+        self.dist_list = dist_list
+        self._index = 0
+
+    def _update(self, param: list[float], t: int) -> Any:
+        val = self.dist_list[self._index]
+        self._index = (self._index + 1) % len(self.dist_list)
+        return val
+
+
 if __name__ == "__main__":
     import inspect
 
@@ -253,10 +378,14 @@ if __name__ == "__main__":
 
 __all__ = [
     "BudgetBoundedIncrement",
+    "DistributionCyclicUpdate",
     "DistributionDecrementUpdate",
     "DistributionIncrementUpdate",
+    "DistributionLinearInterpolation",
     "DistributionNoUpdate",
     "DistributionStepWiseUpdate",
     "LCBoundedDistrubutionUpdate",
     "RandomCategorical",
+    "TargetReversion",
+    "UniformDrift",
 ]

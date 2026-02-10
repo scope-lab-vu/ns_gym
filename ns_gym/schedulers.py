@@ -24,11 +24,8 @@ class RandomScheduler(base.Scheduler):
         self.probability = probability
         self.rng = np.random.default_rng(seed=seed)
 
-    def __call__(self, t: int) -> bool:
-        if self.start <= t <= self.end:
-            return self.rng.random() < self.probability
-        else:
-            return False
+    def _check(self, t: int) -> bool:
+        return self.rng.random() < self.probability
 
 
 class CustomScheduler(base.Scheduler):
@@ -42,11 +39,8 @@ class CustomScheduler(base.Scheduler):
         super().__init__(start, end)
         self.event_function = event_function
 
-    def __call__(self, t: int) -> bool:
-        if self.start <= t <= self.end:
-            return self.event_function(t)
-        else:
-            return False
+    def _check(self, t: int) -> bool:
+        return self.event_function(t)
 
 
 class ContinuousScheduler(base.Scheduler):
@@ -55,8 +49,8 @@ class ContinuousScheduler(base.Scheduler):
     def __init__(self, start=0, end=np.inf) -> None:
         super().__init__(start, end)
 
-    def __call__(self, t: int) -> bool:
-        return self.start <= t <= self.end
+    def _check(self, t: int) -> bool:
+        return True
 
 
 class DiscreteScheduler(base.Scheduler):
@@ -76,9 +70,8 @@ class DiscreteScheduler(base.Scheduler):
             "Scheduler end time occurs before last event in event list"
         )
 
-    def __call__(self, t: int) -> bool:
-        if self.start <= t <= self.end:
-            return t in self.event_list
+    def _check(self, t: int) -> bool:
+        return t in self.event_list
 
 
 class PeriodicScheduler(base.Scheduler):
@@ -92,7 +85,7 @@ class PeriodicScheduler(base.Scheduler):
         super().__init__(start, end)
         self.period = period
 
-    def __call__(self, t: int) -> bool:
+    def _check(self, t: int) -> bool:
         return t % self.period == 0
 
 
@@ -114,13 +107,95 @@ class MemorylessScheduler(base.Scheduler):
         self.rng = np.random.default_rng(seed=seed)
         self.transition_time = self.rng.geometric(p=self.p, size=(1,))
 
-    def __call__(self, t: int) -> bool:
+    def _check(self, t: int) -> bool:
         if t == self.transition_time:
             delta_t = self.rng.geometric(p=self.p, size=(1,))
             self.transition_time = delta_t + t
             return True
         else:
             return False
+
+
+class BurstScheduler(base.Scheduler):
+    """Burst event scheduler: fires for a window of consecutive steps, then stays silent, repeating cyclically.
+
+    The cycle length is ``on_duration + off_duration``.  Within each cycle the
+    scheduler fires for the first ``on_duration`` steps and is silent for the
+    remaining ``off_duration`` steps.
+
+    Args:
+        on_duration (int): Number of consecutive steps to fire each cycle.
+        off_duration (int): Number of consecutive silent steps each cycle.
+        start (int, optional): Start time. Defaults to 0.
+        end (int, optional): End time. Defaults to infinity.
+    """
+
+    def __init__(self, on_duration: int, off_duration: int, start=0, end=np.inf) -> None:
+        super().__init__(start, end)
+        self.on_duration = on_duration
+        self.off_duration = off_duration
+        self.cycle = on_duration + off_duration
+
+    def _check(self, t: int) -> bool:
+        return (t % self.cycle) < self.on_duration
+
+
+class DecayingProbabilityScheduler(base.Scheduler):
+    r"""Decaying probability scheduler: fires randomly with exponentially decaying probability.
+
+    At each time step the probability of firing is:
+
+    .. math::
+        p(t) = p_0 \, e^{-\lambda t}
+
+    where :math:`p_0` is the initial probability and :math:`\lambda` is the
+    decay rate.  This models environments that stabilise over time.
+
+    Args:
+        initial_probability (float): Probability of firing at t = 0.
+        decay_rate (float): Exponential decay rate (>= 0).
+        start (int, optional): Start time. Defaults to 0.
+        end (int, optional): End time. Defaults to infinity.
+        seed (int, optional): Random generator seed. Defaults to None.
+    """
+
+    def __init__(
+        self,
+        initial_probability: float,
+        decay_rate: float,
+        start=0,
+        end=np.inf,
+        seed=None,
+    ) -> None:
+        super().__init__(start, end)
+        self.initial_probability = initial_probability
+        self.decay_rate = decay_rate
+        self.rng = np.random.default_rng(seed=seed)
+
+    def _check(self, t: int) -> bool:
+        p = self.initial_probability * np.exp(-self.decay_rate * t)
+        return bool(self.rng.random() < p)
+
+
+class WindowScheduler(base.Scheduler):
+    """Window-based event scheduler: fires only within specified time windows.
+
+    Each window is an inclusive ``(start, end)`` tuple.  The scheduler fires
+    at time ``t`` if ``t`` falls inside any window (and inside the global
+    ``[start, end]`` range).
+
+    Args:
+        windows (list[tuple[int, int]]): List of ``(start, end)`` time windows.
+        start (int, optional): Global start time. Defaults to 0.
+        end (int, optional): Global end time. Defaults to infinity.
+    """
+
+    def __init__(self, windows: list, start=0, end=np.inf) -> None:
+        super().__init__(start, end)
+        self.windows = windows
+
+    def _check(self, t: int) -> bool:
+        return any(w_start <= t <= w_end for w_start, w_end in self.windows)
 
 
 if __name__ == "__main__":
