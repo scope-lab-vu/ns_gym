@@ -6,11 +6,25 @@ import torch.nn as nn
 from collections import deque
 import time
 
-def initialize_buffers(state_dim, action_dim, max_steps):
+def _observation_to_vector(observation):
+    """Convert an observation to a flat float32 vector."""
+    observation, _ = ns_gym.utils.type_mismatch_checker(observation, None)
+    if isinstance(observation, torch.Tensor):
+        obs_arr = observation.detach().cpu().numpy()
+    else:
+        obs_arr = np.asarray(observation)
+    obs_arr = obs_arr.astype(np.float32, copy=False)
+    if obs_arr.ndim == 0:
+        obs_arr = np.expand_dims(obs_arr, axis=0)
+    return obs_arr.reshape(-1)
+
+def initialize_buffers(state_dim, action_dim, max_steps, is_discrete=False):
     """Initialize buffers for states, actions, values, rewards, and log probabilities."""
+    actions_shape = (max_steps,) if is_discrete else (max_steps, action_dim)
+    actions_dtype = np.int64 if is_discrete else np.float32
     buffers = {
         "states": np.zeros((max_steps, state_dim), dtype=np.float32),
-        "actions": np.zeros((max_steps, action_dim), dtype=np.float32),
+        "actions": np.zeros(actions_shape, dtype=actions_dtype),
         "values": np.zeros((max_steps,), dtype=np.float32),
         "rewards": np.zeros((max_steps,), dtype=np.float32),
         "log_probs": np.zeros((max_steps,), dtype=np.float32),
@@ -19,6 +33,7 @@ def initialize_buffers(state_dim, action_dim, max_steps):
 
 def compute_discounted_returns(rewards, gamma, last_value):
     """Compute discounted returns."""
+    last_value = float(np.asarray(last_value).squeeze())
     returns = np.zeros_like(rewards)
     for t in reversed(range(len(rewards))):
         if t == len(rewards) - 1:
@@ -29,19 +44,32 @@ def compute_discounted_returns(rewards, gamma, last_value):
 
 def compute_gae(rewards, values, gamma, lamb, last_value):
     """Compute Generalized Advantage Estimation (GAE)."""
+    last_value = float(np.asarray(last_value).squeeze())
     advantages = np.zeros_like(rewards)
     last_gae = 0
     for t in reversed(range(len(rewards))):
-        next_value = last_value if t == len(rewards) - 1 else values[t + 1]
+        next_value = last_value if t == len(rewards) - 1 else float(values[t + 1])
         delta = rewards[t] + gamma * next_value - values[t]
         advantages[t] = last_gae = delta + gamma * lamb * last_gae
     return advantages + values
 
-def run_environment(env, buffers, policy_net, value_net, state_dim, action_dim, max_steps, gamma, lamb, device):
+def run_environment(
+    env,
+    buffers,
+    policy_net,
+    value_net,
+    state_dim,
+    action_dim,
+    max_steps,
+    gamma,
+    lamb,
+    device,
+    is_discrete_action=False,
+):
     """
     Run an episode in the environment, collecting states, actions, rewards, and other data.
     """
-    state = env.reset()[0]
+    state = _observation_to_vector(env.reset()[0])
     episode_length = max_steps
 
     for step in range(max_steps):
@@ -51,19 +79,29 @@ def run_environment(env, buffers, policy_net, value_net, state_dim, action_dim, 
 
         # Store data in buffers
         buffers["states"][step] = state
-        buffers["actions"][step] = action.cpu().numpy()[0]
-        buffers["log_probs"][step] = log_prob.cpu().numpy()
-        buffers["values"][step] = value.cpu().numpy()
+        # For discrete action spaces, convert the action tensor to an int index.
+        # This undoes the _observation_to_vector.
+        if is_discrete_action:
+            env_action = int(action.detach().cpu().item())
+            buffers["actions"][step] = env_action
+        else:
+            env_action = action.detach().cpu().numpy()[0]
+            buffers["actions"][step] = env_action
+        buffers["log_probs"][step] = float(log_prob.detach().cpu().item())
+        buffers["values"][step] = float(value.detach().cpu().item())
 
         # Take a step in the environment
-        state, reward, terminated, truncated, _ = env.step(action.cpu().numpy()[0])
-        buffers["rewards"][step] = reward
+        state, reward, terminated, truncated, _ = env.step(env_action)
+        state, reward = ns_gym.utils.type_mismatch_checker(state, reward)
+        state = _observation_to_vector(state)
+        buffers["rewards"][step] = float(reward)
         if terminated or truncated:
             episode_length = step + 1
             break
 
     # Compute the returns
-    last_value = value_net(torch.tensor(state[None, :], dtype=torch.float32, device=device)).cpu().numpy()
+    last_state_tensor = torch.tensor(state[None, :], dtype=torch.float32, device=device)
+    last_value = float(value_net(last_state_tensor).detach().cpu().item())
     returns = compute_discounted_returns(buffers["rewards"][:episode_length], gamma, last_value)
 
     # Uncomment the line below to use GAE instead of discounted returns
@@ -95,41 +133,60 @@ class Dist(torch.distributions.Normal):
 class PPOActor(nn.Module):
     """Actor network for policy approximation.
 
-    Outputs mean and standard deviation of the action distribution. A simple MLP.
+    Supports both continuous and discrete action spaces.
 
     Args:
         s_dim: State dimension.
         a_dim: Action dimension.
         hidden_size: Number of hidden units in each layer.
+        is_discrete: Whether the action space is discrete.
     """
-    def __init__(self, s_dim, a_dim, hidden_size=64):
+    def __init__(self, s_dim, a_dim, hidden_size=64, is_discrete=False):
         super(PPOActor, self).__init__()
-        self.actions_mean = nn.Sequential(
+        self.is_discrete = is_discrete
+        self.policy_model = nn.Sequential(
             nn.Linear(s_dim, hidden_size),
             nn.ReLU(),
             nn.Linear(hidden_size, hidden_size),
             nn.ReLU(),
-            nn.Linear(hidden_size, a_dim)
+            nn.Linear(hidden_size, a_dim),
         )
-        # Learnable parameter for log standard deviation of actions
-        self.actions_logstd = nn.Parameter(torch.zeros(a_dim))
+        if not self.is_discrete:
+            # Learnable parameter for log standard deviation of actions.
+            self.actions_logstd = nn.Parameter(torch.zeros(a_dim))
 
     def forward(self, state, deterministic=False):
-        actions_mean = self.actions_mean(state)
+        policy_output = self.policy_model(state)
+
+        if self.is_discrete:
+            dist = torch.distributions.Categorical(logits=policy_output)
+            if deterministic:
+                action = torch.argmax(policy_output, dim=-1)
+            else:
+                action = dist.sample()
+            return action, dist.log_prob(action)
+
         actions_std = torch.exp(self.actions_logstd)
-        dist = Dist(actions_mean, actions_std)
-        
+        dist = Dist(policy_output, actions_std)
+
         if deterministic:
-            action = actions_mean
+            action = policy_output
         else:
             action = dist.sample()
-            
+
         return action, dist.log_prob(action).sum(-1)
 
     def evaluate(self, state, action):
-        actions_mean = self.actions_mean(state)
+        policy_output = self.policy_model(state)
+        if self.is_discrete:
+            dist = torch.distributions.Categorical(logits=policy_output)
+            action = action.long().view(-1)
+            return dist.log_prob(action), dist.entropy()
+
         actions_std = torch.exp(self.actions_logstd)
-        dist = Dist(actions_mean, actions_std)
+        dist = Dist(policy_output, actions_std)
+        if action.dim() == 1:
+            action = action.unsqueeze(-1)
         return dist.log_prob(action).sum(-1), dist.entropy().sum(-1)
 
 
@@ -184,6 +241,7 @@ class PPO(base.Agent):
         ############## MODELS################
         self.actor = actor
         self.critic = critic
+        self.is_discrete = getattr(actor, "is_discrete", False)
 
         self.actor.to(device)
         self.critic.to(device)
@@ -217,16 +275,20 @@ class PPO(base.Agent):
             entropy: Average entropy.
         """
 
-        states = torch.from_numpy(states).to(self.device)
+        states = torch.from_numpy(states).float().to(self.device)
         actions = torch.from_numpy(actions).to(self.device)
+        if self.is_discrete:
+            actions = actions.long()
+        else:
+            actions = actions.float()
 
 
-        advantages = torch.from_numpy(advantages).to(self.device)
-        returns = torch.from_numpy(returns).to(self.device)
+        advantages = torch.from_numpy(advantages).float().to(self.device)
+        returns = torch.from_numpy(returns).float().to(self.device)
 
-        prev_val = torch.from_numpy(prev_val).to(self.device)
+        prev_val = torch.from_numpy(prev_val).float().to(self.device)
        
-        prev_lobprobs = torch.from_numpy(prev_lobprobs).to(self.device)
+        prev_lobprobs = torch.from_numpy(prev_lobprobs).float().to(self.device)
         
         episode_length = len(states)
         indices = np.arange(episode_length)
@@ -286,16 +348,15 @@ class PPO(base.Agent):
         return pg_loss.item(), v_loss.item(), entropy.mean().item()
     
     def act(self, obs, *args, **kwargs):
-
-        obs,_ = ns_gym.utils.type_mismatch_checker(obs,None)
-        obs = ns_gym.nn_model_input_checker(obs)
+        obs = _observation_to_vector(obs)
+        obs = torch.tensor(obs[None, :], dtype=torch.float32, device=self.device)
 
         self.actor.eval()
 
         with torch.no_grad():
             action, _ = self.actor(obs,deterministic=True)
 
-        return action
+        return action.squeeze(0).cpu()
     
     def train_ppo(self, env,config):
         """Main training loop PPO algorithm.
@@ -313,17 +374,33 @@ class PPO(base.Agent):
         # s_dim = env.observation_space.shape[0]  # For now I am manully setting the state and action dimensions in the config file. 
         # a_dim = env.action_space.shape[0] # This method does not work all the time -- due to the dfiferent types of action/observation spaces in gym.
 
+        # Both problems above resolved :)
+
         if "s_dim" not in config:
-            s_dim = env.observation_space.shape[0]
+            if hasattr(env.observation_space, "shape") and env.observation_space.shape is not None and len(env.observation_space.shape) > 0:
+                s_dim = int(np.prod(env.observation_space.shape))
+            else:
+                s_dim = 1
         else:
             s_dim = config["s_dim"]
 
 
+        is_discrete_action = hasattr(env.action_space, "n")
         if "a_dim" not in config:
-            a_dim = config["a_dim"]
+            if is_discrete_action:
+                a_dim = int(env.action_space.n)
+            elif hasattr(env.action_space, "shape") and env.action_space.shape is not None and len(env.action_space.shape) > 0:
+                a_dim = int(np.prod(env.action_space.shape))
+            else:
+                raise ValueError("Unsupported action space. PPO currently supports Discrete and Box spaces.")
         else:
-            a_dim = env.action_space.shape[0]
+            a_dim = config["a_dim"]
 
+        if self.is_discrete != is_discrete_action:
+            raise ValueError(
+                "Actor action type does not match environment action space. "
+                "Initialize PPOActor with is_discrete=True for Discrete action spaces."
+            )
         
 
         
@@ -360,7 +437,7 @@ class PPO(base.Agent):
         
         # agent = PPO(actor, critic, lr_policy=lr_policy, lr_critic=lr_critic, max_grad_norm=max_grad_norm,clip_val=clip_val, ent_weight=ent_weight, sample_n_epoch=n_epochs, sample_mb_size=minibatch_size, device=device)
         
-        buffers =  initialize_buffers(s_dim, a_dim, max_steps)
+        buffers = initialize_buffers(s_dim, a_dim, max_steps, is_discrete=is_discrete_action)
         #runner = EnvRunner(s_dim, a_dim, gamma=0.99, lamb=0.8, max_step=batch_size)
 
         # Metrics storage
@@ -373,12 +450,24 @@ class PPO(base.Agent):
             # Run episode to collect data using GAE
             with torch.no_grad():
                 mb_states, mb_actions, mb_old_a_logps, mb_values, mb_returns, mb_rewards = \
-                    run_environment(env,buffers,self.actor, self.critic, s_dim, a_dim, max_steps,gamma, lamb, device)
+                    run_environment(
+                        env,
+                        buffers,
+                        self.actor,
+                        self.critic,
+                        s_dim,
+                        a_dim,
+                        max_steps,
+                        gamma,
+                        lamb,
+                        device,
+                        is_discrete_action=is_discrete_action,
+                    )
                 
                 # Use GAE-Lambda advantage estimation
                 last_value = self.critic(
                     torch.tensor(np.expand_dims(mb_states[-1], axis=0), dtype=torch.float32).to(self.device)
-                ).detach().cpu().numpy()
+                ).detach().cpu().item()
                 
                 mb_returns = compute_gae(mb_rewards, mb_values,gamma,lamb,last_value)
                 mb_advs = mb_returns - mb_values
@@ -411,5 +500,4 @@ class PPO(base.Agent):
             #     break
         
         return best_reward
-
 
