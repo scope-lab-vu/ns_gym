@@ -6,13 +6,13 @@ This section contains all Mujoco environments wrapped by ns_gym.
 .. toctree::
    :maxdepth: 1
 
-   antenv
-   halfcheetah
-   hopper
-   humanoid_standup
-   humnoid
-   inverted_double_pendulum
-   inverted_pendulum
-   pusher
-   reacher
-   swimmer
+   antenv.md
+   halfcheetah.md
+   hopper.md
+   humanoid_standup.md
+   humanoid.md
+   inverted_double_pendulum.md
+   inverted_pendulum.md
+   pusher.md
+   reacher.md
+   swimmer.md

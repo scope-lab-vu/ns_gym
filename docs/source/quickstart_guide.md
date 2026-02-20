@@ -15,7 +15,7 @@ To install NS-Gym, you can use pip (remove the `uv` prefix if not using UV):
 uv pip install ns-gym
 ```
 
-for nightly builds, you can install directly from the GitHub repository:
+For nightly builds, you can install directly from the GitHub repository:
 
 ```bash
 uv pip install git+https://github.com/scope-lab-vu/ns_gym
@@ -36,9 +36,9 @@ We will then import the necessary wrappers to create a non-stationary environmen
 env = gym.make("CartPole-v1")
 ```
 
-We then must define how evironmental parameters will evolve over time to induce non-stationarity. To do this NS-Gym provides a suite of "schedulers" and "update functions". Schedulers define *when* a parameter is updated, while update functions define *how* a parameter is updated. In this example, we will use a `ContinuousScheduler` to update the pole's mass at every time step, and a `PeriodicScheduler` to update the gravity every three time steps. We will use an `IncrementUpdate` function to increase the pole's mass by 0.1 units at each update, and a `RandomWalk` function to change the gravity.
+We then must define how environmental parameters will evolve over time to induce non-stationarity. To do this NS-Gym provides a suite of "schedulers" and "update functions". Schedulers define *when* a parameter is updated, while update functions define *how* a parameter is updated. In this example, we will use a `ContinuousScheduler` to update the pole's mass at every time step, and a `PeriodicScheduler` to update the gravity every three time steps. We will use an `IncrementUpdate` function to increase the pole's mass by 0.1 units at each update, and a `RandomWalk` function to change the gravity.
 
-We define the schedulers and update functions and map them to the environmental parameter names. See environments documentation for complete table of environmental parameter than can be tuned.
+We define the schedulers and update functions and map them to the environmental parameter names. See environments documentation for complete table of environmental parameter that can be tuned.
 
 
 ```python
@@ -67,7 +67,7 @@ from ns_gym.wrappers import NSClassicControlWrapper
 ns_env = NSClassicControlWrapper(env,tunable_params,change_notification=True)
 ```
 
-We can then evalute our decision-making policies in this non-stationary environment. Here, we use NS-Gym's Monte Carlo Tree Search (MCTS) implementation as an example. 
+We can then evaluate our decision-making policies in this non-stationary environment. Here, we use NS-Gym's Monte Carlo Tree Search (MCTS) implementation as an example. 
 
 ```python
 from ns_gym.benchmark_algorithms import MCTS
@@ -78,7 +78,7 @@ episode_reward = 0
 
 obs,info = ns_env.reset()
 
-# We get the planning environment for the MCTS agent -- this environment does not have non-stationarity enabled and it a static snapshot of the current state environment
+# We get the planning environment for the MCTS agent -- this environment does not have non-stationarity enabled and it is a static snapshot of the current state environment
 planning_env = ns_env.get_planning_env()
 
 mcst_agent = MCTS(planning_env, state=obs["state"], d=50, m=100,c=1.4,gamma=0.99)
@@ -120,7 +120,7 @@ reward:  Reward(reward=1.0,
                 relative_time=1)
 ```     
 
-The `obs` dictionary of the following terms:
+The `obs` dictionary contains the following terms:
 
 - `state`: the standard Gymnasium observation of the environment.
 - `env_change`: a dictionary indicating whether this parameter has changed (1 indicates a change, 0 indicates no change). This is only available if `change_notification=True` is set in the wrapper.

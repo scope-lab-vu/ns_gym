@@ -21,3 +21,4 @@ This section provides the auto-generated API documentation for the `ns_gym` pack
    reference/evaluate
    reference/benchmark_algs
    reference/context_switching
+```

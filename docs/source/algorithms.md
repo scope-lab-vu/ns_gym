@@ -18,10 +18,8 @@ NS-Gym has implementations of the following algorithms:
 - :py:class:`Deep Q-Network <ns_gym.benchmark_algorithms.DQN>`
 - :py:class:`AlphaZero <ns_gym.benchmark_algorithms.AlphaZeroAgent>`
 - :py:class:`Policy Augmented MCTS <ns_gym.benchmark_algorithms.PAMCTS>`
-- `ADA-MCTS` (Code included and runnable on NS-Gym envs though needs to be refactored for API compliance)
-- `RATS` (Code included and runnable on NS-Gym envs but needs to be refactored for API compliance)
+- `ADA-MCTS` (Code included and runnable on NS-Gym envs though it needs to be refactored for API compliance)
+- `RATS` (Code included and runnable on NS-Gym envs but it needs to be refactored for API compliance)
 
 We also support integration with `Stable-Baselines3 <https://stable-baselines3.readthedocs.io/en/master/>`_, allowing users to leverage a wide range of RL algorithms in NS-Gym environments.
-
-
-
+```

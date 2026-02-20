@@ -24,7 +24,7 @@ cd ns_gym
 uv pip install -e ".[all]" 
 ```
 
-To run all test in the project run:
+To run all tests in the project, run:
 
 ```bash
 pytest tests/
