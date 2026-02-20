@@ -92,13 +92,13 @@ The episode terminates ($\mathbf{done=True}$) if:
 
 ## Non-Stationarity Focus: Structural Changes 
 
-The environment is particularly well-suited for simulating $\mathbf{Structural}$ $\mathbf{Non-Stationarity}$ through **agent failure** or $\mathbf{coalition}$ $\mathbf{breakdown}$. The Corresponding NS-Gym wrapper can modify the `num_pursuers` parameter at specified timesteps to simulate scenarios where agents become non-operational or leave the coalition, requiring the remaining agents to adapt their strategies dynamically.
+The environment is particularly well-suited for simulating $\mathbf{Structural}$ $\mathbf{Non-Stationarity}$ through **agent failure** or $\mathbf{coalition}$ $\mathbf{breakdown}$. The corresponding NS-Gym wrapper can modify the `num_pursuers` parameter at specified timesteps to simulate scenarios where agents become non-operational or leave the coalition, requiring the remaining agents to adapt their strategies dynamically.
 
 
 ## Tunable Parameters (NS-Gym)
 
 This environment is designed with several parameters that can be varied, which can be leveraged by an NS-Gym wrapper to induce non-stationarity.
-You got it. Here is the revised table with the **obstacle\_map** parameter removed, the **NS-Gym Use Case** merged into the **Description**, and the separate **NS-Gym Use Case** column deleted.
+
 
 | Parameter | Type | Default | Description |
 | :---: | :---: | :---: | :---: |

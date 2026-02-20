@@ -1,7 +1,7 @@
 NS-Gym
 ======
 
-NS-Gym (Non-Stationary Gym) is a flexible framework providing a standardized abstraction for both modeling non-stationary Markov Decision processes (NS-MDPs) and the key problem types that a decision-making entity may encounter in such environments. NS-Gym is built on top of the popular `Gymnasium <https://gymnasium.farama.org/>`_ library and provides a set of wrappers to for several existing environments, making it easy to incorporate non-stationary dynamics and manage the nature of agent-environment interaction specific to NS-MDPs. A key feature of NS-Gym is emulating the key problem types of decision-making in a non-stationary settings; these problem types concern not only the ability to adapt to changes in the environment but also the ability to detect and characterize these changes. To get started with NS-Gym, check out our :doc:`installation` instructions and :doc:`quickstart_guide`. For a deep dive into the core concepts behind NS-Gym, visit our :doc:`core_concepts` page or take a look at our paper on `ArXiv <https://arxiv.org/abs/2501.09646>`_ published at NeurIPS 2025 Dataset and Benchmarks track. 
+NS-Gym (Non-Stationary Gym) is a flexible framework providing a standardized abstraction for both modeling non-stationary Markov Decision processes (NS-MDPs) and the key problem types that a decision-making entity may encounter in such environments. NS-Gym is built on top of the popular `Gymnasium <https://gymnasium.farama.org/>`_ library and provides a set of wrappers for several existing environments, making it easy to incorporate non-stationary dynamics and manage the nature of agent-environment interaction specific to NS-MDPs. A key feature of NS-Gym is emulating the key problem types of decision-making in non-stationary settings; these problem types concern not only the ability to adapt to changes in the environment but also the ability to detect and characterize these changes. To get started with NS-Gym, check out our :doc:`installation` instructions and :doc:`quickstart_guide`. For a deep dive into the core concepts behind NS-Gym, visit our :doc:`core_concepts` page or take a look at our paper on `ArXiv <https://arxiv.org/abs/2501.09646>`_ published at NeurIPS 2025 Dataset and Benchmarks track. 
 
 
 Paper
@@ -28,6 +28,7 @@ Installation
 To install NS-Gym, you can use pip:
 
 .. code-block::
+
      pip install ns_gym
 
 Alternatively, you can install the latest development version directly from the GitHub repository:

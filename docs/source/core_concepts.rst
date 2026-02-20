@@ -10,7 +10,7 @@ The following sections provide an overview of the core concepts and theory infor
 
     - NS-Gym provides the interface to emulate either or both a runtime monitor and model updater which we argue are common components in non-stationarity decision-making. We thereby focus the development toward the core decision-making module.
 
-A Some Background on MDPs
+Some Background on MDPs
 -----------------------------------------------
 
 Many real-world problems involve agents making sequential decisions over time under sources of uncertainty. Here we refer to an *agent* as an entity capable of computation that *acts* based on *observations* from the environment. We can categorize sources of uncertainty into two categories:
@@ -26,7 +26,7 @@ A popular framework for modeling sequential decisions under uncertainty is the M
 - :math:`P(s'\mid s,a,\theta)`: A probability distribution over the future state given current state and action and :math:`\theta \in \Theta` denotes the set of observable environmental parameters. i.e :math:`P(s' \mid s,a,\theta)`
 - :math:`\mathcal{R}`: The reward function :math:`R(s,a,s')` quantifies the instantaneous reward the agent gets by being in state :math:`s` taking action :math:`a` and transitioning to state :math:`s'`.
 
-Importantly the cannonical MDP only captures problem instances with soley endogenous uncertainty. This is because the transition function is assumed to be stationary, i.e. it does not change over time. To capture exogenous uncertainty, we need to extend the MDP framework to allow for non-stationary transition dynamics.
+Importantly the canonical MDP only captures problem instances with solely endogenous uncertainty. This is because the transition function is assumed to be stationary, i.e. it does not change over time. To capture exogenous uncertainty, we need to extend the MDP framework to allow for non-stationary transition dynamics.
 
 .. figure:: _static/images/mdp.png
     :align: center
@@ -46,12 +46,12 @@ us to capture a wide range of non-stationarity.
 
 .. figure:: _static/images/nsmdp.png
     :align: center
-    :alt: A diagram illustrating a  stationary NS-MDP.
+    :alt: A diagram illustrating a non-stationary NS-MDP.
     :width: 80%
 
     Figure 2: The agent-environment interaction in a stationary NS-MDP. Here we see the evolution of environmental parameters :math:`\theta_t` as a semi-Markov chain that is exogenous to the base MDP.
 
-Mathematically, we let :math:`\theta` denote the set of observable environmental variables that govern the transition dynamics of the base MDP. This notation, following `Campo, Mookerjee, & Bar-Shalom, 1991 <https://ieeexplore.ieee.org/stamp/stamp.jsp?arnumber=67304>`_, clearly segregates the evolution of environmental parameters that characterize non-stationarity from the agent's decision makign module. By design, the evolution of :math:`\theta` is left to the end user; it is completely configurable for a diverse set of non-stationary scenarios. At a high level, NS-Gym defines
+Mathematically, we let :math:`\theta` denote the set of observable environmental variables that govern the transition dynamics of the base MDP. This notation, following `Campo, Mookerjee, & Bar-Shalom, 1991 <https://ieeexplore.ieee.org/stamp/stamp.jsp?arnumber=67304>`_, clearly segregates the evolution of environmental parameters that characterize non-stationarity from the agent's decision making module. By design, the evolution of :math:`\theta` is left to the end user; it is completely configurable for a diverse set of non-stationary scenarios. At a high level, NS-Gym defines
 
 1) A transition function :math:`P(s' \mid s,a,\theta_t)` that defines the probability of transitioning to state :math:`s'` given current state :math:`s`, action :math:`a`, and environmental parameters :math:`\theta_t` at time :math:`t`.
 2) A function :math:`f(t)` i.e :math:`\theta_{t+1} = f(\theta_t,t)` that defines how the environmental parameters evolve over time.
@@ -72,7 +72,7 @@ In designing NS-Gym, we deliberately keep the definition of what constitutes an 
 
 With this agentic perspective in mind, NS-Gym provides the interface to emulate either or both a runtime monitor and model updater, thereby focusing the development toward the core decision-making module.
 
-Furthermore, given these decision-making components, we can can categorize decision-making in non-stationary environments as seen in the literature (`see our ArXiv paper <https://arxiv.org/pdf/2501.09646>`_) by answering four key questions:
+Furthermore, given these decision-making components, we can categorize decision-making in non-stationary environments as seen in the literature (`see our ArXiv paper <https://arxiv.org/pdf/2501.09646>`_) by answering four key questions:
 
 1) What changes in the environment? 
 2) How does the environment change?
@@ -81,11 +81,11 @@ Furthermore, given these decision-making components, we can can categorize decis
 
 From these questions, we can distill the key problem types that arise in non-stationary environments:
 
-1) Agent knows that the environment has changed (:math:`\theta_1` no longer applies) but does now know to what extent (does not know :math:`\theta_2`).
-2) Agent knows the  exact change (knows :math:`\theta_2`), but non-stationary environments may make retraining an agent inefficient. 
+1) Agent knows that the environment has changed (:math:`\theta_1` no longer applies) but does not know to what extent (does not know :math:`\theta_2`).
+2) Agent knows the exact change (knows :math:`\theta_2`), but non-stationary environments may make retraining an agent inefficient. 
 3) Agent is unaware that the environment has changed (does not know :math:`\theta_1` no longer applies).
 
-An orthogonal problem type modles the frequency of changes in :math:`\theta`:
+An orthogonal problem type models the frequency of changes in :math:`\theta`:
 
 1) Single change within an episode: :math:`\theta_1 \rightarrow \theta_2`
 2) Multiple changes within an episode: :math:`\theta_1 \rightarrow \theta_2 \rightarrow \ldots \rightarrow \theta_n \rightarrow \ldots`

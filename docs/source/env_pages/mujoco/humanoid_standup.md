@@ -1,5 +1,7 @@
 # Humanoid Standup Environment
 
+The Humanoid Standup environment is a variant of the Humanoid environment where the goal is for a humanoid robot to stand up from the ground. See the [Gymnasium documentation](https://gymnasium.farama.org/environments/mujoco/humanoid_standup/) for more details.
+
 ## Tunable Parameters
 
 | Parameter | Description | Default Value |
