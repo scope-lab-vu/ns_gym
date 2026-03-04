@@ -7,7 +7,7 @@ name = "ns_gym"
 dynamic = ["version"]
 description = "A simulation toolkit for non-stationary Markov decision processes"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.10,<3.14"
 classifiers = [
     "Programming Language :: Python :: 3",
     "Operating System :: OS Independent",
