@@ -1120,3 +1120,106 @@ def test_two_envs_same_seed_identical_gridworld(gw_wrappers, env_id):
     assert states_a == states_b, (
         f"[{env_id}] Two envs with same seed should produce identical state transitions"
     )
+
+
+# ============================================================
+# MuJoCo: state preserved after parameter update (mj_setConst fix)
+# ============================================================
+
+MUJOCO_STATE_CONSISTENCY_IDS = [
+    "HalfCheetah-v5",
+    "Hopper-v5",
+    "InvertedPendulum-v5",
+    "InvertedDoublePendulum-v5",
+]
+
+
+@pytest.mark.parametrize("env_id", MUJOCO_STATE_CONSISTENCY_IDS)
+def test_mujoco_state_preserved_after_param_update(env_id):
+    """After a parameter update, qpos/qvel should reflect physics, not be reset.
+
+    The dependency resolver calls mj_setConst (which recomputes derived model
+    constants like body_subtreemass) but must preserve the integration state
+    (qpos, qvel, time). This test verifies that stepping with parameter changes
+    produces continuous state evolution, not state resets.
+    """
+    import mujoco
+    from ns_gym.wrappers.mujoco_env import param_look_up
+
+    env = gym.make(env_id)
+    env_name = env.unwrapped.__class__.__name__
+    params = list(TUNABLE_PARAMS[env_name].keys())
+    param_name = next((p for p in params if p != "gravity"), params[0])
+
+    fn = IncrementUpdate(ContinuousScheduler(start=0), k=0.5)
+    ns_env = MujocoWrapper(env, {param_name: fn})
+    ns_env.reset(seed=42)
+
+    model = env.unwrapped.model
+    data = env.unwrapped.data
+
+    # Step once to get non-trivial state
+    action = ns_env.action_space.sample()
+    ns_env.step(action)
+
+    qpos_after_step = data.qpos.copy()
+    qvel_after_step = data.qvel.copy()
+    time_after_step = data.time
+
+    # qpos should NOT be all zeros (i.e. not reset to qpos0)
+    assert not np.allclose(qpos_after_step, model.qpos0, atol=1e-10), (
+        f"[{env_id}] qpos should not be at qpos0 after stepping — "
+        "mj_setConst may have wiped the state"
+    )
+
+    # Step again — state should continue evolving, not snap back
+    ns_env.step(action)
+
+    qpos_after_second_step = data.qpos.copy()
+    time_after_second_step = data.time
+
+    assert time_after_second_step > time_after_step, (
+        f"[{env_id}] Simulation time should advance after step"
+    )
+    assert not np.array_equal(qpos_after_second_step, qpos_after_step), (
+        f"[{env_id}] qpos should change between steps"
+    )
+    assert not np.allclose(qpos_after_second_step, model.qpos0, atol=1e-10), (
+        f"[{env_id}] qpos should not snap back to qpos0 after second step"
+    )
+
+    ns_env.close()
+
+
+@pytest.mark.parametrize("env_id", MUJOCO_STATE_CONSISTENCY_IDS)
+def test_mujoco_subtreemass_updated_after_mass_change(env_id):
+    """After changing a mass parameter, body_subtreemass should be recomputed."""
+    import mujoco
+    from ns_gym.wrappers.mujoco_env import param_look_up
+
+    env = gym.make(env_id)
+    env_name = env.unwrapped.__class__.__name__
+    params = list(TUNABLE_PARAMS[env_name].keys())
+    # Pick a mass parameter
+    mass_param = next((p for p in params if "mass" in p), None)
+    if mass_param is None:
+        pytest.skip(f"No mass parameter for {env_id}")
+
+    fn = IncrementUpdate(ContinuousScheduler(start=0), k=1.0)
+    ns_env = MujocoWrapper(env, {mass_param: fn})
+    ns_env.reset(seed=42)
+
+    model = env.unwrapped.model
+    subtreemass_before = model.body_subtreemass.copy()
+
+    # Step to trigger the parameter update + dependency resolver
+    ns_env.step(ns_env.action_space.sample())
+
+    subtreemass_after = model.body_subtreemass.copy()
+
+    assert not np.array_equal(subtreemass_before, subtreemass_after), (
+        f"[{env_id}] body_subtreemass should update after mass change — "
+        "mj_setConst may not be called in _dependency_resolver"
+    )
+
+    ns_env.close()
