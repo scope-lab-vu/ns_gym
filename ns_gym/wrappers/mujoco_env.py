@@ -55,8 +55,28 @@ class MujocoWrapper(base.NSWrapper):
         setter(self.unwrapped, value)
 
     def _dependency_resolver(self):
-        """Re-computes derived properties of the MuJoCo model after changes."""
-        mujoco.mj_forward(self.unwrapped.model, self.unwrapped.data)
+        """Re-computes derived properties of the MuJoCo model after changes.
+
+        mj_setConst recomputes derived model constants (e.g. body_subtreemass)
+        that depend on mass parameters but are not updated by mj_forward alone.
+        However, mj_setConst resets qpos to qpos0, so we save and restore
+        the full integration state around the call.
+        """
+        model = self.unwrapped.model
+        data = self.unwrapped.data
+
+        # Save integration state (qpos, qvel, act, time, etc.)
+        spec = mujoco.mjtState.mjSTATE_INTEGRATION
+        state_size = mujoco.mj_stateSize(model, spec)
+        state = np.empty(state_size)
+        mujoco.mj_getState(model, data, state, spec)
+
+        # Recompute derived model constants (body_subtreemass, etc.)
+        mujoco.mj_setConst(model, data)
+
+        # Restore integration state and recompute forward dynamics
+        mujoco.mj_setState(model, data, state, spec)
+        mujoco.mj_forward(model, data)
 
     def _constraint_checker(self, new_vals: dict) -> dict[str, bool]:
         """Checks if new parameter values violate physical constraints."""
