@@ -6,8 +6,9 @@ from copy import deepcopy
 import ns_gym.base as base
 from ns_gym.base import TUNABLE_PARAMS, Reward
 from ns_gym.schedulers import ContinuousScheduler
-from ns_gym.update_functions import IncrementUpdate, DistributionIncrementUpdate
+from ns_gym.update_functions import IncrementUpdate, DistributionIncrementUpdate, RandomWalk
 from ns_gym.wrappers import NSClassicControlWrapper, NSCliffWalkingWrapper, NSFrozenLakeWrapper
+from ns_gym.wrappers.mujoco_env import MujocoWrapper
 
 
 # --- Constants ---
@@ -393,4 +394,173 @@ def test_constraint_checker_prevents_invalid_values():
     # masscart should NOT have gone negative
     assert env.unwrapped.masscart > 0, (
         f"Constraint checker failed: masscart={env.unwrapped.masscart}"
+    )
+
+
+# ============================================================
+# Issue 1: MuJoCo double time increment regression test
+# ============================================================
+
+MUJOCO_TIME_TEST_IDS = [
+    "InvertedPendulum-v5",
+    "HalfCheetah-v5",
+]
+
+
+@pytest.mark.parametrize("env_id", MUJOCO_TIME_TEST_IDS)
+def test_step_increments_t_mujoco(env_id):
+    """MuJoCo wrapper should increment t by 1 per step, not 2."""
+    env = gym.make(env_id)
+    env_name = env.unwrapped.__class__.__name__
+    first_param = list(TUNABLE_PARAMS[env_name].keys())[0]
+    fn = IncrementUpdate(ContinuousScheduler(), k=0.1)
+    ns_env = MujocoWrapper(env, {first_param: fn})
+    ns_env.reset(seed=42)
+
+    for step_num in range(1, 6):
+        obs, _, done, trunc, _ = ns_env.step(ns_env.action_space.sample())
+        if done or trunc:
+            break
+        assert ns_env.t == step_num, (
+            f"Expected t={step_num}, got t={ns_env.t} (double increment bug?)"
+        )
+        assert obs["relative_time"] == step_num
+
+    ns_env.close()
+
+
+# ============================================================
+# Issue 2: persistent_params tests
+# ============================================================
+
+def test_persistent_params_preserves_values_classic_control():
+    """With persistent_params=True, params should NOT reset to initial values."""
+    env = gym.make("CartPole-v1")
+    fn = IncrementUpdate(ContinuousScheduler(), k=0.5)
+    ns_env = NSClassicControlWrapper(env, {"masspole": fn}, persistent_params=True)
+    ns_env.reset(seed=42)
+
+    initial_masspole = env.unwrapped.masspole
+
+    # Step to mutate masspole
+    for _ in range(5):
+        obs, _, done, trunc, _ = ns_env.step(ns_env.action_space.sample())
+        if done or trunc:
+            break
+
+    mutated_masspole = env.unwrapped.masspole
+    assert mutated_masspole != initial_masspole, "masspole should have changed after steps"
+
+    # Reset — params should persist
+    ns_env.reset(seed=42)
+    assert ns_env.t == 0, "Time should still reset to 0"
+    assert env.unwrapped.masspole == mutated_masspole, (
+        f"masspole should persist after reset: expected {mutated_masspole}, "
+        f"got {env.unwrapped.masspole}"
+    )
+
+
+def test_persistent_params_rng_continuity_classic_control():
+    """With persistent_params=True, RNG state should continue across resets (not restart)."""
+    # --- persistent_params=True: RNG continues ---
+    env1 = gym.make("CartPole-v1")
+    fn1 = RandomWalk(ContinuousScheduler(), mu=0, sigma=0.01, seed=42)
+    ns_env1 = NSClassicControlWrapper(env1, {"masspole": fn1}, persistent_params=True)
+    ns_env1.reset(seed=0)
+
+    trajectory_1a = []
+    for _ in range(5):
+        ns_env1.step(0)
+        trajectory_1a.append(env1.unwrapped.masspole)
+
+    ns_env1.reset(seed=0)
+    trajectory_1b = []
+    for _ in range(5):
+        ns_env1.step(0)
+        trajectory_1b.append(env1.unwrapped.masspole)
+
+    # Second trajectory should NOT be identical (RNG kept advancing)
+    assert trajectory_1a != trajectory_1b, (
+        "With persistent_params=True, RNG should continue, not restart"
+    )
+
+    # --- persistent_params=False (default): RNG restarts ---
+    env2 = gym.make("CartPole-v1")
+    fn2 = RandomWalk(ContinuousScheduler(), mu=0, sigma=0.01, seed=42)
+    ns_env2 = NSClassicControlWrapper(env2, {"masspole": fn2})
+    ns_env2.reset(seed=0)
+
+    trajectory_2a = []
+    for _ in range(5):
+        ns_env2.step(0)
+        trajectory_2a.append(env2.unwrapped.masspole)
+
+    ns_env2.reset(seed=0)
+    trajectory_2b = []
+    for _ in range(5):
+        ns_env2.step(0)
+        trajectory_2b.append(env2.unwrapped.masspole)
+
+    # Second trajectory SHOULD be identical (RNG restarted from same seed)
+    assert trajectory_2a == trajectory_2b, (
+        "With persistent_params=False, RNG should restart and produce same trajectory"
+    )
+
+
+def test_persistent_params_default_false_unchanged(cc_params):
+    """Explicitly passing persistent_params=False should behave like default (params restored)."""
+    env = gym.make("CartPole-v1")
+    ns_env = NSClassicControlWrapper(
+        env, cc_params["CartPole-v1"], persistent_params=False
+    )
+    ns_env.reset(seed=42)
+
+    initial_masspole = env.unwrapped.masspole
+
+    for _ in range(5):
+        obs, _, done, trunc, _ = ns_env.step(ns_env.action_space.sample())
+        if done or trunc:
+            break
+
+    ns_env.reset(seed=42)
+    assert np.isclose(env.unwrapped.masspole, initial_masspole), (
+        "With persistent_params=False, masspole should be restored after reset"
+    )
+
+
+@pytest.mark.parametrize("env_id", MUJOCO_TIME_TEST_IDS)
+def test_persistent_params_preserves_values_mujoco(env_id):
+    """With persistent_params=True, MuJoCo params should NOT reset to initial values."""
+    from ns_gym.wrappers.mujoco_env import param_look_up
+
+    env = gym.make(env_id)
+    env_name = env.unwrapped.__class__.__name__
+    # Use 'pole_mass' for InvertedPendulum, first non-gravity param otherwise
+    params = list(TUNABLE_PARAMS[env_name].keys())
+    param_name = next((p for p in params if p != "gravity"), params[0])
+
+    fn = IncrementUpdate(ContinuousScheduler(), k=0.5)
+    ns_env = MujocoWrapper(env, {param_name: fn}, persistent_params=True)
+    ns_env.reset(seed=42)
+
+    getter, _ = param_look_up(env_name, param_name)[0]
+    initial_value = getter(env.unwrapped)
+
+    for _ in range(3):
+        obs, _, done, trunc, _ = ns_env.step(ns_env.action_space.sample())
+        if done or trunc:
+            break
+
+    mutated_value = getter(env.unwrapped)
+    assert not np.allclose(mutated_value, initial_value), (
+        f"Parameter '{param_name}' should have changed after steps"
+    )
+
+    ns_env.reset(seed=42)
+    assert ns_env.t == 0, "Time should still reset to 0"
+
+    value_after_reset = getter(env.unwrapped)
+    assert np.allclose(value_after_reset, mutated_value), (
+        f"With persistent_params=True, '{param_name}' should persist after reset: "
+        f"expected {mutated_value}, got {value_after_reset}"
     )

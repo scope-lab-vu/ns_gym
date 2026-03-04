@@ -218,6 +218,7 @@ class NSWrapper(Wrapper):
         delta_change_notification: bool = False,
         in_sim_change: bool = False,
         scalar_reward: bool = True,
+        persistent_params: bool = False,
         **kwargs: Any,
     ):
         """
@@ -228,6 +229,7 @@ class NSWrapper(Wrapper):
             delta_change_notification (bool): Sets detailed notification levle. Returns Flag to indicate whether to notify the agent of changes in the transition function. Defaults to False.
             in_sim_change (bool): Flag to indicate whether to allow changes in the environment during simulation (e.g MCTS rollouts). Defaults to False.
             scalar_reward (bool): If True, step() returns a scalar reward. If False, step() returns a Reward dataclass containing the reward, env_change, delta_change, and relative_time. Defaults to True.
+            persistent_params (bool): If True, tunable_params (and their RNG state) are preserved across resets instead of being restored to initial values. Time still resets to 0. Defaults to False.
 
         Attributes:
             frozen (bool): Flag to indicate whether the environment is frozen or not.
@@ -257,6 +259,7 @@ class NSWrapper(Wrapper):
         self.in_sim_change = in_sim_change
         self.frozen = False
         self.is_sim_env = False
+        self.persistent_params = persistent_params
         self.t = 0
         self.has_reset = False
 
@@ -365,7 +368,8 @@ class NSWrapper(Wrapper):
         state, info = super().reset(seed=seed, options=options)
         self.has_reset = True
         self.t = 0
-        self.tunable_params = copy.deepcopy(self.init_initial_params)
+        if not self.persistent_params:
+            self.tunable_params = copy.deepcopy(self.init_initial_params)
 
         delta_change = {param_name: 0 for param_name in self.tunable_params.keys()}
         env_change = {param_name: 0 for param_name in self.tunable_params.keys()}

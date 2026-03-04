@@ -34,9 +34,6 @@ class MujocoWrapper(base.NSWrapper):
             in_sim_change=in_sim_change,
             **kwargs,
         )
-        self.t = 0
-        self.delta_t = 1
-
         self._accessors = {}
         for key in tunable_params.keys():
             self._accessors[key] = param_look_up(
@@ -128,7 +125,6 @@ class MujocoWrapper(base.NSWrapper):
                 action, env_change=env_change, delta_change=delta_change
             )
 
-        self.t += self.delta_t
         return obs, reward, terminated, truncated, info
 
     def reset(
@@ -137,11 +133,11 @@ class MujocoWrapper(base.NSWrapper):
         """Reset environment and restore initial model parameters."""
         obs, info = super().reset(seed=seed, options=options)
 
-        for k, v in self.initial_params.items():
-            self._set_param_value(k, deepcopy(v))
+        if not self.persistent_params:
+            for k, v in self.initial_params.items():
+                self._set_param_value(k, deepcopy(v))
 
         self._dependency_resolver()
-        self.t = 0
         return obs, info
 
     def get_planning_env(self):
@@ -190,6 +186,7 @@ class MujocoWrapper(base.NSWrapper):
             self.delta_change_notification,
             self.in_sim_change,
             scalar_reward=self.scalar_reward,
+            persistent_params=self.persistent_params,
         )
         sim_env.reset()
 
