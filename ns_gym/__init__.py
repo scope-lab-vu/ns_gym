@@ -1,11 +1,8 @@
 from gymnasium.envs.registration import register
-from . import base  
+from . import base
 from . import wrappers
 from . import update_functions
 from . import schedulers
-from . import evaluate
-from . import benchmark_algorithms
-from . import context_switching
 from . import utils
 from . import envs
 
@@ -32,28 +29,22 @@ register(
 
 del register
 
+# Lazy-loaded submodules: benchmark_algorithms, evaluate, context_switching
+# These pull in heavy dependencies (torch, pandas, stable_baselines3, matplotlib)
+# and are only loaded on first access via __getattr__.
+_LAZY_SUBMODULES = {"evaluate", "benchmark_algorithms", "context_switching"}
+
+
+def __getattr__(name):
+    if name in _LAZY_SUBMODULES:
+        import importlib
+        module = importlib.import_module(f".{name}", __name__)
+        globals()[name] = module
+        return module
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
 __all__ = [
-    "base", "wrappers", "update_functions", "schedulers", 
-    "algo_utils", "benchmark_algorithms", "envs", "evaluate","utils"
+    "base", "wrappers", "update_functions", "schedulers",
+    "utils", "envs", "benchmark_algorithms", "evaluate", "context_switching",
 ]
-
-# __all__ = ["base","wrappers", "update_functions", "schedulers", "algo_utils","benchmark_algorithms","envs","evaluate"]
-
-# from .  import wrappers, update_functions, schedulers,evaluate,benchmark_algorithms, context_switching,evaluate
-
-
-
-# import .utils
-# import .benchmark_algorithms
-# import .eval
-# import context_switching
-
-
-# from .wrappers import *
-# from .update_functions import *
-# from .schedulers import *
-# from .utils import *
-# from .benchmark_algorithms import *
-# from ns_gym.envs.Bridge import Bridge
-# from .eval import *
-# from .context_switching import *

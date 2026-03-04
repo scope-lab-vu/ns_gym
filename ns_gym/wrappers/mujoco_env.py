@@ -3,11 +3,10 @@ import mujoco
 import numpy as np
 import warnings
 from copy import deepcopy
-from typing import Any
+from typing import Any, Callable
 import ns_gym.base as base
 import ns_gym.update_functions as update_functions
 import ns_gym.schedulers as schedulers
-from typing import Callable
 
 
 class ConstraintViolationWarning(Warning):

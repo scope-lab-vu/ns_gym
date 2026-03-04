@@ -1,14 +1,12 @@
 # import ns_bench.base as base
 import math
 import numpy as np
-from scipy.stats import wasserstein_distance
 import ns_gym.base as base
 import yaml
 import argparse
 from pathlib import Path
 import datetime
 import warnings
-import torch
 
 
 def state_action_update(transitions: list, new_probs: list):
@@ -54,20 +52,18 @@ def n_choose_k(n, k):
     return math.factorial(n) // (math.factorial(k) * math.factorial(n - k))
 
 
-def wasserstein_dual(u: np.ndarray, v: np.ndarray):
-    """_summary_
+def wasserstein_distance(u: np.ndarray, v: np.ndarray):
+    """Compute the Wasserstein distance between two distributions.
 
     Args:
-        u (np.ndarray): _description_
-        v (np.ndarray): _description_
-        d (np.ndarray): _description_
+        u (np.ndarray): First distribution.
+        v (np.ndarray): Second distribution.
 
     Returns:
-        _type_: _description_
+        float: The Wasserstein distance between u and v.
     """
-
-    dist = wasserstein_distance(u, v)
-    return dist
+    from scipy.stats import wasserstein_distance as _wasserstein_distance
+    return _wasserstein_distance(u, v)
 
 
 def categorical_sample(probs: list):
@@ -212,6 +208,7 @@ def neural_network_checker(agent_device, obs):
     Helper function to check if model and inputs are on the same device
     """
 
+    import torch
     if isinstance(obs, np.ndarray):
         obs = torch.from_numpy(obs).float()
 
