@@ -208,6 +208,7 @@ class MujocoWrapper(base.NSWrapper):
         # Recompute all derived MuJoCo quantities from the copied state
         sim_env._dependency_resolver()
         sim_env.is_sim_env = True
+        sim_env._reseed_planning_env_rngs()
         return sim_env
 
 

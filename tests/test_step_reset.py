@@ -461,49 +461,26 @@ def test_persistent_params_preserves_values_classic_control():
 
 
 def test_persistent_params_rng_continuity_classic_control():
-    """With persistent_params=True, RNG state should continue across resets (not restart)."""
-    # --- persistent_params=True: RNG continues ---
-    env1 = gym.make("CartPole-v1")
-    fn1 = RandomWalk(ContinuousScheduler(), mu=0, sigma=0.01, seed=42)
-    ns_env1 = NSClassicControlWrapper(env1, {"masspole": fn1}, persistent_params=True)
-    ns_env1.reset(seed=0)
+    """With persistent_params=True and no seed, RNG continues across resets."""
+    env = gym.make("CartPole-v1")
+    fn = RandomWalk(ContinuousScheduler(), mu=0, sigma=0.01, seed=42)
+    ns_env = NSClassicControlWrapper(env, {"masspole": fn}, persistent_params=True)
+    ns_env.reset(seed=0)
 
-    trajectory_1a = []
+    trajectory_a = []
     for _ in range(5):
-        ns_env1.step(0)
-        trajectory_1a.append(env1.unwrapped.masspole)
+        ns_env.step(0)
+        trajectory_a.append(env.unwrapped.masspole)
 
-    ns_env1.reset(seed=0)
-    trajectory_1b = []
+    # Reset WITHOUT seed — RNG should continue (persistent_params=True)
+    ns_env.reset()
+    trajectory_b = []
     for _ in range(5):
-        ns_env1.step(0)
-        trajectory_1b.append(env1.unwrapped.masspole)
+        ns_env.step(0)
+        trajectory_b.append(env.unwrapped.masspole)
 
-    # Second trajectory should NOT be identical (RNG kept advancing)
-    assert trajectory_1a != trajectory_1b, (
-        "With persistent_params=True, RNG should continue, not restart"
-    )
-
-    # --- persistent_params=False (default): RNG restarts ---
-    env2 = gym.make("CartPole-v1")
-    fn2 = RandomWalk(ContinuousScheduler(), mu=0, sigma=0.01, seed=42)
-    ns_env2 = NSClassicControlWrapper(env2, {"masspole": fn2})
-    ns_env2.reset(seed=0)
-
-    trajectory_2a = []
-    for _ in range(5):
-        ns_env2.step(0)
-        trajectory_2a.append(env2.unwrapped.masspole)
-
-    ns_env2.reset(seed=0)
-    trajectory_2b = []
-    for _ in range(5):
-        ns_env2.step(0)
-        trajectory_2b.append(env2.unwrapped.masspole)
-
-    # Second trajectory SHOULD be identical (RNG restarted from same seed)
-    assert trajectory_2a == trajectory_2b, (
-        "With persistent_params=False, RNG should restart and produce same trajectory"
+    assert trajectory_a != trajectory_b, (
+        "With persistent_params=True and no seed, RNG should continue, not restart"
     )
 
 
@@ -563,4 +540,583 @@ def test_persistent_params_preserves_values_mujoco(env_id):
     assert np.allclose(value_after_reset, mutated_value), (
         f"With persistent_params=True, '{param_name}' should persist after reset: "
         f"expected {mutated_value}, got {value_after_reset}"
+    )
+
+
+# ============================================================
+# Issue 3: Seeding tests — Classic Control
+# ============================================================
+
+CC_SEEDING_PARAMS = {
+    "CartPole-v1": "masspole",
+    "Acrobot-v1": "LINK_LENGTH_1",
+    "MountainCar-v0": "force",
+    "MountainCarContinuous-v0": "power",
+    "Pendulum-v1": "m",
+}
+
+
+@pytest.mark.parametrize("env_id", CLASSIC_CONTROL_ENV_IDS)
+def test_reset_no_seed_different_rng_sequence_classic_control(env_id):
+    """reset() with no seed should produce different RNG sequences each episode."""
+    param = CC_SEEDING_PARAMS[env_id]
+    env = gym.make(env_id)
+    fn = RandomWalk(ContinuousScheduler(), mu=0, sigma=0.01, seed=42)
+    ns_env = NSClassicControlWrapper(env, {param: fn})
+
+    # First episode with explicit seed
+    ns_env.reset(seed=0)
+    trajectory_a = []
+    for _ in range(5):
+        ns_env.step(ns_env.action_space.sample())
+        trajectory_a.append(getattr(env.unwrapped, param))
+
+    # Second episode without seed — RNG should continue
+    ns_env.reset()
+    trajectory_b = []
+    for _ in range(5):
+        ns_env.step(ns_env.action_space.sample())
+        trajectory_b.append(getattr(env.unwrapped, param))
+
+    assert trajectory_a != trajectory_b, (
+        f"[{env_id}] reset() with no seed should produce different RNG sequences"
+    )
+
+
+@pytest.mark.parametrize("env_id", CLASSIC_CONTROL_ENV_IDS)
+def test_reset_same_seed_reproducible_classic_control(env_id):
+    """reset(seed=X) should produce identical RNG sequences each time."""
+    param = CC_SEEDING_PARAMS[env_id]
+    env = gym.make(env_id)
+    fn = RandomWalk(ContinuousScheduler(), mu=0, sigma=0.01, seed=42)
+    ns_env = NSClassicControlWrapper(env, {param: fn})
+
+    ns_env.reset(seed=0)
+    trajectory_a = []
+    for _ in range(5):
+        ns_env.step(ns_env.action_space.sample())
+        trajectory_a.append(getattr(env.unwrapped, param))
+
+    ns_env.reset(seed=0)
+    trajectory_b = []
+    for _ in range(5):
+        ns_env.step(ns_env.action_space.sample())
+        trajectory_b.append(getattr(env.unwrapped, param))
+
+    assert trajectory_a == trajectory_b, (
+        f"[{env_id}] reset(seed=0) twice should produce identical RNG sequences"
+    )
+
+
+@pytest.mark.parametrize("env_id", CLASSIC_CONTROL_ENV_IDS)
+def test_reset_no_seed_multiple_episodes_differ_classic_control(env_id):
+    """Multiple reset() calls without seed should each produce different trajectories."""
+    param = CC_SEEDING_PARAMS[env_id]
+    env = gym.make(env_id)
+    fn = RandomWalk(ContinuousScheduler(), mu=0, sigma=0.01, seed=42)
+    ns_env = NSClassicControlWrapper(env, {param: fn})
+
+    ns_env.reset(seed=0)  # Initial seed
+
+    trajectories = []
+    for _ in range(3):
+        ns_env.reset()  # No seed
+        traj = []
+        for _ in range(5):
+            ns_env.step(ns_env.action_space.sample())
+            traj.append(getattr(env.unwrapped, param))
+        trajectories.append(traj)
+
+    # All 3 trajectories should be different from each other
+    assert trajectories[0] != trajectories[1], (
+        f"[{env_id}] Episodes 1 and 2 should differ without explicit seed"
+    )
+    assert trajectories[1] != trajectories[2], (
+        f"[{env_id}] Episodes 2 and 3 should differ without explicit seed"
+    )
+
+
+# ============================================================
+# Issue 3: Seeding tests — MuJoCo
+# ============================================================
+
+@pytest.mark.parametrize("env_id", MUJOCO_TIME_TEST_IDS)
+def test_reset_no_seed_different_rng_sequence_mujoco(env_id):
+    """MuJoCo: reset() with no seed should produce different RNG sequences."""
+    from ns_gym.wrappers.mujoco_env import param_look_up
+
+    env = gym.make(env_id)
+    env_name = env.unwrapped.__class__.__name__
+    params = list(TUNABLE_PARAMS[env_name].keys())
+    param_name = next((p for p in params if p != "gravity"), params[0])
+
+    fn = RandomWalk(ContinuousScheduler(), mu=0, sigma=0.01, seed=42)
+    ns_env = MujocoWrapper(env, {param_name: fn})
+    getter, _ = param_look_up(env_name, param_name)[0]
+
+    ns_env.reset(seed=0)
+    trajectory_a = []
+    for _ in range(5):
+        ns_env.step(ns_env.action_space.sample())
+        trajectory_a.append(float(getter(env.unwrapped)))
+
+    ns_env.reset()
+    trajectory_b = []
+    for _ in range(5):
+        ns_env.step(ns_env.action_space.sample())
+        trajectory_b.append(float(getter(env.unwrapped)))
+
+    assert trajectory_a != trajectory_b, (
+        f"[{env_id}] reset() with no seed should produce different RNG sequences"
+    )
+    ns_env.close()
+
+
+@pytest.mark.parametrize("env_id", MUJOCO_TIME_TEST_IDS)
+def test_reset_same_seed_reproducible_mujoco(env_id):
+    """MuJoCo: reset(seed=X) should produce identical RNG sequences."""
+    from ns_gym.wrappers.mujoco_env import param_look_up
+
+    env = gym.make(env_id)
+    env_name = env.unwrapped.__class__.__name__
+    params = list(TUNABLE_PARAMS[env_name].keys())
+    param_name = next((p for p in params if p != "gravity"), params[0])
+
+    fn = RandomWalk(ContinuousScheduler(), mu=0, sigma=0.01, seed=42)
+    ns_env = MujocoWrapper(env, {param_name: fn})
+    getter, _ = param_look_up(env_name, param_name)[0]
+
+    ns_env.reset(seed=0)
+    trajectory_a = []
+    for _ in range(5):
+        ns_env.step(ns_env.action_space.sample())
+        trajectory_a.append(float(getter(env.unwrapped)))
+
+    ns_env.reset(seed=0)
+    trajectory_b = []
+    for _ in range(5):
+        ns_env.step(ns_env.action_space.sample())
+        trajectory_b.append(float(getter(env.unwrapped)))
+
+    assert trajectory_a == trajectory_b, (
+        f"[{env_id}] reset(seed=0) twice should produce identical RNG sequences"
+    )
+    ns_env.close()
+
+
+# ============================================================
+# Issue 3: Seeding tests — Gridworld
+# ============================================================
+
+@pytest.mark.parametrize("env_id", GRIDWORLD_ENV_IDS)
+def test_reset_no_seed_different_rng_sequence_gridworld(gw_wrappers, env_id):
+    """Gridworld: reset() with no seed should produce different RNG sequences."""
+    from ns_gym.update_functions import RandomCategorical
+
+    env = gym.make(env_id)
+    WrapperClass = gw_wrappers[env_id]
+    fn = RandomCategorical(ContinuousScheduler(), seed=42)
+    ns_env = WrapperClass(env, {"P": fn})
+
+    ns_env.reset(seed=0)
+    for _ in range(5):
+        ns_env.step(ns_env.action_space.sample())
+    tp_a = ns_env.transition_prob[:]
+
+    ns_env.reset()
+    for _ in range(5):
+        ns_env.step(ns_env.action_space.sample())
+    tp_b = ns_env.transition_prob[:]
+
+    assert tp_a != tp_b, (
+        f"[{env_id}] reset() with no seed should produce different transition probs"
+    )
+
+
+@pytest.mark.parametrize("env_id", GRIDWORLD_ENV_IDS)
+def test_reset_same_seed_reproducible_gridworld(gw_wrappers, env_id):
+    """Gridworld: reset(seed=X) should produce identical RNG sequences."""
+    from ns_gym.update_functions import RandomCategorical
+
+    env = gym.make(env_id)
+    WrapperClass = gw_wrappers[env_id]
+    fn = RandomCategorical(ContinuousScheduler(), seed=42)
+    ns_env = WrapperClass(env, {"P": fn})
+
+    ns_env.reset(seed=0)
+    for _ in range(5):
+        ns_env.step(ns_env.action_space.sample())
+    tp_a = ns_env.transition_prob[:]
+
+    ns_env.reset(seed=0)
+    for _ in range(5):
+        ns_env.step(ns_env.action_space.sample())
+    tp_b = ns_env.transition_prob[:]
+
+    assert tp_a == tp_b, (
+        f"[{env_id}] reset(seed=0) twice should produce identical transition probs"
+    )
+
+
+# ============================================================
+# Issue 3: Seeding + persistent_params interaction
+# ============================================================
+
+def test_persistent_params_seed_overrides_rng():
+    """With persistent_params=True, explicit seed should still re-seed RNGs."""
+    env = gym.make("CartPole-v1")
+    fn = RandomWalk(ContinuousScheduler(), mu=0, sigma=0.01, seed=42)
+    ns_env = NSClassicControlWrapper(env, {"masspole": fn}, persistent_params=True)
+
+    # Track deltas (increments) rather than absolute values,
+    # since persistent_params means the base value differs between episodes
+    ns_env.reset(seed=0)
+    deltas_a = []
+    prev = env.unwrapped.masspole
+    for _ in range(5):
+        ns_env.step(0)
+        cur = env.unwrapped.masspole
+        deltas_a.append(cur - prev)
+        prev = cur
+
+    # Explicit seed should re-seed even with persistent_params
+    ns_env.reset(seed=0)
+    deltas_b = []
+    prev = env.unwrapped.masspole
+    for _ in range(5):
+        ns_env.step(0)
+        cur = env.unwrapped.masspole
+        deltas_b.append(cur - prev)
+        prev = cur
+
+    assert np.allclose(deltas_a, deltas_b), (
+        "With persistent_params=True, reset(seed=0) should produce same RNG-driven deltas"
+    )
+
+
+# ============================================================
+# Issue 3: Planning env RNG divergence tests
+# ============================================================
+
+@pytest.mark.parametrize("env_id", CLASSIC_CONTROL_ENV_IDS)
+def test_planning_env_rng_diverges_classic_control(env_id):
+    """Planning env should NOT predict future stochastic parameter changes."""
+    param = CC_SEEDING_PARAMS[env_id]
+    env = gym.make(env_id)
+    fn = RandomWalk(ContinuousScheduler(), mu=0, sigma=0.1, seed=42)
+    ns_env = NSClassicControlWrapper(
+        env, {param: fn},
+        change_notification=True,
+        delta_change_notification=True,
+    )
+    ns_env.reset(seed=0)
+
+    # Step a few times to advance state
+    for _ in range(3):
+        obs, _, done, trunc, _ = ns_env.step(ns_env.action_space.sample())
+        if done or trunc:
+            ns_env.reset(seed=0)
+
+    planning_env = ns_env.get_planning_env()
+
+    # --- Explicit RNG state comparison ---
+    real_fn = ns_env.tunable_params[param]
+    plan_fn = planning_env.tunable_params[param]
+    if hasattr(real_fn, 'rng') and hasattr(plan_fn, 'rng'):
+        real_sample = real_fn.rng.normal()
+        plan_sample = plan_fn.rng.normal()
+        assert real_sample != plan_sample, (
+            f"[{env_id}] Planning env RNG should be independent from real env"
+        )
+
+    # --- Trajectory divergence with same action sequence ---
+    # Re-create to get fresh RNG (previous comparison consumed a sample)
+    env = gym.make(env_id)
+    fn = RandomWalk(ContinuousScheduler(), mu=0, sigma=0.1, seed=42)
+    ns_env = NSClassicControlWrapper(
+        env, {param: fn},
+        change_notification=True,
+        delta_change_notification=True,
+    )
+    ns_env.reset(seed=0)
+    for _ in range(3):
+        obs, _, done, trunc, _ = ns_env.step(ns_env.action_space.sample())
+        if done or trunc:
+            ns_env.reset(seed=0)
+
+    planning_env = ns_env.get_planning_env()
+
+    # Use a fixed action for both envs
+    action = 0 if hasattr(ns_env.action_space, 'n') else np.zeros(ns_env.action_space.shape)
+    real_trajectory = []
+    planning_trajectory = []
+    for _ in range(10):
+        obs_real, _, done, trunc, _ = ns_env.step(action)
+        if done or trunc:
+            break
+        real_trajectory.append(getattr(env.unwrapped, param))
+
+        obs_plan, _, _, _, _ = planning_env.step(action)
+        planning_trajectory.append(getattr(planning_env.unwrapped, param))
+
+    assert len(real_trajectory) > 0, f"[{env_id}] No steps completed"
+    assert real_trajectory != planning_trajectory, (
+        f"[{env_id}] Planning env should have independent RNG — trajectories must diverge"
+    )
+
+
+@pytest.mark.parametrize("env_id", MUJOCO_TIME_TEST_IDS)
+def test_planning_env_rng_diverges_mujoco(env_id):
+    """MuJoCo planning env should NOT predict future stochastic parameter changes."""
+    from ns_gym.wrappers.mujoco_env import param_look_up
+
+    env = gym.make(env_id)
+    env_name = env.unwrapped.__class__.__name__
+    params = list(TUNABLE_PARAMS[env_name].keys())
+    param_name = next((p for p in params if p != "gravity"), params[0])
+
+    fn = RandomWalk(ContinuousScheduler(), mu=0, sigma=0.1, seed=42)
+    ns_env = MujocoWrapper(
+        env, {param_name: fn},
+        change_notification=True,
+        delta_change_notification=True,
+    )
+    getter, _ = param_look_up(env_name, param_name)[0]
+
+    ns_env.reset(seed=0)
+
+    planning_env = ns_env.get_planning_env()
+
+    # --- Explicit RNG state comparison ---
+    real_fn = ns_env.tunable_params[param_name]
+    plan_fn = planning_env.tunable_params[param_name]
+    if hasattr(real_fn, 'rng') and hasattr(plan_fn, 'rng'):
+        real_sample = real_fn.rng.normal()
+        plan_sample = plan_fn.rng.normal()
+        assert real_sample != plan_sample, (
+            f"[{env_id}] Planning env RNG should be independent from real env"
+        )
+
+    # --- Trajectory divergence with same action sequence ---
+    # Re-create to get fresh RNG (previous comparison consumed a sample)
+    env = gym.make(env_id)
+    fn = RandomWalk(ContinuousScheduler(), mu=0, sigma=0.1, seed=42)
+    ns_env = MujocoWrapper(
+        env, {param_name: fn},
+        change_notification=True,
+        delta_change_notification=True,
+    )
+    getter, _ = param_look_up(env_name, param_name)[0]
+    ns_env.reset(seed=0)
+
+    planning_env = ns_env.get_planning_env()
+
+    # Generate a fixed action sequence
+    actions = [ns_env.action_space.sample() for _ in range(10)]
+
+    real_trajectory = []
+    planning_trajectory = []
+    for action in actions:
+        obs_real, _, done, trunc, _ = ns_env.step(action)
+        if done or trunc:
+            break
+        real_trajectory.append(float(getter(env.unwrapped)))
+
+        obs_plan, _, _, _, _ = planning_env.step(action)
+        planning_trajectory.append(float(getter(planning_env.unwrapped)))
+
+    if len(real_trajectory) > 0:
+        assert real_trajectory != planning_trajectory, (
+            f"[{env_id}] Planning env should have independent RNG — trajectories must diverge"
+        )
+
+    ns_env.close()
+
+
+@pytest.mark.parametrize("env_id", GRIDWORLD_ENV_IDS)
+def test_planning_env_rng_diverges_gridworld(gw_wrappers, env_id):
+    """Gridworld planning env should NOT predict future stochastic parameter changes."""
+    from ns_gym.update_functions import RandomCategorical
+
+    env = gym.make(env_id)
+    WrapperClass = gw_wrappers[env_id]
+    fn = RandomCategorical(ContinuousScheduler(), seed=42)
+    ns_env = WrapperClass(
+        env, {"P": fn},
+        change_notification=True,
+        delta_change_notification=True,
+    )
+    ns_env.reset(seed=0)
+
+    for _ in range(3):
+        ns_env.step(ns_env.action_space.sample())
+
+    planning_env = ns_env.get_planning_env()
+
+    # --- Explicit RNG state comparison ---
+    real_fn = ns_env.tunable_params["P"]
+    plan_fn = planning_env.tunable_params["P"]
+    if hasattr(real_fn, 'rng') and hasattr(plan_fn, 'rng'):
+        real_sample = real_fn.rng.random()
+        plan_sample = plan_fn.rng.random()
+        assert real_sample != plan_sample, (
+            f"[{env_id}] Planning env RNG should be independent from real env"
+        )
+
+    # --- Trajectory divergence with same action sequence ---
+    # Re-create to get fresh RNG (previous comparison consumed a sample)
+    env = gym.make(env_id)
+    fn = RandomCategorical(ContinuousScheduler(), seed=42)
+    ns_env = WrapperClass(
+        env, {"P": fn},
+        change_notification=True,
+        delta_change_notification=True,
+    )
+    ns_env.reset(seed=0)
+
+    for _ in range(3):
+        ns_env.step(ns_env.action_space.sample())
+
+    planning_env = ns_env.get_planning_env()
+
+    # Use the same action sequence for both envs
+    actions = [ns_env.action_space.sample() for _ in range(5)]
+    for action in actions:
+        obs_real, _, done_real, trunc_real, _ = ns_env.step(action)
+        obs_plan, _, done_plan, trunc_plan, _ = planning_env.step(action)
+        if done_real or trunc_real or done_plan or trunc_plan:
+            break
+
+    assert ns_env.transition_prob != planning_env.transition_prob, (
+        f"[{env_id}] Planning env should have independent RNG — transition probs must diverge"
+    )
+
+
+# ============================================================
+# Issue 3: Two independent envs with same seed produce identical results
+# ============================================================
+
+@pytest.mark.parametrize("env_id", CLASSIC_CONTROL_ENV_IDS)
+def test_two_envs_same_seed_identical_classic_control(env_id):
+    """Two independently created envs with the same seed should produce identical
+    state transitions and parameter updates."""
+    param = CC_SEEDING_PARAMS[env_id]
+
+    def run_episode(seed):
+        env = gym.make(env_id)
+        fn = RandomWalk(ContinuousScheduler(), mu=0, sigma=0.1, seed=99)
+        ns_env = NSClassicControlWrapper(env, {param: fn})
+        ns_env.reset(seed=seed)
+
+        states = []
+        param_values = []
+        action = 0 if hasattr(ns_env.action_space, 'n') else np.zeros(ns_env.action_space.shape)
+        for _ in range(10):
+            obs, _, done, trunc, _ = ns_env.step(action)
+            if done or trunc:
+                break
+            states.append(obs["state"].tolist() if hasattr(obs["state"], "tolist") else obs["state"])
+            param_values.append(float(getattr(env.unwrapped, param)))
+        return states, param_values
+
+    states_a, params_a = run_episode(seed=42)
+    states_b, params_b = run_episode(seed=42)
+
+    assert len(states_a) > 0, f"[{env_id}] No steps completed"
+    assert params_a == params_b, (
+        f"[{env_id}] Two envs with same seed should produce identical parameter updates"
+    )
+    assert states_a == states_b, (
+        f"[{env_id}] Two envs with same seed should produce identical state transitions"
+    )
+
+
+@pytest.mark.parametrize("env_id", MUJOCO_TIME_TEST_IDS)
+def test_two_envs_same_seed_identical_mujoco(env_id):
+    """Two independently created MuJoCo envs with the same seed should produce
+    identical state transitions and parameter updates."""
+    from ns_gym.wrappers.mujoco_env import param_look_up
+
+    env_name = gym.make(env_id).unwrapped.__class__.__name__
+    params = list(TUNABLE_PARAMS[env_name].keys())
+    param_name = next((p for p in params if p != "gravity"), params[0])
+
+    # Pre-generate a fixed action sequence using a separate RNG
+    action_rng = np.random.default_rng(seed=123)
+    tmp_env = gym.make(env_id)
+    actions = [action_rng.uniform(
+        low=tmp_env.action_space.low,
+        high=tmp_env.action_space.high,
+    ).astype(tmp_env.action_space.dtype) for _ in range(10)]
+    tmp_env.close()
+
+    def run_episode(seed):
+        env = gym.make(env_id)
+        fn = RandomWalk(ContinuousScheduler(), mu=0, sigma=0.1, seed=99)
+        ns_env = MujocoWrapper(env, {param_name: fn})
+        getter, _ = param_look_up(env_name, param_name)[0]
+        ns_env.reset(seed=seed)
+
+        states = []
+        param_values = []
+        for action in actions:
+            obs, _, done, trunc, _ = ns_env.step(action)
+            if done or trunc:
+                break
+            states.append(obs["state"].tolist())
+            param_values.append(float(getter(env.unwrapped)))
+        ns_env.close()
+        return states, param_values
+
+    states_a, params_a = run_episode(seed=42)
+    states_b, params_b = run_episode(seed=42)
+
+    assert len(states_a) > 0, f"[{env_id}] No steps completed"
+    assert params_a == params_b, (
+        f"[{env_id}] Two envs with same seed should produce identical parameter updates"
+    )
+    assert states_a == states_b, (
+        f"[{env_id}] Two envs with same seed should produce identical state transitions"
+    )
+
+
+@pytest.mark.parametrize("env_id", GRIDWORLD_ENV_IDS)
+def test_two_envs_same_seed_identical_gridworld(gw_wrappers, env_id):
+    """Two independently created gridworld envs with the same seed should produce
+    identical state transitions and parameter updates."""
+    from ns_gym.update_functions import RandomCategorical
+
+    WrapperClass = gw_wrappers[env_id]
+
+    # Pre-generate a fixed action sequence using a separate RNG
+    action_rng = np.random.default_rng(seed=123)
+    tmp_env = gym.make(env_id)
+    actions = [int(action_rng.integers(tmp_env.action_space.n)) for _ in range(10)]
+    tmp_env.close()
+
+    def run_episode(seed):
+        env = gym.make(env_id)
+        fn = RandomCategorical(ContinuousScheduler(), seed=99)
+        ns_env = WrapperClass(env, {"P": fn})
+        ns_env.reset(seed=seed)
+
+        states = []
+        transition_probs = []
+        for action in actions:
+            obs, _, done, trunc, _ = ns_env.step(action)
+            if done or trunc:
+                break
+            states.append(obs["state"])
+            transition_probs.append(ns_env.transition_prob[:])
+        return states, transition_probs
+
+    states_a, tp_a = run_episode(seed=42)
+    states_b, tp_b = run_episode(seed=42)
+
+    assert len(tp_a) > 0, f"[{env_id}] No steps completed"
+    assert tp_a == tp_b, (
+        f"[{env_id}] Two envs with same seed should produce identical transition probs"
+    )
+    assert states_a == states_b, (
+        f"[{env_id}] Two envs with same seed should produce identical state transitions"
     )

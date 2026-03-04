@@ -182,6 +182,7 @@ class NSClassicControlWrapper(base.NSWrapper):
             setattr(sim_env.unwrapped, k, deepcopy(getattr(self.unwrapped, k)))
         sim_env._dependency_resolver()
         sim_env.is_sim_env = True
+        sim_env._reseed_planning_env_rngs()
         return sim_env
     
 

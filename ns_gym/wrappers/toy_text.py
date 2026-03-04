@@ -249,6 +249,7 @@ class NSCliffWalkingWrapper(base.NSWrapper):
         setattr(sim_env.unwrapped, "P", current_P)
 
         sim_env.is_sim_env = True
+        sim_env._reseed_planning_env_rngs()
         return sim_env
 
     def close(self):
@@ -506,6 +507,7 @@ class NSFrozenLakeWrapper(base.NSWrapper):
         sim_env.intial_p = deepcopy(self.intial_p)
         sim_env.unwrapped.P = deepcopy(self.P)
         sim_env.is_sim_env = True
+        sim_env._reseed_planning_env_rngs()
         return sim_env
 
 
@@ -603,6 +605,7 @@ class NSBridgeWrapper(base.NSWrapper):
         sim_env.unwrapped.P = deepcopy(self.unwrapped.P)
         sim_env.update_fn = deepcopy(self.update_fn)
         sim_env.is_sim_env = True
+        sim_env._reseed_planning_env_rngs()
         return sim_env
 
     @property
