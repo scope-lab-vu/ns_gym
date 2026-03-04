@@ -203,9 +203,10 @@ class NSCliffWalkingWrapper(base.NSWrapper):
         self, *, seed: int | None = None, options: dict[str, Any] | None = None
     ) -> tuple[Any, dict[str, Any]]:
         obs, info = super().reset(seed=seed, options=options)
-        self.transition_prob = deepcopy(self.initial_prob_dist)
-        self.update_fn = self.tunable_params["P"]
-        setattr(self.unwrapped, "P", self.intial_p)
+        if not self.persistent_params:
+            self.transition_prob = deepcopy(self.initial_prob_dist)
+            self.update_fn = self.tunable_params["P"]
+            setattr(self.unwrapped, "P", self.intial_p)
         return obs, info
 
     def get_planning_env(self):
@@ -232,6 +233,7 @@ class NSCliffWalkingWrapper(base.NSWrapper):
             in_sim_change=self.in_sim_change,
             initial_prob_dist=self.initial_prob_dist,
             scalar_reward=self.scalar_reward,
+            persistent_params=self.persistent_params,
         )
         memo[id(self)] = sim_env
 
@@ -247,6 +249,7 @@ class NSCliffWalkingWrapper(base.NSWrapper):
         setattr(sim_env.unwrapped, "P", current_P)
 
         sim_env.is_sim_env = True
+        sim_env._reseed_planning_env_rngs()
         return sim_env
 
     def close(self):
@@ -389,9 +392,10 @@ class NSFrozenLakeWrapper(base.NSWrapper):
         """
         
         obs, info = super().reset(seed=seed, options=options)
-        self.transition_prob = deepcopy(self.initial_prob_dist)
-        self.update_fn = self.tunable_params["P"]
-        setattr(self.unwrapped, "P", self.intial_p)
+        if not self.persistent_params:
+            self.transition_prob = deepcopy(self.initial_prob_dist)
+            self.update_fn = self.tunable_params["P"]
+            setattr(self.unwrapped, "P", self.intial_p)
         return obs, info
 
     def state_encoding(self, row, col):
@@ -492,6 +496,7 @@ class NSFrozenLakeWrapper(base.NSWrapper):
             initial_prob_dist=self.initial_prob_dist,
             modified_rewards=self.modified_rewards,
             scalar_reward=self.scalar_reward,
+            persistent_params=self.persistent_params,
         )
         sim_env.reset()
         sim_env.unwrapped.s = deepcopy(self.unwrapped.s)
@@ -502,6 +507,7 @@ class NSFrozenLakeWrapper(base.NSWrapper):
         sim_env.intial_p = deepcopy(self.intial_p)
         sim_env.unwrapped.P = deepcopy(self.P)
         sim_env.is_sim_env = True
+        sim_env._reseed_planning_env_rngs()
         return sim_env
 
 
@@ -564,9 +570,10 @@ class NSBridgeWrapper(base.NSWrapper):
         self, *, seed: int | None = None, options: dict[str, Any] | None = None
     ) -> tuple[Any, dict[str, Any]]:
         obs, info = super().reset(seed=seed, options=options)
-        self.unwrapped.P = deepcopy(self.initial_prob_dist)
-        self.tunable_params = deepcopy(self.init_tunable_params)
-        self.update_fn = self.tunable_params["P"]
+        if not self.persistent_params:
+            self.unwrapped.P = deepcopy(self.initial_prob_dist)
+            self.tunable_params = deepcopy(self.init_tunable_params)
+            self.update_fn = self.tunable_params["P"]
         return obs, info
 
     def get_planning_env(self):
@@ -590,6 +597,7 @@ class NSBridgeWrapper(base.NSWrapper):
             in_sim_change=self.in_sim_change,
             initial_prob_dist=self.initial_prob_dist,
             scalar_reward=self.scalar_reward,
+            persistent_params=self.persistent_params,
         )
         sim_env.reset()
         sim_env.unwrapped.s = deepcopy(self.unwrapped.s)
@@ -597,6 +605,7 @@ class NSBridgeWrapper(base.NSWrapper):
         sim_env.unwrapped.P = deepcopy(self.unwrapped.P)
         sim_env.update_fn = deepcopy(self.update_fn)
         sim_env.is_sim_env = True
+        sim_env._reseed_planning_env_rngs()
         return sim_env
 
     @property

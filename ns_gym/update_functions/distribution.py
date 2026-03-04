@@ -1,4 +1,3 @@
-from rich import inspect
 import ns_gym.base as base
 import ns_gym.utils as utils
 from typing import Any, Type, Union, Optional

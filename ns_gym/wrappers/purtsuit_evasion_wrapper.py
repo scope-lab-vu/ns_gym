@@ -1,14 +1,13 @@
-import gymnasium as gym
-import ns_gym
-from ns_gym.base import UpdateFn, UpdateDistributionFn
+from gymnasium import Env
+from ns_gym.base import NSWrapper, UpdateFn, UpdateDistributionFn
 
 
-class PursuitEvasionWrapper(ns_gym.base.NSWrapper):
+class PursuitEvasionWrapper(NSWrapper):
     """Wrapper to adapt CityEnvGym's Pursuit-Evasion environment to the ns_gym interface."""
 
     def __init__(
         self,
-        env: gym.Env,
+        env: Env,
         tunable_params: dict[str, type[UpdateFn] | type[UpdateDistributionFn]],
         change_notification: bool = False,
         delta_change_notification: bool = False,
