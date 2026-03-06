@@ -49,4 +49,4 @@ When ready, either:
 
 ## What happens next
 
-Organizers will pull your repository, run standardized evaluation, and report results. Congrats!
+We will pull your repository, run standardized evaluation, and report results. Congrats!
