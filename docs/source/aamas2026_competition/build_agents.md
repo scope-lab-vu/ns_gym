@@ -104,7 +104,7 @@ uv run python evaluator.py
 ```
 
 The evaluator supports the following flags:
-- `--num-episodes`: how many episodes to train
+- `--num-episodes`: how many episodes to evaluate
 - `--start-seed`: what is the starting seed. Note you could also change this by using `set_seed(seed)` in `agent.py`.
 
 To run the program using Docker, 
