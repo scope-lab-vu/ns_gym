@@ -148,6 +148,15 @@ class UpdateFn(ABC):
             self.prev_time = t
             return (param, 0, 0.0)
 
+    def seed(self, seed) -> None:
+        """Re-seed the RNG if this update function has one.
+
+        Args:
+            seed: Seed value (int or SeedSequence) for the random number generator.
+        """
+        if hasattr(self, 'rng'):
+            self.rng = np.random.default_rng(seed=seed)
+
     def _update(self, param: Any, t: int) -> Any:
         """Update the parameter. Subclasses must implement this method. Called by the __call__ method if the scheduler returns True.
 
@@ -218,6 +227,7 @@ class NSWrapper(Wrapper):
         delta_change_notification: bool = False,
         in_sim_change: bool = False,
         scalar_reward: bool = True,
+        persistent_params: bool = False,
         **kwargs: Any,
     ):
         """
@@ -228,6 +238,7 @@ class NSWrapper(Wrapper):
             delta_change_notification (bool): Sets detailed notification levle. Returns Flag to indicate whether to notify the agent of changes in the transition function. Defaults to False.
             in_sim_change (bool): Flag to indicate whether to allow changes in the environment during simulation (e.g MCTS rollouts). Defaults to False.
             scalar_reward (bool): If True, step() returns a scalar reward. If False, step() returns a Reward dataclass containing the reward, env_change, delta_change, and relative_time. Defaults to True.
+            persistent_params (bool): If True, tunable_params (and their RNG state) are preserved across resets instead of being restored to initial values. Time still resets to 0. Defaults to False.
 
         Attributes:
             frozen (bool): Flag to indicate whether the environment is frozen or not.
@@ -257,6 +268,7 @@ class NSWrapper(Wrapper):
         self.in_sim_change = in_sim_change
         self.frozen = False
         self.is_sim_env = False
+        self.persistent_params = persistent_params
         self.t = 0
         self.has_reset = False
 
@@ -365,7 +377,22 @@ class NSWrapper(Wrapper):
         state, info = super().reset(seed=seed, options=options)
         self.has_reset = True
         self.t = 0
-        self.tunable_params = copy.deepcopy(self.init_initial_params)
+
+        if not self.persistent_params:
+            # Save current RNG states before deepcopy overwrites them
+            old_params = self.tunable_params
+            self.tunable_params = copy.deepcopy(self.init_initial_params)
+
+            if seed is not None:
+                # Explicit seed: re-seed RNGs deterministically (reproducible)
+                self._seed_update_fns(seed)
+            else:
+                # No seed: transplant current RNG states so they keep advancing
+                self._transplant_rng_states(old_params)
+        else:
+            # persistent_params=True: only re-seed if explicit seed given
+            if seed is not None:
+                self._seed_update_fns(seed)
 
         delta_change = {param_name: 0 for param_name in self.tunable_params.keys()}
         env_change = {param_name: 0 for param_name in self.tunable_params.keys()}
@@ -381,6 +408,37 @@ class NSWrapper(Wrapper):
         info["Ground Truth Delta Change"] = delta_change
 
         return obs, info
+
+    def _seed_update_fns(self, seed: int) -> None:
+        """Re-seed all stochastic update functions deterministically.
+
+        Uses NumPy's SeedSequence to derive independent child seeds
+        for each update function, ensuring reproducibility.
+        """
+        ss = np.random.SeedSequence(seed)
+        child_seeds = ss.spawn(len(self.tunable_params))
+        for child_seed, fn in zip(child_seeds, self.tunable_params.values()):
+            fn.seed(child_seed)
+
+    def _transplant_rng_states(self, old_params: dict) -> None:
+        """Copy RNG states from old update functions into fresh deepcopied ones.
+
+        This preserves the RNG advancement across resets when no explicit
+        seed is provided, matching Gymnasium's convention.
+        """
+        for key in self.tunable_params:
+            if key in old_params and hasattr(old_params[key], 'rng'):
+                self.tunable_params[key].rng = old_params[key].rng
+
+    def _reseed_planning_env_rngs(self) -> None:
+        """Re-seed update function RNGs with fresh random seeds.
+
+        Used after deepcopy to ensure planning environments cannot
+        predict future stochastic parameter changes.
+        """
+        for fn in self.tunable_params.values():
+            if hasattr(fn, 'rng'):
+                fn.rng = np.random.default_rng()
 
     def freeze(self, mode: bool = True):
         """ "Freezes" the current MDP so that the environment dynamics do not change.

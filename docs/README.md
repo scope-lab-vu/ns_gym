@@ -1,22 +1,16 @@
-# NS-Gym Website
+# Docs Refs
 
-The official website for NSGym, hosted on [nsgym.io](https://nsgym.io/).
+To build HTML docs 
 
-## Running the Website
-In your `nsgym` conda environment, do:
 ```
-pip install -e ".[dev]"
-```
-Then, for Mac Users,
-```
-cd docs
-make html
-python -m http.server 8000 --directory build/html
+sphinx-build -b html source _build
 ```
 
-For Windows,
+To serve locally
+
 ```
-cd docs
-make.bat html
+cd _build
+python -m http.server
 ```
-The website should be running on `http://localhost:8000`.
+
+When you push to main on Github the docs will automatically be build for you. 

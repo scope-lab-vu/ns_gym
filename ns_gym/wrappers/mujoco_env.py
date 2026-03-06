@@ -3,11 +3,10 @@ import mujoco
 import numpy as np
 import warnings
 from copy import deepcopy
-from typing import Any
+from typing import Any, Callable
 import ns_gym.base as base
 import ns_gym.update_functions as update_functions
 import ns_gym.schedulers as schedulers
-from typing import Callable
 
 
 class ConstraintViolationWarning(Warning):
@@ -34,9 +33,6 @@ class MujocoWrapper(base.NSWrapper):
             in_sim_change=in_sim_change,
             **kwargs,
         )
-        self.t = 0
-        self.delta_t = 1
-
         self._accessors = {}
         for key in tunable_params.keys():
             self._accessors[key] = param_look_up(
@@ -58,8 +54,28 @@ class MujocoWrapper(base.NSWrapper):
         setter(self.unwrapped, value)
 
     def _dependency_resolver(self):
-        """Re-computes derived properties of the MuJoCo model after changes."""
-        mujoco.mj_forward(self.unwrapped.model, self.unwrapped.data)
+        """Re-computes derived properties of the MuJoCo model after changes.
+
+        mj_setConst recomputes derived model constants (e.g. body_subtreemass)
+        that depend on mass parameters but are not updated by mj_forward alone.
+        However, mj_setConst resets qpos to qpos0, so we save and restore
+        the full integration state around the call.
+        """
+        model = self.unwrapped.model
+        data = self.unwrapped.data
+
+        # Save integration state (qpos, qvel, act, time, etc.)
+        spec = mujoco.mjtState.mjSTATE_INTEGRATION
+        state_size = mujoco.mj_stateSize(model, spec)
+        state = np.empty(state_size)
+        mujoco.mj_getState(model, data, state, spec)
+
+        # Recompute derived model constants (body_subtreemass, etc.)
+        mujoco.mj_setConst(model, data)
+
+        # Restore integration state and recompute forward dynamics
+        mujoco.mj_setState(model, data, state, spec)
+        mujoco.mj_forward(model, data)
 
     def _constraint_checker(self, new_vals: dict) -> dict[str, bool]:
         """Checks if new parameter values violate physical constraints."""
@@ -128,7 +144,6 @@ class MujocoWrapper(base.NSWrapper):
                 action, env_change=env_change, delta_change=delta_change
             )
 
-        self.t += self.delta_t
         return obs, reward, terminated, truncated, info
 
     def reset(
@@ -137,11 +152,11 @@ class MujocoWrapper(base.NSWrapper):
         """Reset environment and restore initial model parameters."""
         obs, info = super().reset(seed=seed, options=options)
 
-        for k, v in self.initial_params.items():
-            self._set_param_value(k, deepcopy(v))
+        if not self.persistent_params:
+            for k, v in self.initial_params.items():
+                self._set_param_value(k, deepcopy(v))
 
         self._dependency_resolver()
-        self.t = 0
         return obs, info
 
     def get_planning_env(self):
@@ -190,6 +205,7 @@ class MujocoWrapper(base.NSWrapper):
             self.delta_change_notification,
             self.in_sim_change,
             scalar_reward=self.scalar_reward,
+            persistent_params=self.persistent_params,
         )
         sim_env.reset()
 
@@ -211,6 +227,7 @@ class MujocoWrapper(base.NSWrapper):
         # Recompute all derived MuJoCo quantities from the copied state
         sim_env._dependency_resolver()
         sim_env.is_sim_env = True
+        sim_env._reseed_planning_env_rngs()
         return sim_env
 
 

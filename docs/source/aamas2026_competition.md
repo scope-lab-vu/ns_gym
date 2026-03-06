@@ -31,9 +31,9 @@ AAMAS is the largest and most influential conference in the field of agents and 
 
 All times are AOE.
 
-- **January 30, 2026**: Baseline Competition Code Release and Submission Portal Opens
+- **February 5, 2026**: Baseline Competition Code Release and Submission Portal Opens
 - **January - April 2026**: Submission period with open leaderboard and Q&A forum
-- **April 30, 2026**: Final Submission Deadline
+- **May 10, 2026**: Final Submission Deadline
 - **May 25-29, 2026**: AAMAS 2026 Conference (Paphos, Cyprus) and presentation of competition results
 
 ## NS-Gym NeurIPS Paper
@@ -53,7 +53,7 @@ For more information about NS-Gym and the underlying framework for this competit
 
 ## NS-Gym Installation
 
-To get started with NS-Gym, please follow the instructions in the NS-Gym [quickstart guide](quickstart_guide.md) to install the package and set up your development environment. A tutoiral notebook for using NS-Gym can be found [here](https://github.com/scope-lab-vu/ns_gym/blob/main/tutorial.ipynb)
+To get started with NS-Gym, please follow the instructions in the NS-Gym [quickstart guide](quickstart_guide.md) to install the package and set up your development environment. A tutorial notebook for using NS-Gym can be found [here](https://github.com/scope-lab-vu/ns_gym/blob/main/tutorial.ipynb).
 
 ## Submission Guidelines
 
@@ -63,7 +63,7 @@ Submissions will be managed via GitHub using a private repository model to ensur
   2) Follow the instructions in the template repository readme to create a new repository using the template and set your development environment. 
   3) Implement Your Agent: Develop your solution within the provided framework.
   4) Grant Access: Once you are ready to submit, add the competition organizers, nkepling and ayanmukhopadhyay, as collaborators on your private repository.
-  5) Finalize Submission: When ready to submit, [open an issue](https://github.com/scope-lab-vu/ns-gym-comp-template/issues/new) on in the template repository with a link to your submission repo. Alternitavelly you can email nathaniel.s.keplinger [at] vanderbilt.edu and ayan.mukhopadhyay [at] vanderbilt.edu to notify us that your repository is ready for evaluation.
+  5) Finalize Submission: When ready to submit, [open an issue](https://github.com/scope-lab-vu/ns-gym-comp-template/issues/new) in the template repository with a link to your submission repo. Alternatively, you can email nathaniel.s.keplinger [at] vanderbilt.edu and ayan.mukhopadhyay [at] vanderbilt.edu to notify us that your repository is ready for evaluation.
 
 The organizers will pull your code and conduct the final evaluation using a standardized Docker image. Results will be reported back. 
 
@@ -103,7 +103,7 @@ We evaluate agents based on how well they handle the transition from a stable en
 
 The competition will focus on environments that have parametric changes. The parametric changes involve gradual or abrupt variations in continuous parameters that affect the environment's dynamics. Examples include changes in friction coefficients, mass distributions, or gravity. The magnitude and frequency of these changes will vary across different environments to test the robustness of the agents.
 
-We will evaluate all submitted agents on a suite of non-stationary environments using NS-Gym. For each environment in NS-Gym, we will define a holdout set of non-stationary variations for testing not available to the public. Each variation will define a set of parameters to change, frequency of changes, and the magnitude of changes. For each environment we will test agents on three levels of "notification" settings
+We will evaluate all submitted agents on a suite of non-stationary environments using NS-Gym. For each environment in NS-Gym, we will define a holdout set of non-stationary variations for testing not available to the public. Each variation will define a set of parameters to change, frequency of changes, and the magnitude of changes. For each environment we will test agents on three levels of "notification" settings.
 
 - **Basic Notification**: The agent is only informed that a change has occurred but receives no additional context.
 - **Detailed Notification**: The agent is explicitly informed when a change occurs and will receive additional context about the nature of the change.
@@ -111,8 +111,19 @@ We will evaluate all submitted agents on a suite of non-stationary environments 
 
 ## Contact Information
 
-Please feel free to reach out with any questions or concerns regarding the competition. You can contact the competition organizers at **nathaniel.s.keplinger** [at] **vanderbilt.edu** and **ayan.mukhopadhyay** [at] **vanderbilt.edu**
+Please feel free to reach out with any questions or concerns regarding the competition. You can contact the competition organizers at **nathaniel.s.keplinger** [at] **vanderbilt.edu** and **ayan.mukhopadhyay** [at] **vanderbilt.edu**.
 
+### Office Hours
+
+We will be hosting weekly virtual office hours over Zoom on an alternating schedule to accommodate participants across different time zones:
+
+**Session A:** 8:00 AM – 9:00 AM (CST / UTC-6)
+February 25, March 11, March 25, April 8, April 22, May 6
+
+**Session B:** 8:00 PM – 9:00 PM (CST / UTC-6)
+March 4, March 18, April 1, April 15, April 29
+
+[OFFICE HOURS LINK](https://vanderbilt.zoom.us/j/92590230100)
 
 <hr>
 

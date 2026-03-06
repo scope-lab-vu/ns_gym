@@ -102,8 +102,9 @@ class NSClassicControlWrapper(base.NSWrapper):
     def reset(self, *, seed: int | None = None, options: dict[str, Any] | None = None):
         """Reset environment"""
         obs, info = super().reset(seed=seed, options=options)
-        for k, v in self.initial_params.items():
-            setattr(self.unwrapped, k, deepcopy(v))
+        if not self.persistent_params:
+            for k, v in self.initial_params.items():
+                setattr(self.unwrapped, k, deepcopy(v))
 
         return obs, info
 
@@ -172,6 +173,7 @@ class NSClassicControlWrapper(base.NSWrapper):
             self.delta_change_notification,
             self.in_sim_change,
             scalar_reward=self.scalar_reward,
+            persistent_params=self.persistent_params,
         )
         sim_env.reset()
         sim_env.unwrapped.state = deepcopy(self.unwrapped.state)
@@ -180,6 +182,7 @@ class NSClassicControlWrapper(base.NSWrapper):
             setattr(sim_env.unwrapped, k, deepcopy(getattr(self.unwrapped, k)))
         sim_env._dependency_resolver()
         sim_env.is_sim_env = True
+        sim_env._reseed_planning_env_rngs()
         return sim_env
     
 

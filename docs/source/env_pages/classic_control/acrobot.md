@@ -17,7 +17,7 @@ The Acrobot environment is configured to allow non-stationarity in physics param
 |-----------|-------------|---------------|
 | `dt` | Time between control updates | 0.2 |
 | `LINK_LENGTH_1` | Length of the link connecting the first joint to the second joint | 1.0 |
-| `LINK_LENGTH_2` | Length of the link only connected the second joint | 1.0 |
+| `LINK_LENGTH_2` | Length of the link only connected to the second joint | 1.0 |
 | `LINK_MASS_1` | Mass of the first link | 1.0 |
 | `LINK_MASS_2` | Mass of the second link | 1.0 |
 | `LINK_COM_POS_1` | Center of mass position of the first link | 0.5 |

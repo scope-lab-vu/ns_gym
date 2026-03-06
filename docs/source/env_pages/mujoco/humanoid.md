@@ -1,6 +1,6 @@
 # Humanoid Environment
 
-The Humanoid environment is a high-dimensional continuous control task where a humanoid robot must learn to walk and navigate through its environment. The goal is to maximize forward velocity while maintaining balance and stability.  See the [Gymnasium documentation](https://gymnasium.farama.org/environments/mujoco/humanoid/) for more details.
+The Humanoid environment is a high-dimensional continuous control task where a humanoid robot must learn to walk and navigate through its environment. The goal is to maximize forward velocity while maintaining balance and stability. See the [Gymnasium documentation](https://gymnasium.farama.org/environments/mujoco/humanoid/) for more details.
 
 ```{eval-rst}
 .. figure:: /_static/images/humanoid.gif

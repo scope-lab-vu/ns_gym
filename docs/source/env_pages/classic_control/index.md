@@ -4,7 +4,7 @@
    :maxdepth: 2 
    :caption: Classic Control Environments
 
-   cartpole
-   acrobot
-   pendulum
-   mountaincar
+   cartpole.md
+   acrobot.md
+   pendulum.md
+   mountaincar.md
