@@ -86,4 +86,8 @@ For now, you should have:
 - Docker images that match the evaluation environment,
 - an `upstream` remote to pull template updates.
 
+
+Need help? Join in our [Office Hour sessions](../aamas2026_competition.md#office-hours)!
+
+
 In the next tutorial, we will cover the basics of building an agent using the Ns-Gym competition template. 

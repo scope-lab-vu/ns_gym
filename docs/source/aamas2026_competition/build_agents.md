@@ -123,4 +123,6 @@ In this tutorial, you have:
 - built a model-free agent
 - ran the code both locally and using Docker.
 
+Need help? Join in our [Office Hour sessions](../aamas2026_competition.md#office-hours)!
+
 In the next tutorial, we will cover how to create a custom, non-stationary environment. See you there!

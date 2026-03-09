@@ -133,6 +133,8 @@ register(
 You can then load it anywhere with `gym.make("MyCustomNSCartPole-v0")` and add the env ID to the `ENVIRONMENTS` dictionary in [evaluator.py](evaluator.py) to evaluate your agent on it!
 
 
+Need help? Join in our [Office Hour sessions](../aamas2026_competition.md#office-hours)!
+
 ## Next step
 
 Confident about your algorithm? Go to [Submit Your Agent](submission.md) and show us what you got!
