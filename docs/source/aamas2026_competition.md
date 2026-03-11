@@ -36,6 +36,37 @@ All times are AOE.
 - **May 10, 2026**: Final Submission Deadline
 - **May 25-29, 2026**: AAMAS 2026 Conference (Paphos, Cyprus) and presentation of competition results
 
+## Competition Tutorials
+
+Use these guides in order:
+
+1. [Setup](aamas2026_competition/setup.md)
+2. [Build Your Agent](aamas2026_competition/build_agents.md)
+3. [Create a Custom Environment](aamas2026_competition/make_env.md)
+4. [Submit Your Agent](aamas2026_competition/submission.md)
+
+```{toctree}
+:maxdepth: 1
+:hidden:
+
+aamas2026_competition/setup
+aamas2026_competition/build_agents
+aamas2026_competition/make_env
+aamas2026_competition/submission
+```
+
+## Office Hours
+
+We will be hosting weekly virtual office hours over Zoom on an alternating schedule to accommodate participants across different time zones:
+
+**Session A:** 8:00 AM – 9:00 AM (CST / UTC-6)
+February 25, March 11, March 25, April 8, April 22, May 6
+
+**Session B:** 8:00 PM – 9:00 PM (CST / UTC-6)
+March 4, March 18, April 1, April 15, April 29
+
+[OFFICE HOURS LINK](https://vanderbilt.zoom.us/j/92590230100)
+
 ## NS-Gym NeurIPS Paper
 
 For more information about NS-Gym and the underlying framework for this competition, please refer to our NeurIPS 2025 paper: [NS-Gym: A Comprehensive and Open-Source Simulation Framework for Non-Stationary Markov Decision Processes](https://openreview.net/pdf?id=YOXZuRy40U).
@@ -67,24 +98,6 @@ Submissions will be managed via GitHub using a private repository model to ensur
 
 The organizers will pull your code and conduct the final evaluation using a standardized Docker image. Results will be reported back. 
 
-## Competition Tutorials
-
-Use these guides in order:
-
-1. [Setup](aamas2026_competition/setup.md)
-2. [Build Your Agent](aamas2026_competition/build_agents.md)
-3. [Create a Custom Environment](aamas2026_competition/make_env.md)
-4. [Submit Your Agent](aamas2026_competition/submission.md)
-
-```{toctree}
-:maxdepth: 1
-:hidden:
-
-aamas2026_competition/setup
-aamas2026_competition/build_agents
-aamas2026_competition/make_env
-aamas2026_competition/submission
-```
 
 ### Agent Interface
 - Model-free agents must expose a `select_action(obs)` method.
@@ -112,18 +125,6 @@ We will evaluate all submitted agents on a suite of non-stationary environments 
 ## Contact Information
 
 Please feel free to reach out with any questions or concerns regarding the competition. You can contact the competition organizers at **nathaniel.s.keplinger** [at] **vanderbilt.edu** and **ayan.mukhopadhyay** [at] **vanderbilt.edu**.
-
-### Office Hours
-
-We will be hosting weekly virtual office hours over Zoom on an alternating schedule to accommodate participants across different time zones:
-
-**Session A:** 8:00 AM – 9:00 AM (CST / UTC-6)
-February 25, March 11, March 25, April 8, April 22, May 6
-
-**Session B:** 8:00 PM – 9:00 PM (CST / UTC-6)
-March 4, March 18, April 1, April 15, April 29
-
-[OFFICE HOURS LINK](https://vanderbilt.zoom.us/j/92590230100)
 
 <hr>
 
