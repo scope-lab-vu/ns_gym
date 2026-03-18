@@ -43,7 +43,8 @@ Use these guides in order:
 1. [Setup](aamas2026_competition/setup.md)
 2. [Build Your Agent](aamas2026_competition/build_agents.md)
 3. [Create a Custom Environment](aamas2026_competition/make_env.md)
-4. [Submit Your Agent](aamas2026_competition/submission.md)
+4. [Evaluation Criteria](aamas2026_competition/evaluation.md)
+5. [Submit Your Agent](aamas2026_competition/submission.md)
 
 ```{toctree}
 :maxdepth: 1
@@ -52,6 +53,7 @@ Use these guides in order:
 aamas2026_competition/setup
 aamas2026_competition/build_agents
 aamas2026_competition/make_env
+aamas2026_competition/evaluation
 aamas2026_competition/submission
 ```
 

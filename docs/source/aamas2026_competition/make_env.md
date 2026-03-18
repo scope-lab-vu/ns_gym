@@ -5,7 +5,8 @@ Welcome! This is the third tutorial in a series for the full submission workflow
 1.  [Environment Setup](setup.md): create your repository, configure Python, and build Docker images.
 2.  [Build Your Agent](build_agents.md): implement a model-based or model-free agent and register it.
 3. This tutorial: define non-stationarity with schedulers and update functions.
-4. [Submit Your Agent](submission.md): run final checks and send your repository for evaluation.
+4. [Evaluation Criteria](evaluation.md): understand how submissions are scored and ranked.
+5. [Submit Your Agent](submission.md): run final checks and send your repository for evaluation.
 
 This is an in-depth tutorial on the settings of NS-Gym. Let's get started!
 
@@ -137,4 +138,4 @@ Need help? Join in our [Office Hour sessions](../aamas2026_competition.md#office
 
 ## Next step
 
-Confident about your algorithm? Go to [Submit Your Agent](submission.md) and show us what you got!
+Confident about your environment and algorithm? Go to [Evaluation Criteria](evaluation.md) to see how submissions are scored.

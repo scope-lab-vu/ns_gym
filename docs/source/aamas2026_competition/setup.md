@@ -7,7 +7,8 @@ This tutorial series will walk you through the full submission workflow:
 1. This tutorial: create your repository, configure Python, and build Docker images.
 2. [Build Your Agent](build_agents.md): implement a model-based or model-free agent and register it.
 3. [Create a Custom Environment](make_env.md): define non-stationarity with schedulers and update functions.
-4. [Submit Your Agent](submission.md): run final checks and send your repository for evaluation.
+4. [Evaluation Criteria](evaluation.md): understand how submissions are scored and ranked.
+5. [Submit Your Agent](submission.md): run final checks and send your repository for evaluation.
 
 Let's get started!
 
