@@ -114,6 +114,8 @@ We evaluate agents based on how well they handle the transition from a stable en
 3. **Resilience**: We assess how well the agent recovers from unexpected shifts in dynamics. We specifically look at the magnitude of the performance drop between the stable pre-shift return and the post-shift episode return.
 4. **Efficiency**: We track the computational cost of the adaptation mechanism. This includes CPU/GPU utilization per decision step and the total memory utilization across the evaluation episode.
 
+For detailed information, see [Evaluation Criteria](aamas2026_competition/evaluation.md).
+
 ## Example Environments
 
 The competition will focus on environments that have parametric changes. The parametric changes involve gradual or abrupt variations in continuous parameters that affect the environment's dynamics. Examples include changes in friction coefficients, mass distributions, or gravity. The magnitude and frequency of these changes will vary across different environments to test the robustness of the agents.
