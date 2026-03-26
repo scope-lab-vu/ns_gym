@@ -46,7 +46,7 @@ When ready, either:
 - open an issue in `scope-lab-vu/ns-gym-comp-template` with your repository link, or
 - email:
   - `nathaniel.s.keplinger [at] vanderbilt.edu`
-  - `ayan.mukhopadhyay [at] vanderbilt.edu`
+  - `amukhopadhyay [at] wm.edu`
 
 ## What happens next
 

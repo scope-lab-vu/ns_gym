@@ -96,7 +96,7 @@ Submissions will be managed via GitHub using a private repository model to ensur
   2) Follow the instructions in the template repository readme to create a new repository using the template and set your development environment. 
   3) Implement Your Agent: Develop your solution within the provided framework.
   4) Grant Access: Once you are ready to submit, add the competition organizers, nkepling and ayanmukhopadhyay, as collaborators on your private repository.
-  5) Finalize Submission: When ready to submit, [open an issue](https://github.com/scope-lab-vu/ns-gym-comp-template/issues/new) in the template repository with a link to your submission repo. Alternatively, you can email nathaniel.s.keplinger [at] vanderbilt.edu and ayan.mukhopadhyay [at] vanderbilt.edu to notify us that your repository is ready for evaluation.
+  5) Finalize Submission: When ready to submit, [open an issue](https://github.com/scope-lab-vu/ns-gym-comp-template/issues/new) in the template repository with a link to your submission repo. Alternatively, you can email nathaniel.s.keplinger [at] vanderbilt.edu and amukhopadhyay [at] wm.edu to notify us that your repository is ready for evaluation.
 
 The organizers will pull your code and conduct the final evaluation using a standardized Docker image. Results will be reported back. 
 
@@ -128,7 +128,7 @@ We will evaluate all submitted agents on a suite of non-stationary environments 
 
 ## Contact Information
 
-Please feel free to reach out with any questions or concerns regarding the competition. You can contact the competition organizers at **nathaniel.s.keplinger** [at] **vanderbilt.edu** and **ayan.mukhopadhyay** [at] **vanderbilt.edu**.
+Please feel free to reach out with any questions or concerns regarding the competition. You can contact the competition organizers at **nathaniel.s.keplinger** [at] **vanderbilt.edu** and **amukhopadhyay** [at] **wm.edu**.
 
 <hr>
 
@@ -162,6 +162,24 @@ Please feel free to reach out with any questions or concerns regarding the compe
 
   <!-- Organizer 2 -->
   <div style="text-align: center; max-width: 160px;">
+    <img src="_static/images/yuanhe.jpg"
+         alt="Yuanhe Li"
+         style="
+           width: 120px;
+           height: 120px;
+           border-radius: 50%;
+           object-fit: cover;
+           margin-bottom: 10px;
+         ">
+    <div style="font-weight: 600;">Yuanhe Li</div>
+    <div style="font-size: 0.9em; color: #555;">Graduate Student, College of William and Mary</div>
+    <a href="https://www.linkedin.com/in/yuanhe-li/" target="_blank" style="font-size: 0.9em;">
+      Website
+    </a>
+  </div>
+
+  <!-- Organizer 3 -->
+  <div style="text-align: center; max-width: 160px;">
     <img src="_static/images/mukhopadhyay.jpg"
          alt="Ayan Mukhopadhyay"
          style="
@@ -178,7 +196,7 @@ Please feel free to reach out with any questions or concerns regarding the compe
     </a>
   </div>
 
-  <!-- Organizer 3 -->
+  <!-- Organizer 4 -->
   <div style="text-align: center; max-width: 160px;">
     <img src="_static/images/dubey.jpg"
          alt="Abhishek Dubey"
@@ -196,7 +214,7 @@ Please feel free to reach out with any questions or concerns regarding the compe
     </a>
   </div>
 
-  <!-- Organizer 4 -->
+  <!-- Organizer 5 -->
   <div style="text-align: center; max-width: 160px;">
     <img src="_static/images/laszka.jpg"
          alt="Aron Laszka"
