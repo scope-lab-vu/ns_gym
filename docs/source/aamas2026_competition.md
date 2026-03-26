@@ -43,7 +43,8 @@ Use these guides in order:
 1. [Setup](aamas2026_competition/setup.md)
 2. [Build Your Agent](aamas2026_competition/build_agents.md)
 3. [Create a Custom Environment](aamas2026_competition/make_env.md)
-4. [Submit Your Agent](aamas2026_competition/submission.md)
+4. [Evaluation Criteria](aamas2026_competition/evaluation.md)
+5. [Submit Your Agent](aamas2026_competition/submission.md)
 
 ```{toctree}
 :maxdepth: 1
@@ -52,6 +53,7 @@ Use these guides in order:
 aamas2026_competition/setup
 aamas2026_competition/build_agents
 aamas2026_competition/make_env
+aamas2026_competition/evaluation
 aamas2026_competition/submission
 ```
 
@@ -111,6 +113,8 @@ We evaluate agents based on how well they handle the transition from a stable en
 2. **Performance**: This is calculated based on the average undiscounted episodic reward achieved under non-stationary conditions.
 3. **Resilience**: We assess how well the agent recovers from unexpected shifts in dynamics. We specifically look at the magnitude of the performance drop between the stable pre-shift return and the post-shift episode return.
 4. **Efficiency**: We track the computational cost of the adaptation mechanism. This includes CPU/GPU utilization per decision step and the total memory utilization across the evaluation episode.
+
+For detailed information, see [Evaluation Criteria](aamas2026_competition/evaluation.md).
 
 ## Example Environments
 
