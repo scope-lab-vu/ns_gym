@@ -47,6 +47,7 @@ When ready, either:
 - email:
   - `nathaniel.s.keplinger [at] vanderbilt.edu`
   - `amukhopadhyay [at] wm.edu`
+  - `yli113 [at] wm.edu`
 
 ## What happens next
 

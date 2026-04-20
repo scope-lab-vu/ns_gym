@@ -96,7 +96,7 @@ Submissions will be managed via GitHub using a private repository model to ensur
   2) Follow the instructions in the template repository readme to create a new repository using the template and set your development environment. 
   3) Implement Your Agent: Develop your solution within the provided framework.
   4) Grant Access: Once you are ready to submit, add the competition organizers, nkepling and ayanmukhopadhyay, as collaborators on your private repository.
-  5) Finalize Submission: When ready to submit, [open an issue](https://github.com/scope-lab-vu/ns-gym-comp-template/issues/new) in the template repository with a link to your submission repo. Alternatively, you can email nathaniel.s.keplinger [at] vanderbilt.edu and amukhopadhyay [at] wm.edu to notify us that your repository is ready for evaluation.
+  5) Finalize Submission: When ready to submit, [open an issue](https://github.com/scope-lab-vu/ns-gym-comp-template/issues/new) in the template repository with a link to your submission repo. Alternatively, you can email nathaniel.s.keplinger [at] vanderbilt.edu, yli113 [at] wm.edu, and amukhopadhyay [at] wm.edu to notify us that your repository is ready for evaluation.
 
 The organizers will pull your code and conduct the final evaluation using a standardized Docker image. Results will be reported back. 
 
@@ -128,7 +128,7 @@ We will evaluate all submitted agents on a suite of non-stationary environments 
 
 ## Contact Information
 
-Please feel free to reach out with any questions or concerns regarding the competition. You can contact the competition organizers at **nathaniel.s.keplinger** [at] **vanderbilt.edu** and **amukhopadhyay** [at] **wm.edu**.
+Please feel free to reach out with any questions or concerns regarding the competition. You can contact the competition organizers at **nathaniel.s.keplinger** [at] **vanderbilt.edu**, **yli113** [at] **wm.edu** and **amukhopadhyay** [at] **wm.edu**.
 
 <hr>
 
