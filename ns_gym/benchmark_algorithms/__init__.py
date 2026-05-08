@@ -6,6 +6,7 @@ from .PAMCTS import PAMCTS
 from .AlphaZero.alphazero import AlphaZeroAgent, AlphaZeroNetwork
 from .PPO.PPO import PPO, PPOActor, PPOCritic
 from .DDPG import DDPG
+from .rats import RATS
 
 
 __all__ = [
@@ -19,4 +20,5 @@ __all__ = [
     "PPO",
     "PPOActor",
     "PPOCritic",
-    "DDPG"]
+    "DDPG",
+    "RATS"]

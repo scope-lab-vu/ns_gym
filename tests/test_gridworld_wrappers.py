@@ -175,7 +175,60 @@ def test_get_planning_env(gridworld_wrappers, gridworld_params, env_id):
 
 
 
-@pytest.mark.parametrize("env_id", SUPPORTED_GRID_WORLD_ENV_IDS)    
+@pytest.mark.parametrize("env_id", SUPPORTED_GRID_WORLD_ENV_IDS)
+def test_P_is_current_snapshot_not_future_schedule(
+    gridworld_wrappers, gridworld_params, env_id
+):
+    """``unwrapped.P`` must reflect the CURRENT non-stationary snapshot, not
+    a precomputed schedule of future transitions.
+
+    Specifically:
+      * Repeated reads at the same time step return identical P.
+      * P drifts only via ``step()``.
+      * Probabilities at every (s, a) sum to 1 (no leakage of future-mass).
+      * A deepcopy at time t freezes P; subsequent ``step()`` on the original
+        does not change the snapshot's P.
+    """
+    env = gym.make(env_id)
+    WrapperClass = gridworld_wrappers[env_id]
+    tunable_params = gridworld_params[env_id]
+    ns_env = WrapperClass(env, tunable_params)
+    ns_env.reset(seed=0)
+
+    # Re-read stability
+    P_a = copy.deepcopy(ns_env.unwrapped.P)
+    P_b = copy.deepcopy(ns_env.unwrapped.P)
+    assert P_a == P_b, "P read twice without stepping must be identical"
+
+    # Drift via step
+    for _ in range(5):
+        ns_env.step(ns_env.action_space.sample())
+    P_t5 = copy.deepcopy(ns_env.unwrapped.P)
+    assert P_a != P_t5, f"P must drift via step() (env={env_id})"
+
+    # Mass conservation: every (s, a) entry must sum to 1
+    bad = []
+    for s in P_t5:
+        for a in P_t5[s]:
+            total = sum(t[0] for t in P_t5[s][a])
+            if abs(total - 1.0) > 1e-9:
+                bad.append((s, a, total))
+    assert not bad, f"P[s][a] mass != 1 at: {bad[:3]}"
+
+    # Deepcopy isolation: snapshot frozen against future drift
+    snap = copy.deepcopy(ns_env)
+    snap_P = copy.deepcopy(snap.unwrapped.P)
+    for _ in range(10):
+        ns_env.step(ns_env.action_space.sample())
+    assert snap.unwrapped.P == snap_P, (
+        f"deepcopy leaked future drift (env={env_id})"
+    )
+    assert ns_env.unwrapped.P != snap_P, (
+        f"original env did not drift after snapshot (env={env_id})"
+    )
+
+
+@pytest.mark.parametrize("env_id", SUPPORTED_GRID_WORLD_ENV_IDS)
 def test_invalid_tunable_param_gridworld(env_id, gridworld_wrappers):
     """Tests that the wrapper raises an error for an invalid parameter name."""
     env = gym.make(env_id)

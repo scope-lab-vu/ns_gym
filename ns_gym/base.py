@@ -1113,6 +1113,15 @@ Tunable parameters dictionary. Keys are environment names and values are diction
 """
 TUNABLE_PARAMS = _generate_tunable_params()
 
+# The custom Bridge env is registered in ns_gym/__init__.py, but that
+# registration runs *after* this module is imported, so gym.make() in
+# _generate_tunable_params can't see it. Register it manually instead.
+TUNABLE_PARAMS["Bridge"] = {
+    "P": [1.0, 0.0, 0.0],        # uniform single slip distribution
+    "P_left": [1.0, 0.0, 0.0],   # left-half slip (split-mode)
+    "P_right": [1.0, 0.0, 0.0],  # right-half slip (split-mode)
+}
+
 
 if __name__ == "__main__":
     pass
