@@ -165,23 +165,22 @@ class LCBoundedDistrubutionUpdate(base.UpdateDistributionFn):
             self.update_fn = update_fn(scheduler)
 
     def _update(self, param: Any, t: int) -> Any:
-        max_trys = 1e5
-        count = 0
-        cur_dist = param
-        updated_dist = self.update_fn.update(param, t)
-        wass_dist = utils.wasserstein_distance(cur_dist, updated_dist)
-
+        max_trys = int(1e5)
+        cur_dist = np.asarray(param, dtype=float)
         delta_time = abs(t - self.prev_time)
         d = self.L * delta_time
-        while wass_dist > d and count < max_trys:
-            updated_dist = self.update_fn.update(param, t)
-            wass_dist = utils.wasserstein_distance(cur_dist, updated_dist)
-            count += 1
 
-        if count >= max_trys:
-            raise ValueError("Could not find a Lipshitz continuous update")
-        else:
-            return updated_dist
+        for _ in range(max_trys):
+            # Some inner _update implementations mutate their argument in
+            # place, so each candidate must start from a fresh copy.
+            updated_dist = self.update_fn._update(list(param), t)
+            if utils.wasserstein_distance(cur_dist, np.asarray(updated_dist, dtype=float)) <= d:
+                return updated_dist
+
+        raise ValueError(
+            "Could not find a Lipschitz-continuous update after "
+            f"{max_trys} attempts (L={self.L}, delta_time={delta_time})"
+        )
 
 
 class BudgetBoundedIncrement(base.UpdateDistributionFn):

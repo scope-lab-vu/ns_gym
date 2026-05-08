@@ -1,4 +1,5 @@
 import gymnasium as gym
+from ns_gym import base
 from ns_gym.wrappers import (
     NSClassicControlWrapper,
     NSBridgeWrapper,
@@ -111,7 +112,7 @@ def make_env_with_context(
         raise ValueError("Invalid environment")
 
     ns_env = gym.wrappers.TransformObservation(ns_env, lambda obs: obs["state"], ns_env.unwrapped.observation_space)
-    ns_env = gym.wrappers.TransformReward(ns_env, lambda rew: rew.reward)
+    ns_env = gym.wrappers.TransformReward(ns_env, lambda rew: rew.reward if isinstance(rew, base.Reward) else rew)
 
     if seed is not None:
         ns_env.reset(seed=seed)

@@ -9,7 +9,7 @@ from typing import Optional
 """
 """
 
-MAPS = {"bridge": ["HHHHHHHH", "FFFFFHHH", "GFFFSFFG", "FFFFFHHH", "HHHHHHHH"]}
+MAPS = {"bridge": ["HHHHHHHH", "FFFFFHHH", "GFHFSFFG", "FFFFFHHH", "HHHHHHHH"]}
 
 LEFT = 0
 DOWN = 1
@@ -18,13 +18,36 @@ UP = 3
 
 
 class Bridge(gym.Env):
-    """Bridge environment
-    This is a simple implementation of the bridge environment used in Lecarpentier and Rachelson
-    (2019). The primary difference between this implementation and the one used in the paper is that the non-sationarity is handled externally by the ns
-    The agent starts at the position marked by "S" and has to reach the goal position marked by "G". The agent can move in four directions: up, down, left, right. The agent receives a reward of -1 for stepping on a hole "H" and a reward of 1 for reaching the goal "G". The episode ends when the agent reaches the goal or steps on a ho
+    """Bridge environment.
+
+    Inspired by the bridge env in Lecarpentier and Rachelson (2019). The
+    agent starts at "S" and must reach a "G" cell. Actions are LEFT, DOWN,
+    RIGHT, UP. Reward is -1 for stepping onto "H", +1 for reaching "G",
+    and 0 otherwise; the episode terminates on either.
+
+    Differences from the paper:
+
+    * Non-stationarity is handled externally via ``NSBridgeWrapper`` and
+      ns_gym update functions, rather than being baked into the env.
+    * Slip pattern is FrozenLake-style: at each step the agent's intended
+      action ``a`` is perturbed to one of ``[a, (a+1) % 4, (a-1) % 4]``
+      with probabilities ``self.P[0], self.P[1], self.P[2]``. The original
+      paper instead fixes slip to the N-S axis regardless of the intended
+      action -- i.e. an agent walking RIGHT can be knocked north or south
+      off the bridge but never sideways. The simpler perpendicular-slip
+      scheme used here makes Bridge a drop-in counterpart to FrozenLake,
+      at the cost of being slightly easier than the paper's design.
 
     Args:
-        gym (_type_): _description_
+        global_init_probs (list[float]): initial slip distribution
+            ``[p_intended, p_(a+1)%4, p_(a-1)%4]`` summing to 1.
+        map_name (str): one of the keys of ``MAPS``.
+        epsilon (float): unused by this implementation; kept for
+            back-compat with the original RATS Bridge config.
+        split_probs (bool): if True, the env reads slip from
+            ``self.P_left`` (cols < ncol // 2) or ``self.P_right``
+            (cols >= ncol // 2) instead of the global ``self.P``. Used
+            by ``NSBridgeWrapper`` in split mode.
     """
 
     def __init__(
@@ -37,7 +60,7 @@ class Bridge(gym.Env):
         # super(Bridge, self).__init__()
         self.map = np.asarray(MAPS[map_name], dtype="c")
         self.global_init_probs = copy.copy(global_init_probs)
-        self.P = global_init_probs
+        self.P = list(global_init_probs)
         self.epsilon = epsilon
 
         self.nS = self.map.size
@@ -48,8 +71,13 @@ class Bridge(gym.Env):
         self.observation_space = spaces.Discrete(self.nS)
         self.action_space = spaces.Discrete(self.nA)
 
-        self.left_side_prob = copy.copy(global_init_probs)
-        self.right_side_prob = copy.copy(global_init_probs)
+        # Per-side slip distributions (only used when split_probs=True or when
+        # something explicitly writes to them). Default: same as global P.
+        self.P_left = list(global_init_probs)
+        self.P_right = list(global_init_probs)
+        # Legacy aliases kept for back-compat with older code.
+        self.left_side_prob = self.P_left
+        self.right_side_prob = self.P_right
         self.split_probs = split_probs
         self.delta = {
             LEFT: np.array([0, -1]),
@@ -65,7 +93,7 @@ class Bridge(gym.Env):
             P = self.P
 
         action = np.random.choice(
-            [action, (action + 1) % 4, (action - 1) % 4], p=self.P
+            [action, (action + 1) % 4, (action - 1) % 4], p=P
         )
         newstate, reward, done = self.transition(action)
         self.s = newstate
@@ -118,11 +146,18 @@ class Bridge(gym.Env):
     def state_to_coord(self, state):
         return np.array([state // self.ncol, state % self.ncol])
 
-    def get_loc_basedProb(self, coord):
-        if coord[1] < 4:
-            return self.left_side_prob
+    def get_loc_based_prob(self, coord):
+        """Return the slip distribution for the cell at `coord`. Cells in the
+        left half of the map (col < ncol // 2) use ``self.P_left``, cells in
+        the right half use ``self.P_right``. Used when ``split_probs=True``.
+        """
+        if coord[1] < self.ncol // 2:
+            return self.P_left
         else:
-            return self.right_side_prob
+            return self.P_right
+
+    # Back-compat alias for the original (typo'd) name.
+    get_loc_basedProb = get_loc_based_prob
 
     def get_reward(self, coord):
         x, y = coord[0], coord[1]
@@ -153,17 +188,20 @@ class Bridge(gym.Env):
 
     @property
     def transition_matrix(self):
+        """Full transition table P[s][a] = [(prob, next_state, reward, done), ...]
+        respecting ``split_probs`` (per-side slip distributions when set).
+        """
         return self._get_transition_matrix()
-
-    @property
-    def P(self):
-        return self.transition_matrix()
 
     def _get_transition_matrix(self):
         table = {s: {a: [] for a in range(self.nA)} for s in range(self.nS)}
         for row in range(self.nrow):
             for col in range(self.ncol):
                 s = self.coord_to_state(row, col)
+                if self.split_probs:
+                    cell_P = self.get_loc_based_prob([row, col])
+                else:
+                    cell_P = self.P
                 for a in range(self.nA):
                     li = table[s][a]
                     letter = self.map[row, col]
@@ -179,7 +217,7 @@ class Bridge(gym.Env):
                                 newcoord = np.array([row, col])
                             newstate = self.coord_to_state(newcoord[0], newcoord[1])
                             reward, done = self.get_reward(newcoord)
-                            li.append((self.P[ind], newstate, reward, done))
+                            li.append((cell_P[ind], newstate, reward, done))
         return table
 
 

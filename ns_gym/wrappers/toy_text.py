@@ -512,7 +512,27 @@ class NSFrozenLakeWrapper(base.NSWrapper):
 
 
 class NSBridgeWrapper(base.NSWrapper):
-    """Bridge environment wrapper that allows for non-stationary transitions."""
+    """Bridge environment wrapper that allows for non-stationary transitions.
+
+    Supports two parameter regimes:
+
+    * **Uniform mode** -- ``tunable_params={"P": fn}``. A single slip
+      distribution is applied to the entire map. Equivalent to the original
+      Bridge behavior.
+    * **Split mode** -- ``tunable_params={"P_left": fn_l, "P_right": fn_r}``.
+      The map's left and right halves carry independent slip distributions
+      that drift under their own update functions. Sets ``split_probs=True``
+      on the underlying env. Either side may be omitted; an omitted side
+      stays fixed at its initial value.
+
+    Args:
+        env: The base Bridge env (e.g. ``gym.make("ns_gym/Bridge-v0")``).
+        tunable_params: See above.
+        initial_prob_dist: Default initial slip distribution. In uniform
+            mode this is ``self.unwrapped.P``. In split mode both
+            ``P_left`` and ``P_right`` start at this value (or pass a tuple
+            ``(left_init, right_init)`` for asymmetric initialization).
+    """
 
     def __init__(
         self,
@@ -536,31 +556,85 @@ class NSBridgeWrapper(base.NSWrapper):
             **kwargs,
         )
 
-        self.initial_prob_dist = initial_prob_dist
-        setattr(self.unwrapped, "P", initial_prob_dist)
-        assert self.unwrapped.P == initial_prob_dist, (
-            "The initial probability distribution is not being set correctly."
-        )
+        # Detect mode
+        self._split_mode = ("P_left" in tunable_params) or ("P_right" in tunable_params)
+
+        # Initial values (allow asymmetric init via a 2-tuple)
+        if isinstance(initial_prob_dist, tuple) and len(initial_prob_dist) == 2:
+            init_left, init_right = list(initial_prob_dist[0]), list(initial_prob_dist[1])
+            self.initial_prob_dist = list(init_left)
+        else:
+            init_left = list(initial_prob_dist)
+            init_right = list(initial_prob_dist)
+            self.initial_prob_dist = list(initial_prob_dist)
+
+        if self._split_mode:
+            self.unwrapped.split_probs = True
+            self.unwrapped.P_left = list(init_left)
+            self.unwrapped.P_right = list(init_right)
+            # Keep legacy aliases in sync
+            self.unwrapped.left_side_prob = self.unwrapped.P_left
+            self.unwrapped.right_side_prob = self.unwrapped.P_right
+            # In split mode, self.unwrapped.P is the (now-unused) global default
+            self.unwrapped.P = list(self.initial_prob_dist)
+            self.initial_left = list(init_left)
+            self.initial_right = list(init_right)
+        else:
+            self.unwrapped.split_probs = False
+            self.unwrapped.P = list(self.initial_prob_dist)
+            assert self.unwrapped.P == list(self.initial_prob_dist), (
+                "The initial probability distribution is not being set correctly."
+            )
+
         self.tunable_params = tunable_params
         self.init_tunable_params = deepcopy(tunable_params)
-        self.update_fn = tunable_params["P"]
-
+        # In uniform mode, we still keep .update_fn for back-compat.
+        self.update_fn = tunable_params.get("P")
         self.delta_t = 1
+
+    def _step_update(self):
+        """Apply registered update functions to the current slip distributions.
+
+        Returns ``(env_change, delta_change)`` dicts in the format the parent
+        ``NSWrapper.step`` expects (one entry per tunable param).
+        """
+        env_change, delta_change = {}, {}
+        if self._split_mode:
+            for key in ("P_left", "P_right"):
+                fn = self.tunable_params.get(key)
+                if fn is None:
+                    continue
+                cur = list(getattr(self.unwrapped, key))
+                new, fired, delta = fn(cur, self.t)
+                setattr(self.unwrapped, key, list(new))
+                env_change[key] = fired
+                delta_change[key] = delta
+            # Keep aliases in sync
+            self.unwrapped.left_side_prob = self.unwrapped.P_left
+            self.unwrapped.right_side_prob = self.unwrapped.P_right
+        else:
+            cur = list(self.unwrapped.P)
+            new, fired, delta = self.update_fn(cur, self.t)
+            self.unwrapped.P = list(new)
+            env_change["P"] = fired
+            delta_change["P"] = delta
+        return env_change, delta_change
 
     def step(
         self, action: Any
     ) -> tuple[Any, SupportsFloat, bool, bool, dict[str, Any]]:
         if self.is_sim_env and not self.in_sim_change:
+            # Sim env: P is frozen, no drift this step. Parent NSWrapper.step
+            # still expects env_change/delta_change to be dicts (one entry per
+            # tunable param), so emit zero-change dicts rather than None.
+            keys = list(self.tunable_params.keys())
+            env_change = {k: 0 for k in keys}
+            delta_change = {k: 0.0 for k in keys}
             obs, reward, terminated, truncated, info = super().step(
-                action, env_change=None, delta_change=None
+                action, env_change=env_change, delta_change=delta_change
             )
         else:
-            P = self.unwrapped.P
-            P, env_change, delta_change = self.update_fn(P, self.t)
-            setattr(self.unwrapped, "P", P)
-            assert self.unwrapped.P == P, (
-                "The transition probability table is not being updated correctly."
-            )
+            env_change, delta_change = self._step_update()
             obs, reward, terminated, truncated, info = super().step(
                 action, env_change=env_change, delta_change=delta_change
             )
@@ -571,9 +645,15 @@ class NSBridgeWrapper(base.NSWrapper):
     ) -> tuple[Any, dict[str, Any]]:
         obs, info = super().reset(seed=seed, options=options)
         if not self.persistent_params:
-            self.unwrapped.P = deepcopy(self.initial_prob_dist)
+            if self._split_mode:
+                self.unwrapped.P_left = list(self.initial_left)
+                self.unwrapped.P_right = list(self.initial_right)
+                self.unwrapped.left_side_prob = self.unwrapped.P_left
+                self.unwrapped.right_side_prob = self.unwrapped.P_right
+            else:
+                self.unwrapped.P = list(self.initial_prob_dist)
             self.tunable_params = deepcopy(self.init_tunable_params)
-            self.update_fn = self.tunable_params["P"]
+            self.update_fn = self.tunable_params.get("P")
         return obs, info
 
     def get_planning_env(self):
@@ -582,27 +662,39 @@ class NSBridgeWrapper(base.NSWrapper):
         )
         if self.is_sim_env or self.delta_change_notification:
             return deepcopy(self)
-        elif not self.delta_change_notification:
+        else:
             planning_env = deepcopy(self)
-            setattr(planning_env.unwrapped, "P", deepcopy(self.initial_prob_dist))
-        return planning_env
+            if self._split_mode:
+                planning_env.unwrapped.P_left = list(self.initial_left)
+                planning_env.unwrapped.P_right = list(self.initial_right)
+            else:
+                planning_env.unwrapped.P = list(self.initial_prob_dist)
+            return planning_env
 
     def __deepcopy__(self, memo):
-        sim_env = gym.make("ns_bench/Bridge-v0", max_episode_steps=1000)
+        sim_env = gym.make("ns_gym/Bridge-v0", max_episode_steps=1000)
+        if self._split_mode:
+            init = (list(self.initial_left), list(self.initial_right))
+        else:
+            init = list(self.initial_prob_dist)
         sim_env = NSBridgeWrapper(
             sim_env,
             tunable_params=deepcopy(self.tunable_params),
             change_notification=self.change_notification,
             delta_change_notification=self.delta_change_notification,
             in_sim_change=self.in_sim_change,
-            initial_prob_dist=self.initial_prob_dist,
+            initial_prob_dist=init,
             scalar_reward=self.scalar_reward,
             persistent_params=self.persistent_params,
         )
         sim_env.reset()
         sim_env.unwrapped.s = deepcopy(self.unwrapped.s)
         sim_env.t = deepcopy(self.t)
-        sim_env.unwrapped.P = deepcopy(self.unwrapped.P)
+        if self._split_mode:
+            sim_env.unwrapped.P_left = list(self.unwrapped.P_left)
+            sim_env.unwrapped.P_right = list(self.unwrapped.P_right)
+        else:
+            sim_env.unwrapped.P = list(self.unwrapped.P)
         sim_env.update_fn = deepcopy(self.update_fn)
         sim_env.is_sim_env = True
         sim_env._reseed_planning_env_rngs()
@@ -617,7 +709,7 @@ if __name__ == "__main__":
     import gymnasium as gym
     import ns_gym
 
-    env = gym.make("ns_bench/Bridge-v0")
+    env = gym.make("ns_gym/Bridge-v0")
     scheduler = ns_gym.schedulers.ContinuousScheduler()
     update_function = ns_gym.update_functions.DistributionDecrmentUpdate(
         scheduler, k=0.1
