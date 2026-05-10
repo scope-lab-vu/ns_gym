@@ -177,7 +177,7 @@ def test_get_planning_env(gridworld_wrappers, gridworld_params, env_id):
 
 @pytest.mark.parametrize("env_id", SUPPORTED_GRID_WORLD_ENV_IDS)
 def test_P_is_current_snapshot_not_future_schedule(
-    gridworld_wrappers, gridworld_params, env_id
+    gridworld_wrappers, env_id
 ):
     """``unwrapped.P`` must reflect the CURRENT non-stationary snapshot, not
     a precomputed schedule of future transitions.
@@ -188,10 +188,23 @@ def test_P_is_current_snapshot_not_future_schedule(
       * Probabilities at every (s, a) sum to 1 (no leakage of future-mass).
       * A deepcopy at time t freezes P; subsequent ``step()`` on the original
         does not change the snapshot's P.
+
+    Note: this test deliberately uses ``DistributionDecrementUpdate`` (which
+    clamps ``param[0]`` at 0) instead of the shared ``gridworld_params``
+    fixture's ``DistributionIncrementUpdate(k=-0.1)``. The latter doesn't
+    clamp negative parameters, so after ~10 steps it produces invalid
+    distributions that the (now-correct) W1 rejects with
+    ``ValueError: All weights must be non-negative.`` That's a real bug in
+    ``DistributionIncrementUpdate`` -- but it's out of scope for *this* test,
+    which is about snapshot semantics, not parameter validity.
     """
+    from ns_gym.update_functions import DistributionDecrementUpdate
     env = gym.make(env_id)
     WrapperClass = gridworld_wrappers[env_id]
-    tunable_params = gridworld_params[env_id]
+    # Decrement clamps at 0, so probs stay valid no matter how many steps.
+    tunable_params = {
+        "P": DistributionDecrementUpdate(ContinuousScheduler(), k=0.05),
+    }
     ns_env = WrapperClass(env, tunable_params)
     ns_env.reset(seed=0)
 

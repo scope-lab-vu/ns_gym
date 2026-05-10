@@ -52,18 +52,46 @@ def n_choose_k(n, k):
     return math.factorial(n) // (math.factorial(k) * math.factorial(n - k))
 
 
-def wasserstein_distance(u: np.ndarray, v: np.ndarray):
-    """Compute the Wasserstein distance between two distributions.
+def wasserstein_distance(u, v):
+    """1-Wasserstein distance between two probability mass functions on
+    the integer indices ``{0, 1, ..., n-1}``.
+
+    ``u`` and ``v`` are interpreted as **probability weights over those
+    indices**, with cost ``c(i, j) = |i - j|``. They must have equal
+    length but need not be normalized -- ``scipy.stats.wasserstein_distance``
+    normalizes weights internally.
+
+    Notes:
+        Earlier versions of this function called
+        ``scipy.stats.wasserstein_distance(u, v)`` directly. That signature
+        treats the inputs as **samples from a 1-D continuous distribution**,
+        not as probability weights over indices, which gave wrong answers
+        for the categorical distributions ns_gym actually uses
+        (e.g. ``W1([1,0,0], [0,0,1]) -> 0.0`` instead of ``2.0``). All
+        ns_gym callers want the categorical / EMD-on-indices semantics,
+        so we explicitly pass ``u_values=v_values=arange(n)`` and the
+        distributions as ``u_weights=u, v_weights=v``.
 
     Args:
-        u (np.ndarray): First distribution.
-        v (np.ndarray): Second distribution.
+        u: First distribution -- length-n iterable of probability weights.
+        v: Second distribution -- length-n iterable of probability weights.
 
     Returns:
-        float: The Wasserstein distance between u and v.
+        float: 1-Wasserstein (earth-mover) distance over the integer-index
+        ground space.
     """
     from scipy.stats import wasserstein_distance as _wasserstein_distance
-    return _wasserstein_distance(u, v)
+    u_arr = np.asarray(u, dtype=float)
+    v_arr = np.asarray(v, dtype=float)
+    if u_arr.shape != v_arr.shape:
+        raise ValueError(
+            f"wasserstein_distance: u and v must have the same shape, "
+            f"got {u_arr.shape} vs {v_arr.shape}"
+        )
+    indices = np.arange(u_arr.size, dtype=float)
+    return float(_wasserstein_distance(
+        indices, indices, u_weights=u_arr, v_weights=v_arr,
+    ))
 
 
 def categorical_sample(probs: list):
