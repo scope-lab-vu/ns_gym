@@ -523,22 +523,64 @@ class Agent(ABC):
 class StableBaselineWrapper:
     """Interface for StableBaseline3 Models and NS-Gym environments.
     Makes it so that you can call the stable baseline functions as you would other NS_Gym agents.
+
+    Args:
+        model: StableBaseline3 model (e.g. a ``stable_baselines3.DQN``
+            instance loaded from a saved zip).
+        obs_fn (Callable[[state, env], np.ndarray] | None): Optional
+            state-to-observation converter. When supplied, ``act`` and
+            ``q_values`` accept a raw env state plus the env itself and
+            build the observation vector via ``obs_fn(state, env)``
+            before calling into the SB3 model. Useful for contextual
+            agents whose observation isn't just the state -- e.g. an
+            agent that wants ``[one_hot_state, slip_context]``. When
+            omitted (the default) the inputs are passed through as-is,
+            preserving the original behaviour.
     """
 
-    def __init__(self, model):
-        """
-        Args:
-            model (Any): StableBaseline3 model
-        """
+    def __init__(self, model, obs_fn=None):
         self.model = model
+        self.obs_fn = obs_fn
 
-    def act(self, obs, *args, **kwargs) -> Any:
-        """Agent decision making function. Calls the predict function of the StableBaseline3 model.
-        Args:
-            obs: Observation from the environment
+    def _to_obs(self, obs_or_state, env=None):
+        if self.obs_fn is None:
+            return obs_or_state
+        return self.obs_fn(obs_or_state, env)
+
+    def act(self, obs, env=None, *args, **kwargs) -> Any:
+        """Predict an action. ``obs`` is either a pre-built observation
+        vector (when ``obs_fn`` is None) or a raw state (when ``obs_fn``
+        is set, in which case ``env`` must also be passed)."""
+        obs_vec = self._to_obs(obs, env)
+        action, _states = self.model.predict(obs_vec, deterministic=True)
+        return int(action)
+
+    def q_values(self, obs, env=None) -> "np.ndarray":
+        """Per-action Q-values from the underlying value head
+        (``model.q_net`` for SB3 DQN/QRDQN). Returns a 1-D numpy array
+        of shape ``(n_actions,)``. Used by PAMCTS and any other code
+        that needs to mix this model's Q-estimates with another
+        planner's Q-estimates.
+
+        Raises:
+            ValueError: if the wrapped model has no readable Q-head
+                (i.e. policy-based models like PPO/A2C). Use ``act``
+                for those instead.
         """
-        action, _states = self.model.predict(obs)
-        return action
+        import torch
+        q_net = getattr(self.model, "q_net", None)
+        if q_net is None:
+            raise ValueError(
+                "StableBaselineWrapper.q_values: the wrapped model has "
+                "no .q_net attribute. Q-values are only available for "
+                "value-based SB3 algorithms (DQN, QRDQN). For policy-"
+                "based models use .act() instead."
+            )
+        obs_vec = self._to_obs(obs, env)
+        obs_arr = np.asarray(obs_vec, dtype=np.float32)
+        with torch.no_grad():
+            t = torch.as_tensor(obs_arr).unsqueeze(0)
+            return q_net(t).cpu().numpy().ravel().astype(np.float32)
 
 
 class Evaluator(ABC):

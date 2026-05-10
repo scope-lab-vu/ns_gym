@@ -509,6 +509,16 @@ class NSFrozenLakeWrapper(base.NSWrapper):
         sim_env.is_sim_env = True
         sim_env._reseed_planning_env_rngs()
         return sim_env
+    
+    def extract_oracle_transition_table(self):
+        """TODO: Extract Oracle tensor
+        """
+        pass
+        # T = self.unwrapped.max_steps
+        # P = np.zeros((T, self.nS, self.nA, n_states), dtype=np.float64)
+        # R = np.zeros((T, n_states, n_actions, n_states), dtype=np.float64)
+
+
 
 
 class NSBridgeWrapper(base.NSWrapper):
