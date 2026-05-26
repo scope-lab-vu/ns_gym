@@ -17,8 +17,12 @@ env.transition(s, a, is_model_dynamic)
 
 import numpy as np
 import code.utils.utils as utils
-from gym import spaces
 from copy import deepcopy
+
+try:
+    from gym import spaces
+except ModuleNotFoundError:
+    from gymnasium import spaces
 
 
 def node_value(node):
@@ -91,6 +95,13 @@ class RATS(object):
         print('Gamma              :', self.gamma)
         print('Maximum depth      :', self.max_depth)
 
+    def _get_env_state(self, env):
+        if hasattr(env, "s"):
+            return env.s
+        if hasattr(env, "unwrapped") and hasattr(env.unwrapped, "s"):
+            return env.unwrapped.s
+        raise AttributeError("Environment must expose state as `.s` or `.unwrapped.s`.")
+
     def build_tree(self, node, env):
         """
         Recursively build an empty tree.
@@ -152,7 +163,7 @@ class RATS(object):
         :param done: (bool)
         :return: (DecisionNode) root node of the created tree
         """
-        root = DecisionNode(None, env.s, 1, done)
+        root = DecisionNode(None, self._get_env_state(env), 1, done)
         self.build_tree(root, env)
         return root
 
