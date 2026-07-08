@@ -18,16 +18,53 @@ This leaderboard mirrors the four competition criteria described in [Evaluating 
       <thead>
         <tr>
           <th scope="col">Rank</th>
-          <th scope="col">Team</th>
-          <th scope="col">Agent</th>
-          <th scope="col">Adaptability score</th>
-          <th scope="col">Recovery steps</th>
-          <th scope="col">Runtime</th>
+          <th scope="col">GitHub ID</th>
+          <th scope="col">Approach (3 experiments)</th>
+          <th scope="col">Threshold Success</th>
+          <th scope="col">Convergence Time</th>
+          <th scope="col">Local Stability</th>
         </tr>
       </thead>
       <tbody>
-        <tr class="leaderboard-empty-row">
-          <td colspan="6"></td>
+          <tr>
+          <td>1</td>
+          <td>Jazhyc</td>
+          <td>Context-Aware PPO/PPO/PPO</td>
+          <td>0.711111</td>
+          <td>0.332233</td>
+          <td>0.000066</td>
+        </tr>
+          <tr>
+          <td>2</td>
+          <td>pudovikoff</td>
+          <td>MLE-Replan/DQN/SAC</td>
+          <td>0.633333</td>
+          <td>0.366667</td>
+          <td>0.366732</td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td>Kumar20-21</td>
+          <td>Dynamic VI/LQR/QR-SAC</td>
+          <td>0.666667</td>
+          <td>0.333333</td>
+          <td>0.111177</td>
+        </tr>
+        <tr>
+          <td>4</td>
+          <td>micahr234</td>
+          <td>MOUSE+sequence model+history/MOUSE/-</td>
+          <td>0.666667</td>
+          <td>0.333333</td>
+          <td>0.333400</td>
+        </tr>
+        <tr>
+          <td>5</td>
+          <td>micahr234</td>
+          <td>MOUSE+MLP+no history/MOUSE/-</td>
+          <td>0.666667</td>
+          <td>0.333333</td>
+          <td>0.333400</td>
         </tr>
       </tbody>
     </table>
@@ -53,16 +90,41 @@ This leaderboard mirrors the four competition criteria described in [Evaluating 
             <thead>
               <tr>
                 <th scope="col">Rank</th>
-                <th scope="col">Team</th>
-                <th scope="col">Agent</th>
+                <th scope="col">GitHub ID</th>
+                <th scope="col">Approach (3 experiments)</th>
                 <th scope="col">Average return</th>
-                <th scope="col">Evaluation suite</th>
-                <th scope="col">Updated</th>
               </tr>
             </thead>
             <tbody>
-              <tr class="leaderboard-empty-row">
-                <td colspan="6"></td>
+              <tr>
+                <td>1</td>
+                <td>Jazhyc</td>
+                <td>Context-Aware PPO/PPO/PPO</td>
+                <td>2257.240</td>
+              </tr>
+              <tr>
+                <td>2</td>
+                <td>pudovikoff</td>
+                <td>MLE-Replan/DQN/SAC</td>
+                <td>1800.111</td>
+              </tr>
+              <tr>
+                <td>3</td>
+                <td>Kumar20-21</td>
+                <td>Dynamic VI/LQR/QR-SAC</td>
+                <td>1734.251</td>
+              </tr>
+              <tr>
+                <td>4</td>
+                <td>micahr234</td>
+                <td>MOUSE+sequence model+history/MOUSE/-</td>
+                <td>568.996</td>
+              </tr>
+              <tr>
+                <td>5</td>
+                <td>micahr234</td>
+                <td>MOUSE+MLP+no history/MOUSE/-</td>
+                <td>567.229</td>
               </tr>
             </tbody>
           </table>
@@ -75,16 +137,41 @@ This leaderboard mirrors the four competition criteria described in [Evaluating 
             <thead>
               <tr>
                 <th scope="col">Rank</th>
-                <th scope="col">Team</th>
-                <th scope="col">Agent</th>
+                <th scope="col">GitHub ID</th>
+                <th scope="col">Approach (3 experiments)</th>
                 <th scope="col">Average return</th>
-                <th scope="col">Evaluation suite</th>
-                <th scope="col">Updated</th>
               </tr>
             </thead>
             <tbody>
-              <tr class="leaderboard-empty-row">
-                <td colspan="6"></td>
+              <tr>
+                <td>1</td>
+                <td>Jazhyc</td>
+                <td>Context-Aware PPO/PPO/PPO</td>
+                <td>2197.415</td>
+              </tr>
+              <tr>
+                <td>2</td>
+                <td>pudovikoff</td>
+                <td>MLE-Replan/DQN/SAC</td>
+                <td>1800.111</td>
+              </tr>
+              <tr>
+                <td>3</td>
+                <td>Kumar20-21</td>
+                <td>Dynamic VI/LQR/QR-SAC</td>
+                <td>1734.251</td>
+              </tr>
+              <tr>
+                <td>4</td>
+                <td>micahr234</td>
+                <td>MOUSE+sequence model+history/MOUSE/-</td>
+                <td>568.996</td>
+              </tr>
+              <tr>
+                <td>5</td>
+                <td>micahr234</td>
+                <td>MOUSE+MLP+no history/MOUSE/-</td>
+                <td>567.229</td>
               </tr>
             </tbody>
           </table>
@@ -106,16 +193,47 @@ This leaderboard mirrors the four competition criteria described in [Evaluating 
       <thead>
         <tr>
           <th scope="col">Rank</th>
-          <th scope="col">Team</th>
-          <th scope="col">Agent</th>
-          <th scope="col">Resilience score</th>
-          <th scope="col">Post-change return</th>
-          <th scope="col">Threshold status</th>
+          <th scope="col">GitHub ID</th>
+          <th scope="col">Approach (3 experiments)</th>
+          <th scope="col">Immediate Drop</th>
+          <th scope="col">Recovery Time</th>
         </tr>
       </thead>
       <tbody>
-        <tr class="leaderboard-empty-row">
-          <td colspan="6"></td>
+        <tr>
+          <td>1</td>
+          <td>Jazhyc</td>
+          <td>Context-Aware PPO/PPO/PPO</td>
+          <td>0.333333</td>
+          <td>0.332727</td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td>Kumar20-21</td>
+          <td>Dynamic VI/LQR/QR-SAC</td>
+          <td>0.333333</td>
+          <td>0.333333</td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td>micahr234</td>
+          <td>MOUSE+sequence model+history/MOUSE/-</td>
+          <td>0.333333</td>
+          <td>0.333333</td>
+        </tr>
+        <tr>
+          <td>4</td>
+          <td>micahr234</td>
+          <td>MOUSE+MLP+no history/MOUSE/-</td>
+          <td>0.333333</td>
+          <td>0.333333</td>
+        </tr>
+        <tr>
+          <td>5</td>
+          <td>pudovikoff</td>
+          <td>MLE-Replan/DQN/SAC</td>
+          <td>0.366667</td>
+          <td>0.366667</td>
         </tr>
       </tbody>
     </table>
@@ -140,16 +258,41 @@ This leaderboard mirrors the four competition criteria described in [Evaluating 
             <thead>
               <tr>
                 <th scope="col">Rank</th>
-                <th scope="col">Team</th>
-                <th scope="col">Agent</th>
-                <th scope="col">Efficiency score</th>
-                <th scope="col">Timesteps</th>
-                <th scope="col">Wall-clock</th>
+                <th scope="col">GitHub ID</th>
+                <th scope="col">Approach (3 experiments)</th>
+                <th scope="col">Efficiency</th>
               </tr>
             </thead>
             <tbody>
-              <tr class="leaderboard-empty-row">
-                <td colspan="6"></td>
+              <tr>
+                <td>1</td>
+                <td>Jazhyc</td>
+                <td>Context-Aware PPO/PPO/PPO</td>
+                <td>0.00001430</td>
+              </tr>
+              <tr>
+                <td>2</td>
+                <td>Kumar20-21</td>
+                <td>Dynamic VI/LQR/QR-SAC</td>
+                <td>0.00001862</td>
+              </tr>
+              <tr>
+                <td>3</td>
+                <td>pudovikoff</td>
+                <td>MLE-Replan/DQN/SAC</td>
+                <td>0.00005887</td>
+              </tr>
+              <tr>
+                <td>4</td>
+                <td>micahr234</td>
+                <td>MOUSE+MLP+no history/MOUSE/-</td>
+                <td>0.00253916</td>
+              </tr>
+              <tr>
+                <td>5</td>
+                <td>micahr234</td>
+                <td>MOUSE+sequence model+history/MOUSE/-</td>
+                <td>0.08414263</td>
               </tr>
             </tbody>
           </table>
@@ -162,16 +305,41 @@ This leaderboard mirrors the four competition criteria described in [Evaluating 
             <thead>
               <tr>
                 <th scope="col">Rank</th>
-                <th scope="col">Team</th>
-                <th scope="col">Agent</th>
-                <th scope="col">Efficiency score</th>
-                <th scope="col">Timesteps</th>
-                <th scope="col">Wall-clock</th>
+                <th scope="col">GitHub ID</th>
+                <th scope="col">Approach (3 experiments)</th>
+                <th scope="col">Efficiency</th>
               </tr>
             </thead>
             <tbody>
-              <tr class="leaderboard-empty-row">
-                <td colspan="6"></td>
+              <tr>
+                <td>1</td>
+                <td>Jazhyc</td>
+                <td>Context-Aware PPO/PPO/PPO</td>
+                <td>0.00000918</td>
+              </tr>
+              <tr>
+                <td>2</td>
+                <td>Kumar20-21</td>
+                <td>Dynamic VI/LQR/QR-SAC</td>
+                <td>0.00001913</td>
+              </tr>
+              <tr>
+                <td>3</td>
+                <td>pudovikoff</td>
+                <td>MLE-Replan/DQN/SAC</td>
+                <td>0.00005943</td>
+              </tr>
+              <tr>
+                <td>4</td>
+                <td>micahr234</td>
+                <td>MOUSE+MLP+no history/MOUSE/-</td>
+                <td>0.00323941</td>
+              </tr>
+              <tr>
+                <td>5</td>
+                <td>micahr234</td>
+                <td>MOUSE+sequence model+history/MOUSE/-</td>
+                <td>0.08204777</td>
               </tr>
             </tbody>
           </table>
