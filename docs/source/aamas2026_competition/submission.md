@@ -1,5 +1,11 @@
 # Submit Your Agent
 
+```{eval-rst}
+.. note::
+
+   **Submissions are closed.** The final submission deadline was May 10, 2026.
+   This page is kept as a record of the submission workflow.
+```
 
 This tutorial series will walk you through the full submission workflow:
 

@@ -98,7 +98,7 @@ while not (done or truncated):
         print("########")
         print("\n")
     planning_env = ns_env.get_planning_env()
-    episode_reward += reward.reward
+    episode_reward += reward
     timestep += 1
 
 print("Episode Reward: ", episode_reward)
@@ -114,11 +114,8 @@ obs:  {'state': array([-0.03006991,  0.19717823,  0.02711801, -0.3215324 ], dtyp
         'delta_change': {'masspole': 0.0, 'gravity': 0.0}, 
         'relative_time': 1}
 
-reward:  Reward(reward=1.0, 
-                env_change={'masspole': 1, 'gravity': 1}, 
-                delta_change={'masspole': 0.0, 'gravity': 0.0}, 
-                relative_time=1)
-```     
+reward:  1.0
+```
 
 The `obs` dictionary contains the following terms:
 
@@ -127,7 +124,20 @@ The `obs` dictionary contains the following terms:
 - `delta_change`: a dictionary indicating the magnitude of change for each parameter. This is only available if `delta_change_notification=True` is set in the wrapper.
 - `relative_time`: Current time step of environment.
 
-The `reward` object is a data class rather than a dictionary that contains the same terms. While the observation is a dictionary to maintain compatibility with Gymnasium, the reward is a dataclass to allow for easier extension in the future for non-stationary rewards while working with a more robust data structure.
+By default `reward` is the plain scalar reward from the base environment, as in Gymnasium.
+
+If you pass `scalar_reward=False` to the wrapper, `step()` returns a `Reward` dataclass instead. It carries the same `env_change`, `delta_change` and `relative_time` fields as the observation, and the number itself is `reward.reward`:
+
+```python
+ns_env = NSClassicControlWrapper(env, tunable_params, change_notification=True, scalar_reward=False)
+```
+
+```python
+reward:  Reward(reward=1.0,
+                env_change={'masspole': 1, 'gravity': 1},
+                delta_change={'masspole': 0.0, 'gravity': 0.0},
+                relative_time=1)
+```
 
 
 ---
@@ -188,7 +198,7 @@ while not (done or truncated):
         print("########")
         print("\n")
     planning_env = ns_env.get_planning_env()
-    episode_reward += reward.reward
+    episode_reward += reward
     timestep += 1
 
 print("Episode Reward: ", episode_reward)

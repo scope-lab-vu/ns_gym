@@ -120,7 +120,7 @@ def make_env(**kwargs):
 
 ## 6. Register the environment
 
-To reuse this environment elsewhere, register it with Gymnasium's registration API. Add a `register()` call in [src/AAMAS_Comp/\_\_init\_\_.py](src/AAMAS_Comp/__init__.py) pointing to your `make_env` function:
+To reuse this environment elsewhere, register it with Gymnasium's registration API. Add a `register()` call in [src/AAMAS_Comp/\_\_init\_\_.py](https://github.com/scope-lab-vu/ns-gym-comp-template/blob/main/src/AAMAS_Comp/__init__.py) pointing to your `make_env` function:
 
 ```python
 register(
@@ -131,7 +131,7 @@ register(
 )
 ```
 
-You can then load it anywhere with `gym.make("MyCustomNSCartPole-v0")` and add the env ID to the `ENVIRONMENTS` dictionary in [evaluator.py](evaluator.py) to evaluate your agent on it!
+You can then load it anywhere with `gym.make("MyCustomNSCartPole-v0")` and add the env ID to the `ENVIRONMENTS` dictionary in [evaluator.py](https://github.com/scope-lab-vu/ns-gym-comp-template/blob/main/evaluator.py) to evaluate your agent on it!
 
 
 Need help? Join in our [Office Hour sessions](../aamas2026_competition.md#office-hours)!
