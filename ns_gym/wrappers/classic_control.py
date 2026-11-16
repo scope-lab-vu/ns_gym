@@ -67,7 +67,7 @@ class NSClassicControlWrapper(base.NSWrapper):
             tuple[dict[str, Any], base.Reward, bool, bool, dict[str, Any]]: NS-Gym Observation dictionary, reward, done flag, truncated flag, info dictionary
         """
 
-        if self.is_sim_env and not self.in_sim_change:
+        if self._updates_paused:
 
             env_change = {p: 0 for p in self.tunable_params.keys()}
             delta_change = {p: 0.0 for p in self.tunable_params.keys()}

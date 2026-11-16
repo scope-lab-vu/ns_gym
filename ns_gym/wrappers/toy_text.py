@@ -167,7 +167,7 @@ class NSCliffWalkingWrapper(base.NSWrapper):
         Returns:
             tuple[dict, base.Reward, bool, bool, dict[str, Any]]: The observation, reward, termination signal, truncation signal, and additional information.       
         """
-        if self.is_sim_env and not self.in_sim_change:
+        if self._updates_paused:
             env_change = {"P": 0}
             delta_change = {"P": 0.0}
 
@@ -360,7 +360,7 @@ class NSFrozenLakeWrapper(base.NSWrapper):
 
         """
 
-        if self.is_sim_env and not self.in_sim_change:
+        if self._updates_paused:
             # action = self._get_action(action)
             env_change = {"P": 0}
             delta_change = {"P": 0.0}
@@ -654,7 +654,7 @@ class NSBridgeWrapper(base.NSWrapper):
     def step(
         self, action: Any
     ) -> tuple[Any, SupportsFloat, bool, bool, dict[str, Any]]:
-        if self.is_sim_env and not self.in_sim_change:
+        if self._updates_paused:
             # Sim env: P is frozen, no drift this step. Parent NSWrapper.step
             # still expects env_change/delta_change to be dicts (one entry per
             # tunable param), so emit zero-change dicts rather than None.

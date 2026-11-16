@@ -521,8 +521,19 @@ class NSWrapper(Wrapper):
         kwargs.update(overrides)
         return gym.make(self._base_env_id or default_id, **kwargs)
 
+    @property
+    def _updates_paused(self) -> bool:
+        """True when ``step()`` must leave the tunable parameters alone: the env
+        is frozen, or it is a planning env that does not simulate changes."""
+        return self.frozen or (self.is_sim_env and not self.in_sim_change)
+
     def freeze(self, mode: bool = True):
         """ "Freezes" the current MDP so that the environment dynamics do not change.
+
+        While frozen, ``step()`` applies no parameter updates and reports no
+        change. Time still advances, so updates resume where the schedule is
+        at the moment of :meth:`unfreeze`.
+
         Args:
             mode (bool): Boolean flag indicating whether to freeze the environment or not. Defaults to True.
         """
