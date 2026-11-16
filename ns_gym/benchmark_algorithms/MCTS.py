@@ -228,18 +228,32 @@ class MCTS(base.Agent):
                 return new_node
 
     def _backpropagation(self,R,v,depth=0):
-        """Backtrack to update the number of times a node has beenm visited and the value of a node untill we reach the root node. 
+        """Propagate a simulation result from the expanded leaf back to the root.
+
+        ``R`` is what ``_default_policy`` returned for the leaf ``v``: the
+        discounted rollout return from that state, or, for a terminal leaf, the
+        reward received on entering it.
+
+        Walking up, ``G`` is the return from the current decision node onwards.
+        Each chance node (a state-action pair) is credited with the reward for
+        the transition it led to plus ``gamma`` times the return from the next
+        state: ``Q(s, a) <- r(s, a, s') + gamma * G(s')``. Discounting therefore
+        happens once per decision, and rewards collected inside the tree count
+        as well as the rollout.
         """
-        depth = 0 
+        # A terminal leaf has no future; its reward is added just below.
+        G = 0.0 if v.is_terminal else R
         while v:
-            v.value += R
             if type(v) == ChanceNode:
+                v.value += G
                 assert not isinstance(v.parent.state, dict), "Parent state is still a dict after type checking."
-                self.update_metrics_chance_node(v.parent.state,v.action,R)
+                self.update_metrics_chance_node(v.parent.state,v.action,G)
             else:
+                v.value += G
                 self.update_metrics_decision_node(v.state)
-            R = R*(self.gamma**depth)
-            depth+=1
+                # Seen from the action that led here: the reward for arriving,
+                # plus the discounted return from this state.
+                G = v.reward + self.gamma * G
             v = v.parent
 
     def update_metrics_chance_node(self, state, action, reward):

@@ -9,7 +9,7 @@ import pytest
 from ns_gym.benchmark_algorithms import MCTS, PAMCTS
 from ns_gym.benchmark_algorithms.MCTS import ChanceNode, DecisionNode
 
-from _helpers import CASE_BY_ID, known_bug
+from _helpers import CASE_BY_ID
 
 RIGHT = 2
 
@@ -89,27 +89,64 @@ def test_mcts_search_with_fewer_simulations_than_actions(frozen_lake):
     assert int(action) in range(4)
 
 
-@known_bug("F1")
-def test_mcts_backpropagation_discounts_once_per_decision(frozen_lake):
-    """A return of 1 found three decisions below the root is worth 1, gamma and
-    gamma**2 to the three actions on the path."""
-    env, obs = frozen_lake
-    gamma = 0.9
-    agent = MCTS(env.get_planning_env(), obs, d=5, m=5, c=1.4, gamma=gamma)
-
+def _three_decision_chain(agent, leaf_is_terminal, leaf_reward):
+    """root -a-> s1 -a-> s2 -a-> leaf, with no reward before the leaf."""
     root = agent.v0
     chance_0 = ChanceNode(root, 0)
     decision_1 = DecisionNode(chance_0, 101, 1, False, 0)
     chance_1 = ChanceNode(decision_1, 0)
     decision_2 = DecisionNode(chance_1, 102, 1, False, 0)
     chance_2 = ChanceNode(decision_2, 0)
-    leaf = DecisionNode(chance_2, 103, 1, False, 0)
+    leaf = DecisionNode(chance_2, 103, 1, leaf_is_terminal, leaf_reward)
+    return root, leaf
 
-    agent._backpropagation(1.0, leaf)
+
+def test_mcts_backpropagation_discounts_a_terminal_reward_once_per_decision(frozen_lake):
+    """A reward of 1 on entering a terminal leaf is worth 1 to the action that
+    reached it, gamma one decision earlier and gamma**2 at the root."""
+    env, obs = frozen_lake
+    gamma = 0.9
+    agent = MCTS(env.get_planning_env(), obs, d=5, m=5, c=1.4, gamma=gamma)
+    root, leaf = _three_decision_chain(agent, leaf_is_terminal=True, leaf_reward=1.0)
+
+    agent._backpropagation(agent._default_policy(leaf), leaf)
 
     assert np.isclose(agent.Qsa[(102, 0)], 1.0)
     assert np.isclose(agent.Qsa[(101, 0)], gamma)
     assert np.isclose(agent.Qsa[(root.state, 0)], gamma**2)
+
+
+def test_mcts_backpropagation_discounts_a_rollout_return_from_the_leaf(frozen_lake):
+    """A rollout return of 1 from a non-terminal leaf is the value of that
+    *state*, so the action that reached it is worth gamma, then gamma**2 and
+    gamma**3 further up."""
+    env, obs = frozen_lake
+    gamma = 0.9
+    agent = MCTS(env.get_planning_env(), obs, d=5, m=5, c=1.4, gamma=gamma)
+    root, leaf = _three_decision_chain(agent, leaf_is_terminal=False, leaf_reward=0.0)
+
+    agent._backpropagation(1.0, leaf)
+
+    assert np.isclose(agent.Qsa[(102, 0)], gamma)
+    assert np.isclose(agent.Qsa[(101, 0)], gamma**2)
+    assert np.isclose(agent.Qsa[(root.state, 0)], gamma**3)
+
+
+def test_mcts_backpropagation_counts_rewards_inside_the_tree(frozen_lake):
+    """A reward collected on the way down the tree counts, not only the rollout."""
+    env, obs = frozen_lake
+    gamma = 0.9
+    agent = MCTS(env.get_planning_env(), obs, d=5, m=5, c=1.4, gamma=gamma)
+    root = agent.v0
+    chance_0 = ChanceNode(root, 0)
+    decision_1 = DecisionNode(chance_0, 101, 1, False, 2.0)  # reward 2 for reaching s1
+    chance_1 = ChanceNode(decision_1, 0)
+    leaf = DecisionNode(chance_1, 102, 1, False, 0.0)
+
+    agent._backpropagation(1.0, leaf)
+
+    assert np.isclose(agent.Qsa[(101, 0)], gamma * 1.0)
+    assert np.isclose(agent.Qsa[(root.state, 0)], 2.0 + gamma * gamma * 1.0)
 
 
 # ============================================================
