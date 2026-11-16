@@ -18,4 +18,3 @@ The Inverted Pendulum environment is a high-dimensional continuous control task 
 | `gravity` | Global gravitational acceleration | [ 0.    0.   -9.81] |
 | `pole_mass` | Mass of the pole | 5.018591641363306 |
 | `cart_mass` | Mass of the cart | 10.47197551196598 |
-| `rail_friction` | Coefficient of friction for the rail | 1.0 |

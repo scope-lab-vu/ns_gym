@@ -26,3 +26,5 @@ The Humanoid Standup environment is a variant of the Humanoid environment where 
 | `right_elbow_damping` | Damping coefficient of the right elbow joint | 5.0 |
 | `left_elbow_damping` | Damping coefficient of the left elbow joint | 1.0 |
 
+**Note on `floor_friction`:** MuJoCo uses the larger of the two touching geoms' friction for a contact. The robot's own contact geoms have a friction of 1 here, so `floor_friction` only changes the dynamics when it is above 1. Lowering it below that value has no effect.
+

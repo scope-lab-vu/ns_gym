@@ -85,12 +85,10 @@ MUJOCO_ENV_PARAMS = [
 # Known bugs
 # --------------------------------------------------------------------------
 
-#: Finding id -> one-line description. Ids match the findings document; the
-#: three that are also GitHub issues say so.
-KNOWN_BUGS = {
-    "D2": "docs list friction parameters that have no physical effect and that the wrapper rejects",
-    "D5": "Bridge docs name the split parameters left_side/right_side; the wrapper accepts P_left/P_right",
-}
+#: Finding id -> one-line description of a confirmed bug that is not fixed yet.
+#: Empty when every known bug has been fixed. To record a new one, add an entry
+#: here and mark the test that demonstrates it with ``@known_bug("<id>")``.
+KNOWN_BUGS: dict = {}
 
 
 def known_bug(bug_id: str, raises: Any = AssertionError):

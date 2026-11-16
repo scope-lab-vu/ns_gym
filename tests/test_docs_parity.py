@@ -13,33 +13,31 @@ import pytest
 
 from ns_gym.base import TUNABLE_PARAMS
 
-from _helpers import known_bug
-
 ENV_PAGES = Path(__file__).resolve().parents[1] / "docs" / "source" / "env_pages"
 
 pytestmark = pytest.mark.skipif(
     not ENV_PAGES.is_dir(), reason="docs sources are not available (not a source checkout)"
 )
 
-#: docs page -> (unwrapped env class names it documents, finding id if it is known to disagree)
+#: docs page -> unwrapped env class names it documents
 PAGES = {
-    "classic_control/cartpole.md": (["CartPoleEnv"], None),
-    "classic_control/acrobot.md": (["AcrobotEnv"], None),
-    "classic_control/pendulum.md": (["PendulumEnv"], None),
-    "classic_control/mountaincar.md": (["MountainCarEnv", "Continuous_MountainCarEnv"], None),
-    "toytext/frozenlake.md": (["FrozenLakeEnv"], None),
-    "toytext/cliffwalking.md": (["CliffWalkingEnv"], None),
-    "toytext/bridge.md": (["Bridge"], "D5"),
-    "mujoco/antenv.md": (["AntEnv"], None),
-    "mujoco/halfcheetah.md": (["HalfCheetahEnv"], None),
-    "mujoco/hopper.md": (["HopperEnv"], None),
-    "mujoco/humanoid.md": (["HumanoidEnv"], None),
-    "mujoco/humanoid_standup.md": (["HumanoidStandupEnv"], None),
-    "mujoco/inverted_pendulum.md": (["InvertedPendulumEnv"], "D2"),
-    "mujoco/inverted_double_pendulum.md": (["InvertedDoublePendulumEnv"], "D2"),
-    "mujoco/reacher.md": (["ReacherEnv"], "D2"),
-    "mujoco/swimmer.md": (["SwimmerEnv"], "D2"),
-    "mujoco/pusher.md": (["PusherEnv"], None),
+    "classic_control/cartpole.md": ["CartPoleEnv"],
+    "classic_control/acrobot.md": ["AcrobotEnv"],
+    "classic_control/pendulum.md": ["PendulumEnv"],
+    "classic_control/mountaincar.md": ["MountainCarEnv", "Continuous_MountainCarEnv"],
+    "toytext/frozenlake.md": ["FrozenLakeEnv"],
+    "toytext/cliffwalking.md": ["CliffWalkingEnv"],
+    "toytext/bridge.md": ["Bridge"],
+    "mujoco/antenv.md": ["AntEnv"],
+    "mujoco/halfcheetah.md": ["HalfCheetahEnv"],
+    "mujoco/hopper.md": ["HopperEnv"],
+    "mujoco/humanoid.md": ["HumanoidEnv"],
+    "mujoco/humanoid_standup.md": ["HumanoidStandupEnv"],
+    "mujoco/inverted_pendulum.md": ["InvertedPendulumEnv"],
+    "mujoco/inverted_double_pendulum.md": ["InvertedDoublePendulumEnv"],
+    "mujoco/reacher.md": ["ReacherEnv"],
+    "mujoco/swimmer.md": ["SwimmerEnv"],
+    "mujoco/pusher.md": ["PusherEnv"],
 }
 
 _PARAM_ROW = re.compile(r"^\|\s*`([A-Za-z0-9_]+)`\s*\|", flags=re.MULTILINE)
@@ -49,15 +47,9 @@ def documented_parameters(page: str) -> set:
     return set(_PARAM_ROW.findall((ENV_PAGES / page).read_text()))
 
 
-@pytest.mark.parametrize(
-    "page",
-    [
-        pytest.param(page, marks=[known_bug(bug)] if bug else [])
-        for page, (_, bug) in PAGES.items()
-    ],
-)
+@pytest.mark.parametrize("page", PAGES)
 def test_documented_parameters_match_accepted_parameters(page):
-    class_names, _ = PAGES[page]
+    class_names = PAGES[page]
     accepted = set().union(*(TUNABLE_PARAMS[name] for name in class_names))
     documented = documented_parameters(page)
 

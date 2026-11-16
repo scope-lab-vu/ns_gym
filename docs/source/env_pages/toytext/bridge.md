@@ -11,8 +11,8 @@ navigate from the starting cell to one of two goal cells. The environment was or
 | Parameter | Description | Default Value |
 |-----------|-------------|---------------|
 | `P` | Categorical distribution over next states for each action | Deterministic (no slip) [1.0, 0.0, 0.0] |
-| `right_side` | Slipperiness of the right side of the bridge | [1.0, 0.0, 0.0] |
-| `left_side` | Slipperiness of the left side of the bridge | [1.0, 0.0, 0.0] |
+| `P_right` | Slipperiness of the right side of the bridge | [1.0, 0.0, 0.0] |
+| `P_left` | Slipperiness of the left side of the bridge | [1.0, 0.0, 0.0] |
 
 ```{eval-rst}
 .. important::
