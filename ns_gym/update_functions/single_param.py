@@ -212,15 +212,20 @@ class StepWiseUpdate(base.UpdateFn):
 
     def __init__(self, scheduler: Type[base.Scheduler], param_list: list) -> None:
         super().__init__(scheduler)
-        self.param_list = param_list
+        # A copy: values are consumed as they are applied, and the caller's
+        # list must not be emptied as a side effect.
+        self.param_list = list(param_list)
 
-    def _update(self, param: list, t: int) -> Any:
-        try:
-            param = self.param_list.pop(0)
-        except AssertionError:
-            "No more parameters to update"
-        finally:
-            return param
+    def __call__(self, param: Any, t: Union[int, float]) -> tuple[Any, int, float]:
+        if not self.param_list:
+            # Nothing left to apply: report no change even if the scheduler fires.
+            self.prev_param = param
+            self.prev_time = t
+            return (param, 0, 0.0)
+        return super().__call__(param, t)
+
+    def _update(self, param: Any, t: int) -> Any:
+        return self.param_list.pop(0)
 
 
 class NoUpdate(base.UpdateFn):

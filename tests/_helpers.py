@@ -92,7 +92,6 @@ KNOWN_BUGS = {
     "D5": "Bridge docs name the split parameters left_side/right_side; the wrapper accepts P_left/P_right",
     "E1": "ExponentialDecay compounds exp(-lambda*t) on every call instead of Y_0*exp(-lambda*t)",
     "E3": "BudgetBoundedIncrement cannot be constructed",
-    "E5": "StepWiseUpdate reports a change after its list is exhausted and empties the caller's list",
     "F1": "MCTS backpropagation discounts by gamma**depth cumulatively",
     "F2": "MCTS.search raises KeyError when a root action was never visited",
     "F4": "ns_gym/VehicleTracking-v0 is registered but its module does not exist",

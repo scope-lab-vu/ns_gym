@@ -110,9 +110,16 @@ class DistributionStepWiseUpdate(base.UpdateDistributionFn):
 
     def __init__(self, scheduler: base.Scheduler, update_values: list) -> None:
         super().__init__(scheduler)
-        self.update_values = update_values
+        # A copy: values are consumed as they are applied, and the caller's
+        # list must not be emptied as a side effect.
+        self.update_values = list(update_values)
 
     def __call__(self, param: Any, t: int) -> Any:
+        if not self.update_values:
+            # Nothing left to apply: report no change even if the scheduler fires.
+            self.prev_param = param
+            self.prev_time = t
+            return (param, 0, 0.0)
         return super().__call__(param, t)
 
     def _update(self, param, t: int) -> Any:
@@ -124,12 +131,7 @@ class DistributionStepWiseUpdate(base.UpdateDistributionFn):
         Returns:
             list: updated parameter value
         """
-        try:
-            param = self.update_values.pop(0)
-        except AssertionError:
-            "No more parameters to update"
-        finally:
-            return param
+        return self.update_values.pop(0)
 
 
 class LCBoundedDistrubutionUpdate(base.UpdateDistributionFn):

@@ -1184,7 +1184,6 @@ class TestDistributionUpdatesStayValid:
 
 
 class TestStepWiseUpdateExhaustion:
-    @known_bug("E5")
     def test_reports_no_change_once_the_list_is_empty(self):
         fn = StepWiseUpdate(_always_scheduler(), param_list=[2.0])
         value, changed, _ = fn(1.0, 0)
@@ -1192,14 +1191,12 @@ class TestStepWiseUpdateExhaustion:
         value, changed, delta = fn(value, 1)
         assert (value, changed, delta) == (2.0, 0, 0.0)
 
-    @known_bug("E5")
     def test_does_not_consume_the_callers_list(self):
         values = [2.0, 3.0]
         fn = StepWiseUpdate(_always_scheduler(), param_list=values)
         fn(1.0, 0)
         assert values == [2.0, 3.0]
 
-    @known_bug("E5")
     def test_distribution_variant_reports_no_change_once_empty(self):
         fn = DistributionStepWiseUpdate(_always_scheduler(), update_values=[[0.6, 0.2, 0.2]])
         dist, _, _ = fn([0.5, 0.25, 0.25], 0)
