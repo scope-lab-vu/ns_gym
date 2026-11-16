@@ -26,6 +26,8 @@ from ns_gym.update_functions.single_param import (
     LinearInterpolation,
 )
 from ns_gym.update_functions.distribution import (
+    BudgetBoundedIncrement,
+    LCBoundedDistrubutionUpdate,
     RandomCategorical,
     DistributionIncrementUpdate,
     DistributionDecrementUpdate,
@@ -36,6 +38,9 @@ from ns_gym.update_functions.distribution import (
     DistributionLinearInterpolation,
     DistributionCyclicUpdate,
 )
+from ns_gym.utils import wasserstein_distance
+
+from _helpers import known_bug
 
 
 # --- Discovery-based tests ---
@@ -1135,3 +1140,119 @@ class TestSingleParamCommonProperties:
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
+
+
+# ============================================================
+# Behaviour the classes document but do not yet deliver, and
+# update functions that had no tests
+# ============================================================
+
+def _is_distribution(dist):
+    return all(0.0 <= p <= 1.0 for p in dist) and np.isclose(sum(dist), 1.0)
+
+
+class TestExponentialDecayClosedForm:
+    @known_bug("E1")
+    def test_matches_documented_formula_over_consecutive_steps(self):
+        """Docstring: ``Y_t = Y_0 * exp(-lambda * t)``."""
+        fn = ExponentialDecay(_always_scheduler(), decay_rate=0.1)
+        value = 1.0
+        for t in range(10):
+            value, _, _ = fn(value, t)
+        assert np.isclose(value, np.exp(-0.1 * 9))
+
+
+class TestDistributionUpdatesStayValid:
+    """Whatever the sign of ``k``, the result must remain a probability distribution."""
+
+    @pytest.mark.parametrize(
+        "cls,k",
+        [
+            (DistributionIncrementUpdate, 0.3),
+            pytest.param(DistributionIncrementUpdate, -0.3, marks=known_bug("E4", raises=(AssertionError, ValueError))),
+            (DistributionDecrementUpdate, 0.3),
+            pytest.param(DistributionDecrementUpdate, -0.3, marks=known_bug("E4", raises=(AssertionError, ValueError))),
+        ],
+    )
+    @pytest.mark.parametrize("n", [3, 4])
+    def test_repeated_updates_stay_on_the_simplex(self, cls, k, n):
+        fn = cls(_always_scheduler(), k=k)
+        dist = [0.5] + [0.5 / (n - 1)] * (n - 1)
+        for t in range(6):
+            dist, _, _ = fn(dist, t)
+            assert _is_distribution(dist), f"t={t}: {dist}"
+
+
+class TestStepWiseUpdateExhaustion:
+    @known_bug("E5")
+    def test_reports_no_change_once_the_list_is_empty(self):
+        fn = StepWiseUpdate(_always_scheduler(), param_list=[2.0])
+        value, changed, _ = fn(1.0, 0)
+        assert (value, changed) == (2.0, 1)
+        value, changed, delta = fn(value, 1)
+        assert (value, changed, delta) == (2.0, 0, 0.0)
+
+    @known_bug("E5")
+    def test_does_not_consume_the_callers_list(self):
+        values = [2.0, 3.0]
+        fn = StepWiseUpdate(_always_scheduler(), param_list=values)
+        fn(1.0, 0)
+        assert values == [2.0, 3.0]
+
+    @known_bug("E5")
+    def test_distribution_variant_reports_no_change_once_empty(self):
+        fn = DistributionStepWiseUpdate(_always_scheduler(), update_values=[[0.6, 0.2, 0.2]])
+        dist, _, _ = fn([0.5, 0.25, 0.25], 0)
+        dist, changed, delta = fn(dist, 1)
+        assert (dist, changed, delta) == ([0.6, 0.2, 0.2], 0, 0.0)
+
+
+class TestLCBoundedDistributionUpdate:
+    """``W1(p_t, p_t') <= L * |t - t'|`` (Lecarpentier and Rachelson, 2019)."""
+
+    def test_every_update_respects_the_lipschitz_bound(self):
+        L = 0.5
+        fn = LCBoundedDistrubutionUpdate(_always_scheduler(), L=L)
+        dist = [1.0, 0.0, 0.0]
+        for t in range(5):
+            new, changed, delta = fn(dist, t)
+            assert changed == 1
+            assert _is_distribution(new)
+            assert wasserstein_distance(dist, new) <= L + 1e-9  # consecutive steps: |t - t'| = 1
+            assert np.isclose(delta, wasserstein_distance(dist, new))
+            dist = list(new)
+
+    def test_bound_scales_with_elapsed_time(self):
+        """Firing every 4th step allows a change of up to ``4 * L``."""
+        L = 0.5
+        fn = LCBoundedDistrubutionUpdate(_periodic_scheduler(period=4), L=L)
+        dist = [1.0, 0.0, 0.0]
+        for t in range(9):
+            new, changed, _ = fn(dist, t)
+            if changed:
+                assert wasserstein_distance(dist, new) <= 4 * L + 1e-9
+            dist = list(new)
+
+    def test_does_not_fire_when_scheduler_is_silent(self):
+        fn = LCBoundedDistrubutionUpdate(_never_scheduler(), L=0.5)
+        assert fn([1.0, 0.0, 0.0], 0) == ([1.0, 0.0, 0.0], 0, 0.0)
+
+
+class TestBudgetBoundedIncrement:
+    """Total change is capped by a budget ``B`` (Cheung et al., 2020)."""
+
+    @known_bug("E3", raises=TypeError)
+    def test_can_be_constructed(self):
+        BudgetBoundedIncrement(_always_scheduler(), k=0.1, B=1.0)
+
+    @known_bug("E3", raises=TypeError)
+    def test_total_change_never_exceeds_budget(self):
+        budget = 0.25
+        fn = BudgetBoundedIncrement(_always_scheduler(), k=-0.1, B=budget)
+        dist, spent = [1.0, 0.0, 0.0], 0.0
+        for t in range(10):
+            new, changed, delta = fn(dist, t)
+            spent += wasserstein_distance(dist, new)
+            dist = list(new)
+        assert spent <= budget + 1e-9
+        assert changed == 0, "updates must stop once the budget is spent"

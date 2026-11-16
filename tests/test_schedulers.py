@@ -17,6 +17,8 @@ from ns_gym.schedulers import (
     WindowScheduler,
 )
 
+from _helpers import known_bug
+
 
 # --- Discovery-based tests ---
 
@@ -708,3 +710,24 @@ class TestSchedulerCommonProperties:
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
+
+
+# ============================================================
+# MemorylessScheduler with a delayed start
+# ============================================================
+
+@known_bug("E2")
+@pytest.mark.parametrize("seed", [0, 1, 2])
+def test_memoryless_scheduler_fires_after_a_delayed_start(seed):
+    """The first event is drawn relative to ``start``, so the scheduler still
+    fires when its window opens late."""
+    sched = MemorylessScheduler(p=0.2, start=50, seed=seed)
+    fired = [t for t in range(1000) if sched(t)]
+    assert fired, "never fired in 1000 steps"
+    assert min(fired) >= 50
+
+
+@pytest.mark.parametrize("seed", [0, 1, 2])
+def test_memoryless_scheduler_never_fires_before_start(seed):
+    sched = MemorylessScheduler(p=0.2, start=50, seed=seed)
+    assert not any(sched(t) for t in range(50))

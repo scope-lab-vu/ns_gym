@@ -1,66 +1,24 @@
-import pytest
-import gymnasium as gym
-import numpy as np
+"""Copies and planning environments for the MuJoCo wrapper."""
+
 import copy
 from copy import deepcopy
 
+import gymnasium as gym
+import numpy as np
+import pytest
+
+from ns_gym.base import TUNABLE_PARAMS, Reward
 from ns_gym.schedulers import ContinuousScheduler
-from ns_gym.update_functions import IncrementUpdate
-from ns_gym.wrappers.mujoco_env import MujocoWrapper
-from ns_gym.base import Reward, TUNABLE_PARAMS
+from ns_gym.update_functions import IncrementUpdate, RandomWalk
+from ns_gym.wrappers import MujocoWrapper
+from ns_gym.wrappers.mujoco_env import param_look_up
 
+from _helpers import MUJOCO_ENV_IDS, MUJOCO_TIME_TEST_IDS, validate_no_double_wrap
 
-# --- Constants ---
-
-MUJOCO_ENV_IDS = [
-    "Ant-v5",
-    "HalfCheetah-v5",
-    "Hopper-v5",
-    "Humanoid-v5",
-    "HumanoidStandup-v5",
-    "InvertedPendulum-v5",
-    "InvertedDoublePendulum-v5",
-    "Reacher-v5",
-    "Swimmer-v5",
-    "Pusher-v5",
-]
-
-
-# --- Fixtures ---
-
-@pytest.fixture
-def mj_params():
-    """Tunable params for each MuJoCo env (representative subset)."""
-    fn = IncrementUpdate(ContinuousScheduler(), k=0.1)
-    return {
-        "Ant-v5": {"torso_mass": fn},
-        "HalfCheetah-v5": {"torso_mass": fn, "floor_friction": fn},
-        "Hopper-v5": {"torso_mass": fn, "thigh_mass": fn},
-        "Humanoid-v5": {"torso_mass": fn},
-        "HumanoidStandup-v5": {"torso_mass": fn},
-        "InvertedPendulum-v5": {"pole_mass": fn, "cart_mass": fn},
-        "InvertedDoublePendulum-v5": {"cart_mass": fn, "pole1_mass": fn},
-        "Reacher-v5": {"body0_mass": fn, "body1_mass": fn},
-        "Swimmer-v5": {"body_mid_mass": fn},
-        "Pusher-v5": {"r_shoulder_pan_link_mass": fn},
-    }
-
-
-# --- Helpers ---
 
 def _make_mj_env(env_id, mj_params, **wrapper_kwargs):
     env = gym.make(env_id)
     return MujocoWrapper(env, mj_params[env_id], **wrapper_kwargs)
-
-
-def _validate_no_double_wrap(env, wrapper_class):
-    """Walk the .env chain and assert no double wrapping."""
-    assert isinstance(env, wrapper_class)
-    current = env.env
-    while hasattr(current, "env"):
-        assert not isinstance(current, wrapper_class), "Double wrap detected"
-        current = current.env
-    assert not isinstance(current, wrapper_class), "Double wrap at base"
 
 
 # ============================================================
@@ -301,7 +259,7 @@ def test_deepcopy_wrapper_stack_intact(mj_params, env_id):
     ns_env.step(ns_env.action_space.sample())
 
     sim_env = copy.deepcopy(ns_env)
-    _validate_no_double_wrap(sim_env, MujocoWrapper)
+    validate_no_double_wrap(sim_env, MujocoWrapper)
 
 
 # ============================================================
@@ -490,3 +448,70 @@ def test_get_planning_env_independence(mj_params, env_id):
     assert np.allclose(ns_env.unwrapped.data.qpos, orig_qpos), (
         "Original qpos was mutated by stepping planning env"
     )
+
+
+@pytest.mark.parametrize("env_id", MUJOCO_TIME_TEST_IDS)
+def test_planning_env_rng_diverges_mujoco(env_id):
+    """MuJoCo planning env should NOT predict future stochastic parameter changes."""
+
+    env = gym.make(env_id)
+    env_name = env.unwrapped.__class__.__name__
+    params = list(TUNABLE_PARAMS[env_name].keys())
+    param_name = next((p for p in params if p != "gravity"), params[0])
+
+    fn = RandomWalk(ContinuousScheduler(), mu=0, sigma=0.1, seed=42)
+    ns_env = MujocoWrapper(
+        env, {param_name: fn},
+        change_notification=True,
+        delta_change_notification=True,
+    )
+    getter, _ = param_look_up(env_name, param_name)[0]
+
+    ns_env.reset(seed=0)
+
+    planning_env = ns_env.get_planning_env()
+
+    # --- Explicit RNG state comparison ---
+    real_fn = ns_env.tunable_params[param_name]
+    plan_fn = planning_env.tunable_params[param_name]
+    if hasattr(real_fn, 'rng') and hasattr(plan_fn, 'rng'):
+        real_sample = real_fn.rng.normal()
+        plan_sample = plan_fn.rng.normal()
+        assert real_sample != plan_sample, (
+            f"[{env_id}] Planning env RNG should be independent from real env"
+        )
+
+    # --- Trajectory divergence with same action sequence ---
+    # Re-create to get fresh RNG (previous comparison consumed a sample)
+    env = gym.make(env_id)
+    fn = RandomWalk(ContinuousScheduler(), mu=0, sigma=0.1, seed=42)
+    ns_env = MujocoWrapper(
+        env, {param_name: fn},
+        change_notification=True,
+        delta_change_notification=True,
+    )
+    getter, _ = param_look_up(env_name, param_name)[0]
+    ns_env.reset(seed=0)
+
+    planning_env = ns_env.get_planning_env()
+
+    # Generate a fixed action sequence
+    actions = [ns_env.action_space.sample() for _ in range(10)]
+
+    real_trajectory = []
+    planning_trajectory = []
+    for action in actions:
+        obs_real, _, done, trunc, _ = ns_env.step(action)
+        if done or trunc:
+            break
+        real_trajectory.append(float(getter(env.unwrapped)))
+
+        obs_plan, _, _, _, _ = planning_env.step(action)
+        planning_trajectory.append(float(getter(planning_env.unwrapped)))
+
+    if len(real_trajectory) > 0:
+        assert real_trajectory != planning_trajectory, (
+            f"[{env_id}] Planning env should have independent RNG — trajectories must diverge"
+        )
+
+    ns_env.close()
