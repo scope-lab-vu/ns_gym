@@ -22,8 +22,6 @@ from _helpers import (
 
 ENV_PARAM_IDS = [f"{env_id}-{param}" for env_id, param in MUJOCO_ENV_PARAMS]
 
-HUMANOID_IDS = ["Humanoid-v5", "HumanoidStandup-v5"]
-
 
 def _all_params_env(env_id, k=0.1, **wrapper_kwargs):
     """The env wrapped with every tunable parameter incrementing by ``k`` per step."""
@@ -162,19 +160,13 @@ def test_mujoco_reset_restores_all_parameters(env_id):
         )
 
 
-@pytest.mark.parametrize(
-    "env_id",
-    [
-        pytest.param(env_id, marks=[known_bug("D1")] if env_id in HUMANOID_IDS else [])
-        for env_id in MUJOCO_ENV_IDS
-    ],
-)
+@pytest.mark.parametrize("env_id", MUJOCO_ENV_IDS)
 def test_mujoco_reset_observation_is_reproducible(env_id):
     """``reset(seed=s)`` returns the same observation before and after an episode.
 
     The observation must be computed with the restored parameters. Humanoid
     observations include body masses, so an observation built before the
-    restore carries the previous episode's values.
+    restore would carry the previous episode's values.
     """
     ns_env = _all_params_env(env_id)
     obs, _ = ns_env.reset(seed=42)

@@ -149,14 +149,18 @@ class MujocoWrapper(base.NSWrapper):
     def reset(
         self, *, seed: int | None = None, options: dict[str, Any] | None = None
     ) -> tuple[Any, dict[str, Any]]:
-        """Reset environment and restore initial model parameters."""
-        obs, info = super().reset(seed=seed, options=options)
+        """Restore initial model parameters, then reset the environment.
 
+        The parameters are restored first so the base env computes its reset
+        observation with them. Some observations depend on the parameters
+        directly (Humanoid's includes body masses).
+        """
         if not self.persistent_params:
             for k, v in self.initial_params.items():
                 self._set_param_value(k, deepcopy(v))
+            self._dependency_resolver()
 
-        self._dependency_resolver()
+        obs, info = super().reset(seed=seed, options=options)
         return obs, info
 
     def get_planning_env(self):
