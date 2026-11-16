@@ -176,3 +176,4 @@ MUJOCO_LOG.TXT
 
 reinstall.sh
 uv.lock
+paper/
