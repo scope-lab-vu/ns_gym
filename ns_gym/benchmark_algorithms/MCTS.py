@@ -137,10 +137,22 @@ class MCTS(base.Agent):
             self._backpropagation(R,expanded_node)
 
 
-        ba = self.best_action(self.v0) # best action
-        action_values = [self.Qsa[(self.v0.state,a)] for a in self.possible_actions] # Q values for s a pairs
+        action_values = self.root_action_values()
         ba = np.argmax(action_values)
         return ba,action_values
+
+    def root_action_values(self):
+        """Estimated Q value of every action at the root, in action order.
+
+        An action that was never tried (possible when there are fewer
+        simulations than actions) has no estimate. It is given the lowest value
+        among the tried actions, so it is neither preferred nor an outlier for
+        code that normalises the list.
+        """
+        root = self.v0.state
+        visited = [self.Qsa[(root, a)] for a in self.possible_actions if (root, a) in self.Qsa]
+        fallback = min(visited) if visited else 0.0
+        return [self.Qsa.get((root, a), fallback) for a in self.possible_actions]
 
     def _tree_policy(self, node) -> ChanceNode:
         """Tree policy for MCTS. Traverse the tree from the root node to a leaf node.
@@ -337,7 +349,7 @@ class MCTS(base.Agent):
             sa = (s, a)  # Create a state-action pair
             # Check if this state-action pair has been explored
             if sa in self.Qsa and sa in self.Nsa and self.Nsa[sa] > 0:
-                avg_value = self.Qsa[sa] / self.Nsa[sa]  # Calculate average value
+                avg_value = self.Qsa[sa]  # Qsa is already the running average
                 if avg_value > best_avg_value:
                     best_avg_value = avg_value
                     best_action = a

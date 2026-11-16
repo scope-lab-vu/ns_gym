@@ -91,7 +91,6 @@ KNOWN_BUGS = {
     "D2": "docs list friction parameters that have no physical effect and that the wrapper rejects",
     "D5": "Bridge docs name the split parameters left_side/right_side; the wrapper accepts P_left/P_right",
     "F1": "MCTS backpropagation discounts by gamma**depth cumulatively",
-    "F2": "MCTS.search raises KeyError when a root action was never visited",
     "F4": "ns_gym/VehicleTracking-v0 is registered but its module does not exist",
     "G2": "freeze() hides notifications but parameters keep changing",
 }

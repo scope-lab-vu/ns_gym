@@ -83,7 +83,6 @@ def test_mcts_rejects_continuous_action_spaces():
         MCTS(env, obs, d=5, m=5, c=1.4, gamma=0.95)
 
 
-@known_bug("F2", raises=KeyError)
 def test_mcts_search_with_fewer_simulations_than_actions(frozen_lake):
     env, obs = frozen_lake
     action, _ = MCTS(env.get_planning_env(), obs, d=5, m=2, c=1.4, gamma=0.95).search()
