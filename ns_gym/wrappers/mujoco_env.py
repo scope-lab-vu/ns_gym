@@ -196,9 +196,10 @@ class MujocoWrapper(base.NSWrapper):
             "PusherEnv": "Pusher-v5",
         }
 
-        base_id = id_map.get(base_class_name, self.unwrapped.spec.id)
-
-        sim_env = gym.make(base_id)
+        # Rebuilt with the base env's own id and constructor arguments
+        # (``terminate_when_unhealthy``, ``xml_file``, ...); the id map is the
+        # fallback for an env that was not created through gym.make.
+        sim_env = self._make_base_env(id_map.get(base_class_name))
         sim_env = MujocoWrapper(
             sim_env,
             deepcopy(self.tunable_params),

@@ -150,15 +150,14 @@ class NSClassicControlWrapper(base.NSWrapper):
             "AcrobotEnv": "Acrobot-v1",
         }
 
-        # Fallback to spec.id only if we don't recognize the class
-        base_id = id_map.get(base_class_name, self.unwrapped.spec.id)
+        # Used only when the base env was not created through gym.make.
+        default_id = id_map.get(base_class_name)
 
-        # Don't forward spec.kwargs — it contains NSWrapper kwargs
-        # (change_notification, etc.) and gym.make() internal kwargs
-        # (order_enforce, disable_env_checker) that aren't valid for the
-        # base env constructor. Standard classic control envs don't need
-        # any constructor kwargs.
-        sim_env = gym.make(base_id)
+        # Rebuild from the id and constructor arguments recorded at wrap time.
+        # ``self.unwrapped.spec.kwargs`` cannot be used here: for a registered
+        # wrapped env it holds the NSWrapper arguments (change_notification,
+        # etc.) and gym.make() internals, not the base env's arguments.
+        sim_env = self._make_base_env(default_id)
         sim_env = NSClassicControlWrapper(
             sim_env,
             deepcopy(self.tunable_params),

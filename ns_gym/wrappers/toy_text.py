@@ -235,12 +235,14 @@ class NSCliffWalkingWrapper(base.NSWrapper):
 
         env_id = "CliffWalking-v1"
         sim_env = NSCliffWalkingWrapper(
-            gym.make(env_id, max_episode_steps=1000),
+            self._make_base_env(env_id, max_episode_steps=1000),
             tunable_params=deepcopy(self.tunable_params, memo),
             change_notification=self.change_notification,
             delta_change_notification=self.delta_change_notification,
             in_sim_change=self.in_sim_change,
             initial_prob_dist=self.initial_prob_dist,
+            modified_rewards=deepcopy(self.modified_rewards),
+            terminal_cliff=self.terminal_cliff,
             scalar_reward=self.scalar_reward,
             persistent_params=self.persistent_params,
         )
@@ -502,7 +504,7 @@ class NSFrozenLakeWrapper(base.NSWrapper):
 
         # Rebuild on the real env's own map. Without ``desc`` gymnasium falls
         # back to the default 4x4 map whatever the real env was created with.
-        sim_env = gym.make(
+        sim_env = self._make_base_env(
             env_id,
             desc=[bytes(row).decode() for row in self.unwrapped.desc],
             is_slippery=False,
@@ -702,7 +704,7 @@ class NSBridgeWrapper(base.NSWrapper):
             return planning_env
 
     def __deepcopy__(self, memo):
-        sim_env = gym.make("ns_gym/Bridge-v0", max_episode_steps=1000)
+        sim_env = self._make_base_env("ns_gym/Bridge-v0", max_episode_steps=1000)
         if self._split_mode:
             init = (list(self.initial_left), list(self.initial_right))
         else:

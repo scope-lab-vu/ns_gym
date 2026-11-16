@@ -88,8 +88,6 @@ MUJOCO_ENV_PARAMS = [
 #: Finding id -> one-line description. Ids match the findings document; the
 #: three that are also GitHub issues say so.
 KNOWN_BUGS = {
-    "C2": "planning envs are rebuilt from a hard-coded id and drop the base env's constructor arguments",
-    "C3": "CliffWalking planning env loses modified_rewards and terminal_cliff",
     "D2": "docs list friction parameters that have no physical effect and that the wrapper rejects",
     "D5": "Bridge docs name the split parameters left_side/right_side; the wrapper accepts P_left/P_right",
     "E1": "ExponentialDecay compounds exp(-lambda*t) on every call instead of Y_0*exp(-lambda*t)",

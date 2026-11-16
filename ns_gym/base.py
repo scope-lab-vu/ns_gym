@@ -319,6 +319,14 @@ class NSWrapper(Wrapper):
         self.t = 0
         self.has_reset = False
 
+        # How the base env was created, so a planning env can be built the same
+        # way. Recorded now: when a wrapped env is itself registered and made
+        # through ``gym.make``, gymnasium overwrites ``unwrapped.spec`` with the
+        # outer spec afterwards.
+        spec = getattr(self.unwrapped, "spec", None)
+        self._base_env_id = spec.id if spec is not None else None
+        self._base_env_kwargs = dict(spec.kwargs) if spec is not None else {}
+
         env_change_space = gym.spaces.Dict(
             {param_name: gym.spaces.Discrete(2) for param_name in tunable_params.keys()}
         )
@@ -496,6 +504,22 @@ class NSWrapper(Wrapper):
         for fn in self.tunable_params.values():
             if hasattr(fn, 'rng'):
                 fn.rng = np.random.default_rng()
+
+    def _make_base_env(self, default_id: str, **overrides):
+        """Build a fresh base env the way this wrapper's own base env was built.
+
+        Uses the id and constructor arguments recorded at wrap time, so options
+        such as ``gym.make("Pendulum-v1", g=3.0)`` carry over to planning envs.
+        ``render_mode`` is dropped (a planning env must not open a window) and
+        ``overrides`` win over the recorded arguments.
+
+        Args:
+            default_id: Env id to use when the base env has no spec, i.e. it
+                was constructed directly instead of through ``gym.make``.
+        """
+        kwargs = {k: v for k, v in self._base_env_kwargs.items() if k != "render_mode"}
+        kwargs.update(overrides)
+        return gym.make(self._base_env_id or default_id, **kwargs)
 
     def freeze(self, mode: bool = True):
         """ "Freezes" the current MDP so that the environment dynamics do not change.

@@ -19,7 +19,6 @@ from _helpers import (
     DISTRIBUTION_CASES,
     GRIDWORLD_ENV_IDS,
     env_cases,
-    known_bug,
     safe_actions,
     same,
     state_of,
@@ -680,7 +679,6 @@ def test_frozenlake_oracle_planning_env_keeps_current_table():
     assert same(case.reported(planning_env), case.executed(planning_env))
 
 
-@known_bug("C3")
 def test_cliffwalking_planning_env_keeps_reward_options():
     rewards = {"H": -7, "G": 5, "F": -2, "S": -2}
     env = CASE_BY_ID["CliffWalking-v1"].make(modified_rewards=rewards, terminal_cliff=True)
@@ -736,7 +734,6 @@ CONSTRUCTOR_ARGUMENTS = [
 ]
 
 
-@known_bug("C2")
 @pytest.mark.parametrize(
     "env_id,make_kwargs,read",
     CONSTRUCTOR_ARGUMENTS,
