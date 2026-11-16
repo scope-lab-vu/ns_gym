@@ -417,7 +417,6 @@ def test_random_schedule_same_seed_is_reproducible(name):
     assert 0 < sum(first) < len(first), "the scheduler should fire on some steps but not all"
 
 
-@known_bug("B1")
 @pytest.mark.parametrize("name", STOCHASTIC_SCHEDULERS)
 def test_random_schedule_depends_on_seed(name):
     """``reset(seed=...)`` must reach the scheduler's RNG, not only the update function's."""
@@ -428,7 +427,6 @@ def test_random_schedule_depends_on_seed(name):
     assert _firing_pattern(env) != first, "seeds 1 and 2 produced the same change schedule"
 
 
-@known_bug("B1")
 @pytest.mark.parametrize("name", STOCHASTIC_SCHEDULERS)
 def test_random_schedule_differs_between_unseeded_episodes(name):
     """Without a seed each episode draws a new schedule, as the update functions do."""
@@ -478,7 +476,6 @@ def test_random_distribution_differs_between_unseeded_episodes(case):
     assert not same(first, second) and not same(second, third)
 
 
-@known_bug("E6")
 def test_lc_bounded_update_is_seeded_by_reset():
     """The Lipschitz-bounded update draws from an inner update function's RNG.
 

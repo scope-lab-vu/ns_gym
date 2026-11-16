@@ -164,6 +164,11 @@ class LCBoundedDistrubutionUpdate(base.UpdateDistributionFn):
             )
             self.update_fn = update_fn(scheduler)
 
+    def seed(self, seed) -> None:
+        """Re-seed this function and the inner update function it draws candidates from."""
+        super().seed(seed)
+        self.update_fn.seed(base._child_seed(seed, 1))
+
     def _update(self, param: Any, t: int) -> Any:
         max_trys = int(1e5)
         cur_dist = np.asarray(param, dtype=float)

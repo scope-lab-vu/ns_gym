@@ -17,7 +17,6 @@ from ns_gym.schedulers import (
     WindowScheduler,
 )
 
-from _helpers import known_bug
 
 
 # --- Discovery-based tests ---
@@ -716,7 +715,6 @@ if __name__ == "__main__":
 # MemorylessScheduler with a delayed start
 # ============================================================
 
-@known_bug("E2")
 @pytest.mark.parametrize("seed", [0, 1, 2])
 def test_memoryless_scheduler_fires_after_a_delayed_start(seed):
     """The first event is drawn relative to ``start``, so the scheduler still

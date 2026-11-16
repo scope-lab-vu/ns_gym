@@ -80,6 +80,24 @@ class Scheduler(ABC):
             return self._check(t)
         return False
 
+    def seed(self, seed) -> None:
+        """Re-seed the RNG if this scheduler has one, then :meth:`reset` it.
+
+        Args:
+            seed: Seed value (int or SeedSequence) for the random number generator.
+        """
+        if hasattr(self, "rng"):
+            self.rng = np.random.default_rng(seed=seed)
+        self.reset()
+
+    def reset(self) -> None:
+        """Start a new episode.
+
+        Called by the environment on ``reset()``. Schedulers that keep state
+        drawn from their RNG (for example a pre-sampled next event time)
+        override this to draw it again; the default does nothing.
+        """
+
     @abstractmethod
     def _check(self, t: int) -> bool:
         """Core scheduling logic. Subclasses must implement this method.
@@ -93,6 +111,32 @@ class Scheduler(ABC):
             bool: Whether the event should fire at this timestep.
         """
         ...
+
+
+def _child_seed(seed, index: int) -> np.random.SeedSequence:
+    """A seed for a dependent RNG, derived deterministically from ``seed``.
+
+    Unlike ``SeedSequence.spawn`` this does not mutate ``seed``, so seeding
+    twice with the same value gives the same child.
+    """
+    ss = seed if isinstance(seed, np.random.SeedSequence) else np.random.SeedSequence(seed)
+    return np.random.SeedSequence(
+        entropy=ss.entropy,
+        spawn_key=tuple(ss.spawn_key) + (index,),
+        pool_size=ss.pool_size,
+    )
+
+
+def _rng_holders(fn):
+    """Yield every object reachable from an update function that may own an RNG:
+    the function, its scheduler, and any update function nested inside it."""
+    yield fn
+    scheduler = getattr(fn, "scheduler", None)
+    if scheduler is not None:
+        yield scheduler
+    inner = getattr(fn, "update_fn", None)
+    if isinstance(inner, UpdateFn):
+        yield from _rng_holders(inner)
 
 
 class UpdateFn(ABC):
@@ -156,6 +200,9 @@ class UpdateFn(ABC):
         """
         if hasattr(self, 'rng'):
             self.rng = np.random.default_rng(seed=seed)
+        # When a change happens can be random too: give the scheduler its own
+        # stream, derived from the same seed.
+        self.scheduler.seed(_child_seed(seed, 0))
 
     def _update(self, param: Any, t: int) -> Any:
         """Update the parameter. Subclasses must implement this method. Called by the __call__ method if the scheduler returns True.
@@ -424,11 +471,21 @@ class NSWrapper(Wrapper):
         """Copy RNG states from old update functions into fresh deepcopied ones.
 
         This preserves the RNG advancement across resets when no explicit
-        seed is provided, matching Gymnasium's convention.
+        seed is provided, matching Gymnasium's convention. It covers the
+        update function, its scheduler and any nested update function.
         """
         for key in self.tunable_params:
-            if key in old_params and hasattr(old_params[key], 'rng'):
-                self.tunable_params[key].rng = old_params[key].rng
+            if key not in old_params:
+                continue
+            holders = zip(_rng_holders(self.tunable_params[key]), _rng_holders(old_params[key]))
+            for new, old in holders:
+                if hasattr(new, "rng") and hasattr(old, "rng"):
+                    new.rng = old.rng
+            # The fresh copies carry state drawn at construction time (a
+            # pre-sampled event time); draw it again from the carried-over RNG.
+            for holder in _rng_holders(self.tunable_params[key]):
+                if isinstance(holder, Scheduler):
+                    holder.reset()
 
     def _reseed_planning_env_rngs(self) -> None:
         """Re-seed update function RNGs with fresh random seeds.

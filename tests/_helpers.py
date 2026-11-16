@@ -88,7 +88,6 @@ MUJOCO_ENV_PARAMS = [
 #: Finding id -> one-line description. Ids match the findings document; the
 #: three that are also GitHub issues say so.
 KNOWN_BUGS = {
-    "B1": "random schedulers replay the same schedule every episode and ignore reset(seed=...)",
     "B2": "Bridge.step samples from the global numpy RNG, so reset(seed=...) is ignored",
     "B3": "NSBridgeWrapper.reset re-copies the update functions after they were seeded",
     "C1": "CartPole planning env / reset leaves total_mass and polemass_length inconsistent with masspole",
@@ -97,11 +96,9 @@ KNOWN_BUGS = {
     "D2": "docs list friction parameters that have no physical effect and that the wrapper rejects",
     "D5": "Bridge docs name the split parameters left_side/right_side; the wrapper accepts P_left/P_right",
     "E1": "ExponentialDecay compounds exp(-lambda*t) on every call instead of Y_0*exp(-lambda*t)",
-    "E2": "MemorylessScheduler with start > 0 never fires",
     "E3": "BudgetBoundedIncrement cannot be constructed",
     "E4": "DistributionIncrementUpdate/DistributionDecrementUpdate clamp one side only and leave [0, 1]",
     "E5": "StepWiseUpdate reports a change after its list is exhausted and empties the caller's list",
-    "E6": "LCBoundedDistrubutionUpdate uses slow rejection sampling and its RNG is not reachable by reset(seed=...)",
     "F1": "MCTS backpropagation discounts by gamma**depth cumulatively",
     "F2": "MCTS.search raises KeyError when a root action was never visited",
     "F4": "ns_gym/VehicleTracking-v0 is registered but its module does not exist",
