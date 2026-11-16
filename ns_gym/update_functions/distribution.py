@@ -138,8 +138,9 @@ class LCBoundedDistrubutionUpdate(base.UpdateDistributionFn):
     """Decrement the parameters so that the change is Lipshitz continuous.
 
     Overview:
-        This function would call the decrement update function and check if the change is Lipshitz continuous.
-        If not it would recall the decrement update function until the change is Lipshitz continuous.
+        This function draws a candidate distribution from the inner update function and moves the current
+        distribution toward it, as far as the Lipschitz bound allows: all the way if the candidate is within
+        the bound, otherwise to the point on the segment between them that sits exactly on the bound.
 
         The Lipshitz continuous constraint between to probability distributions is defined as:
 
@@ -174,22 +175,23 @@ class LCBoundedDistrubutionUpdate(base.UpdateDistributionFn):
         self.update_fn.seed(base._child_seed(seed, 1))
 
     def _update(self, param: Any, t: int) -> Any:
-        max_trys = int(1e5)
         cur_dist = np.asarray(param, dtype=float)
         delta_time = abs(t - self.prev_time)
         d = self.L * delta_time
 
-        for _ in range(max_trys):
-            # Some inner _update implementations mutate their argument in
-            # place, so each candidate must start from a fresh copy.
-            updated_dist = self.update_fn._update(list(param), t)
-            if utils.wasserstein_distance(cur_dist, np.asarray(updated_dist, dtype=float)) <= d:
-                return updated_dist
+        # Some inner _update implementations mutate their argument in place,
+        # so the candidate starts from a copy.
+        candidate = np.asarray(self.update_fn._update(list(param), t), dtype=float)
+        distance = utils.wasserstein_distance(cur_dist, candidate)
+        if distance <= d:
+            return [float(p) for p in candidate]
 
-        raise ValueError(
-            "Could not find a Lipschitz-continuous update after "
-            f"{max_trys} attempts (L={self.L}, delta_time={delta_time})"
-        )
+        # W1 on index-ordered outcomes is the L1 distance between the two CDFs,
+        # so it scales linearly along the segment from ``cur_dist`` to
+        # ``candidate``: a step of ``d / distance`` lands exactly on the bound.
+        # A convex combination of two distributions is itself a distribution.
+        step = d / distance
+        return [float(p) for p in cur_dist + step * (candidate - cur_dist)]
 
 
 class BudgetBoundedIncrement(DistributionIncrementUpdate):
