@@ -153,15 +153,6 @@ class NSClassicControlWrapper(base.NSWrapper):
         # Fallback to spec.id only if we don't recognize the class
         base_id = id_map.get(base_class_name, self.unwrapped.spec.id)
 
-        if self.unwrapped.__class__.__name__ in ["MountainCarEnv", "MountainCarContinuousEnv"]:
-            warnings.warn(
-                f"Deepcopy for {self.unwrapped.__class__.__name__} has a known "
-                "issue with state divergence in the test suite. While parameter "
-                "updates and notifications function correctly, be cautious if "
-                "using `get_planning_env()` for simulation, as the test assertion "
-                "`assert not np.array_equal(sim_obs['state'], obs['state'])` fails.",
-                UserWarning
-            )
         # Don't forward spec.kwargs — it contains NSWrapper kwargs
         # (change_notification, etc.) and gym.make() internal kwargs
         # (order_enforce, disable_env_checker) that aren't valid for the

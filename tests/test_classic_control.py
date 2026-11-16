@@ -298,13 +298,7 @@ def test_acrobot_link_cannot_shrink_below_its_centre_of_mass(link):
     assert getattr(env.unwrapped, length) >= getattr(env.unwrapped, com)
 
 
-@pytest.mark.parametrize(
-    "env_id",
-    [
-        pytest.param(env_id, marks=[known_bug("G3")] if env_id == "MountainCar-v0" else [])
-        for env_id in CLASSIC_CONTROL_ENV_IDS
-    ],
-)
+@pytest.mark.parametrize("env_id", CLASSIC_CONTROL_ENV_IDS)
 def test_deepcopy_does_not_warn(cc_params, env_id):
     """Planners copy the env thousands of times; a copy must not emit a warning."""
     import warnings
@@ -315,5 +309,4 @@ def test_deepcopy_does_not_warn(cc_params, env_id):
         warnings.simplefilter("always")
         copy.deepcopy(env)
 
-    ns_gym_warnings = [w for w in caught if "known issue" in str(w.message)]
-    assert not ns_gym_warnings, str(ns_gym_warnings[0].message)
+    assert not caught, f"deepcopy warned: {caught[0].message}"

@@ -101,7 +101,6 @@ KNOWN_BUGS = {
     "F4": "ns_gym/VehicleTracking-v0 is registered but its module does not exist",
     "G1": "Acrobot LINK_LENGTH_2 may shrink below its centre-of-mass position",
     "G2": "freeze() hides notifications but parameters keep changing",
-    "G3": "MountainCar emits a UserWarning on every deepcopy",
 }
 
 
