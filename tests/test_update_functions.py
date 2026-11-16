@@ -1169,9 +1169,9 @@ class TestDistributionUpdatesStayValid:
         "cls,k",
         [
             (DistributionIncrementUpdate, 0.3),
-            pytest.param(DistributionIncrementUpdate, -0.3, marks=known_bug("E4", raises=(AssertionError, ValueError))),
+            (DistributionIncrementUpdate, -0.3),
             (DistributionDecrementUpdate, 0.3),
-            pytest.param(DistributionDecrementUpdate, -0.3, marks=known_bug("E4", raises=(AssertionError, ValueError))),
+            (DistributionDecrementUpdate, -0.3),
         ],
     )
     @pytest.mark.parametrize("n", [3, 4])

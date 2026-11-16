@@ -61,7 +61,8 @@ class DistributionIncrementUpdate(base.UpdateDistributionFn):
     def _update(self, param: list[float], t: int, **kwargs) -> Any:
         """Update the parameter by incrementing the intended direction by k.
         """
-        param[0] = min(1, param[0] + self.k)
+        # Clamped on both sides so the result stays a distribution for any sign of k.
+        param[0] = min(1, max(0, param[0] + self.k))
         for i in range(1, len(param)):
             param[i] = (1 - param[0]) / (len(param) - 1)
         return param
@@ -91,7 +92,8 @@ class DistributionDecrementUpdate(base.UpdateDistributionFn):
         Returns:
             param (list): Updated probability distribution
         """
-        param[0] = max(0, param[0] - self.k)
+        # Clamped on both sides so the result stays a distribution for any sign of k.
+        param[0] = min(1, max(0, param[0] - self.k))
         for i in range(1, len(param)):
             param[i] = (1 - param[0]) / (len(param) - 1)
         return param
