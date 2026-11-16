@@ -1152,7 +1152,6 @@ def _is_distribution(dist):
 
 
 class TestExponentialDecayClosedForm:
-    @known_bug("E1")
     def test_matches_documented_formula_over_consecutive_steps(self):
         """Docstring: ``Y_t = Y_0 * exp(-lambda * t)``."""
         fn = ExponentialDecay(_always_scheduler(), decay_rate=0.1)

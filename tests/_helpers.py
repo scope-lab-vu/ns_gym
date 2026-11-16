@@ -90,7 +90,6 @@ MUJOCO_ENV_PARAMS = [
 KNOWN_BUGS = {
     "D2": "docs list friction parameters that have no physical effect and that the wrapper rejects",
     "D5": "Bridge docs name the split parameters left_side/right_side; the wrapper accepts P_left/P_right",
-    "E1": "ExponentialDecay compounds exp(-lambda*t) on every call instead of Y_0*exp(-lambda*t)",
     "E3": "BudgetBoundedIncrement cannot be constructed",
     "F1": "MCTS backpropagation discounts by gamma**depth cumulatively",
     "F2": "MCTS.search raises KeyError when a root action was never visited",
