@@ -105,6 +105,7 @@ class NSClassicControlWrapper(base.NSWrapper):
         if not self.persistent_params:
             for k, v in self.initial_params.items():
                 setattr(self.unwrapped, k, deepcopy(v))
+            self._dependency_resolver()
 
         return obs, info
 
@@ -133,6 +134,7 @@ class NSClassicControlWrapper(base.NSWrapper):
             planning_env = deepcopy(self)
             for k, v in self.initial_params.items():
                 setattr(planning_env.unwrapped, k, deepcopy(v))
+            planning_env._dependency_resolver()
             return planning_env
 
     def __deepcopy__(self, memo):

@@ -271,7 +271,6 @@ def test_constraint_checker_prevents_invalid_values():
 # Derived quantities, constraints and copy behaviour
 # ============================================================
 
-@known_bug("C1")
 def test_cartpole_reset_restores_derived_quantities():
     """``reset()`` restores ``masspole``; ``total_mass`` and ``polemass_length`` must follow."""
     case = CASE_BY_ID["CartPole-v1"]

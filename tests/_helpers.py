@@ -88,7 +88,6 @@ MUJOCO_ENV_PARAMS = [
 #: Finding id -> one-line description. Ids match the findings document; the
 #: three that are also GitHub issues say so.
 KNOWN_BUGS = {
-    "C1": "CartPole planning env / reset leaves total_mass and polemass_length inconsistent with masspole",
     "C2": "planning envs are rebuilt from a hard-coded id and drop the base env's constructor arguments",
     "C3": "CliffWalking planning env loses modified_rewards and terminal_cliff",
     "D2": "docs list friction parameters that have no physical effect and that the wrapper rejects",

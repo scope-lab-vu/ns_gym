@@ -714,7 +714,7 @@ def _cartpole_is_consistent(unwrapped):
 
 
 @pytest.mark.parametrize(
-    "notify", [pytest.param(False, marks=known_bug("C1")), True], ids=["no-notification", "notification"]
+    "notify", [False, True], ids=["no-notification", "notification"]
 )
 def test_cartpole_planning_env_derived_quantities(notify):
     """``total_mass`` and ``polemass_length`` must follow whatever ``masspole`` the copy has."""
