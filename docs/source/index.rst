@@ -32,6 +32,7 @@ To install NS-Gym, you can use pip:
      pip install ns_gym
 
 Alternatively, you can install the latest development version directly from the GitHub repository:
+
 .. code-block::
 
     pip install git+https://github.com/scope-lab-vu/ns_gym

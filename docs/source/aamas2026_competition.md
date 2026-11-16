@@ -14,6 +14,16 @@
 </table>
 
 # AAMAS 2026 Competition
+
+```{eval-rst}
+.. note::
+
+   **Submissions are closed.** The final submission deadline was May 10, 2026.
+   These pages are kept as a record of the competition and as a worked guide
+   to building and evaluating agents with NS-Gym. Posted results are on the
+   :doc:`leaderboard <leaderboard>`.
+```
+
 Welcome to the AAMAS 2026 Non-Stationarity Challenge Page! This competition, co-located with [AAMAS 2026](https://cyprusconferences.org/aamas2026/), invites researchers and practitioners to develop and evaluate decision-making agents that can effectively adapt to non-stationary environments using the NS-Gym framework. Participants will design agents capable of detecting, adapting to, and recovering from dynamic environmental shifts. The solution method is open to any approach, including but not limited to reinforcement learning, online planning, meta-learning, and continuous learning. The competition aims to foster innovation in adaptive decision-making and provide insights into the challenges of non-stationary environments. Results will be presented at the AAMAS 2026 conference.
 
 If you are interested in participating and would like to be directly notified of updates, please fill out this [interest form](https://forms.cloud.microsoft/Pages/ResponsePage.aspx?id=OX9aur7js0q0UGf6gPrsrbmt9pQGce1EtA3Q_nZfuDxUQUczRDJEWkdWV0YwNUpLTk5PTkhHNzdVMS4u).

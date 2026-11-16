@@ -1,5 +1,15 @@
 # Vehicle Tracking Environment
 
+```{eval-rst}
+.. warning::
+
+   ``VehicleTrackingEnv`` is not included in the released ``ns_gym`` package.
+   It was moved out of the main branch for further development, and
+   ``ns_gym/VehicleTracking-v0`` is not registered as of version 1.1.0, so
+   ``gym.make("ns_gym/VehicleTracking-v0")`` will fail. This page describes the
+   environment as designed and is kept for reference.
+```
+
 The `VehicleTrackingEnv` is a custom Gymnasium environment specifically focusing on a pursuit-evasion or following scenario on a 2D grid. A single decision-making agent controls one or more **Pursuers**.
 
 
