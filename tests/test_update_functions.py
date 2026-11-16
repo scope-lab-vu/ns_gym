@@ -40,7 +40,6 @@ from ns_gym.update_functions.distribution import (
 )
 from ns_gym.utils import wasserstein_distance
 
-from _helpers import known_bug
 
 
 # --- Discovery-based tests ---
@@ -1237,11 +1236,9 @@ class TestLCBoundedDistributionUpdate:
 class TestBudgetBoundedIncrement:
     """Total change is capped by a budget ``B`` (Cheung et al., 2020)."""
 
-    @known_bug("E3", raises=TypeError)
     def test_can_be_constructed(self):
         BudgetBoundedIncrement(_always_scheduler(), k=0.1, B=1.0)
 
-    @known_bug("E3", raises=TypeError)
     def test_total_change_never_exceeds_budget(self):
         budget = 0.25
         fn = BudgetBoundedIncrement(_always_scheduler(), k=-0.1, B=budget)

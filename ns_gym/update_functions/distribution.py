@@ -192,12 +192,16 @@ class LCBoundedDistrubutionUpdate(base.UpdateDistributionFn):
         )
 
 
-class BudgetBoundedIncrement(base.UpdateDistributionFn):
+class BudgetBoundedIncrement(DistributionIncrementUpdate):
     """Increment the parameters so that the total amount of change is bounded by some budget.
 
     Overview:
         This function contrains the total amount of change in the parameter by some max budget.
         This formulation is outlined in Cheung et al. 2020.
+
+        Each update is a :class:`DistributionIncrementUpdate` step. A step is applied only if
+        the Wasserstein distance it adds keeps the running total within ``B``; otherwise the
+        distribution is left unchanged and no change is reported.
 
     Args:
         scheduler (base.Scheduler): scheduler that determines when the update function fires.
@@ -210,17 +214,17 @@ class BudgetBoundedIncrement(base.UpdateDistributionFn):
     ) -> None:
         super().__init__(scheduler, k)
         self.B = B
-        self.total_change = 0
+        self.total_change = 0.0
 
-    def __call__(self, param: Any, t: int) -> Any:
-        curr_dist = param
-        updated_param, change = super().__call__(param, t)
-        amount_change = utils.wasserstein_distance(curr_dist, updated_param)
+    def __call__(self, param: list[float], t: int) -> Any:
+        updated_param, changed, amount_change = super().__call__(param, t)
+        if not changed:
+            return updated_param, changed, amount_change
         if self.total_change + amount_change <= self.B:
             self.total_change += amount_change
-            return updated_param, change
-        else:
-            return curr_dist, False
+            return updated_param, changed, amount_change
+        # Over budget: keep the distribution as it was.
+        return list(param), 0, 0.0
 
 
 class DistributionNoUpdate(base.UpdateDistributionFn):
