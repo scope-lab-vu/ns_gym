@@ -1,120 +1,47 @@
-import pytest
+"""Wrapped envs registered with gymnasium and created through ``gym.make``."""
+
+import copy
+
 import gymnasium as gym
 import numpy as np
-import copy
-from copy import deepcopy
+import pytest
 
-from gymnasium.envs.registration import register, registry
-
+from ns_gym.base import Reward
 from ns_gym.schedulers import ContinuousScheduler
-from ns_gym.update_functions import IncrementUpdate, DistributionIncrementUpdate
-from ns_gym.wrappers import NSClassicControlWrapper, NSCliffWalkingWrapper, NSFrozenLakeWrapper
-from ns_gym.base import TUNABLE_PARAMS, Reward
+from ns_gym.update_functions import IncrementUpdate
+from ns_gym.wrappers import NSClassicControlWrapper
 
-
-# --- Constants ---
-
-CLASSIC_CONTROL_ENV_IDS = [
-    "CartPole-v1",
-    "Acrobot-v1",
-    "MountainCar-v0",
-    "MountainCarContinuous-v0",
-    "Pendulum-v1",
-]
-
-GRIDWORLD_ENV_IDS = [
-    "CliffWalking-v1",
-    "FrozenLake-v1",
-]
-
-GRIDWORLD_WRAPPER_MAP = {
-    "CliffWalking-v1": NSCliffWalkingWrapper,
-    "FrozenLake-v1": NSFrozenLakeWrapper,
-}
-
-
-# --- Fixtures ---
-
-@pytest.fixture
-def cc_params():
-    fn = IncrementUpdate(ContinuousScheduler(), k=0.1)
-    dec_fn = IncrementUpdate(ContinuousScheduler(), k=-0.1)
-    return {
-        "CartPole-v1": {"masspole": fn, "gravity": fn},
-        "Acrobot-v1": {"LINK_LENGTH_1": fn, "LINK_MASS_2": fn},
-        "MountainCar-v0": {"gravity": dec_fn, "force": fn},
-        "MountainCarContinuous-v0": {"power": fn},
-        "Pendulum-v1": {"m": fn, "g": fn},
-    }
-
-
-@pytest.fixture
-def gw_params():
-    fn = DistributionIncrementUpdate(ContinuousScheduler(), k=-0.1)
-    return {
-        "CliffWalking-v1": {"P": fn},
-        "FrozenLake-v1": {"P": fn},
-    }
-
-
-# --- Helpers ---
-
-def _validate_no_double_wrap(env, wrapper_class):
-    """Assert outermost is wrapper_class and no double wrapping."""
-    assert isinstance(env, wrapper_class), (
-        f"Expected {wrapper_class.__name__}, got {type(env).__name__}"
-    )
-    current = env.env
-    while hasattr(current, "env"):
-        assert not isinstance(current, wrapper_class), "Double wrap detected"
-        current = current.env
-    assert not isinstance(current, wrapper_class)
+from _helpers import (
+    CLASSIC_CONTROL_ENV_IDS,
+    GRIDWORLD_ENV_IDS,
+    GRIDWORLD_WRAPPERS,
+    register_ns_env,
+    unregister,
+    validate_no_double_wrap,
+)
 
 
 def _register_cc_env(env_id, tunable_params, custom_id, **wrapper_kwargs):
     """Register a classic control NS env and return the custom_id."""
     def _make_custom_env(**kwargs):
-        # Filter out gymnasium's own kwargs that shouldn't go to the wrapper
         base_env = gym.make(env_id, **kwargs)
-        return NSClassicControlWrapper(
-            base_env, tunable_params, **wrapper_kwargs
-        )
+        return NSClassicControlWrapper(base_env, tunable_params, **wrapper_kwargs)
 
-    if custom_id in registry:
-        del registry[custom_id]
-
-    register(
-        id=custom_id,
-        entry_point=_make_custom_env,
-        disable_env_checker=True,
-        order_enforce=False,
-    )
-    return custom_id
+    return register_ns_env(custom_id, _make_custom_env)
 
 
 def _register_gw_env(env_id, tunable_params, custom_id, **wrapper_kwargs):
     """Register a gridworld NS env and return the custom_id."""
-    WrapperClass = GRIDWORLD_WRAPPER_MAP[env_id]
+    WrapperClass = GRIDWORLD_WRAPPERS[env_id]
 
     def _make_custom_env(**kwargs):
         base_env = gym.make(env_id, **kwargs)
         return WrapperClass(base_env, tunable_params, **wrapper_kwargs)
 
-    if custom_id in registry:
-        del registry[custom_id]
-
-    register(
-        id=custom_id,
-        entry_point=_make_custom_env,
-        disable_env_checker=True,
-        order_enforce=False,
-    )
-    return custom_id
+    return register_ns_env(custom_id, _make_custom_env)
 
 
-def _cleanup_registry(custom_id):
-    if custom_id in registry:
-        del registry[custom_id]
+_cleanup_registry = unregister
 
 
 # ============================================================
@@ -127,19 +54,19 @@ def test_registered_env_wrapper_stack_classic_control(cc_params, env_id):
     try:
         _register_cc_env(env_id, cc_params[env_id], custom_id)
         ns_env = gym.make(custom_id)
-        _validate_no_double_wrap(ns_env, NSClassicControlWrapper)
+        validate_no_double_wrap(ns_env, NSClassicControlWrapper)
     finally:
         _cleanup_registry(custom_id)
 
 
 @pytest.mark.parametrize("env_id", GRIDWORLD_ENV_IDS)
 def test_registered_env_wrapper_stack_gridworld(gw_params, env_id):
-    WrapperClass = GRIDWORLD_WRAPPER_MAP[env_id]
+    WrapperClass = GRIDWORLD_WRAPPERS[env_id]
     custom_id = f"TestReg-GW-{env_id}"
     try:
         _register_gw_env(env_id, gw_params[env_id], custom_id)
         ns_env = gym.make(custom_id)
-        _validate_no_double_wrap(ns_env, WrapperClass)
+        validate_no_double_wrap(ns_env, WrapperClass)
     finally:
         _cleanup_registry(custom_id)
 
@@ -150,8 +77,6 @@ def test_registered_env_wrapper_stack_gridworld(gw_params, env_id):
 
 @pytest.mark.parametrize("env_id", CLASSIC_CONTROL_ENV_IDS)
 def test_registered_env_deepcopy_works_classic_control(cc_params, env_id):
-    if env_id in ["MountainCar-v0", "MountainCarContinuous-v0"]:
-        pytest.skip("Known deepcopy state divergence issue for MountainCar")
 
     custom_id = f"TestRegDC-CC-{env_id}"
     try:
@@ -168,14 +93,14 @@ def test_registered_env_deepcopy_works_classic_control(cc_params, env_id):
 
         assert sim_env.is_sim_env is True
         assert isinstance(sim_env, NSClassicControlWrapper)
-        _validate_no_double_wrap(sim_env, NSClassicControlWrapper)
+        validate_no_double_wrap(sim_env, NSClassicControlWrapper)
     finally:
         _cleanup_registry(custom_id)
 
 
 @pytest.mark.parametrize("env_id", GRIDWORLD_ENV_IDS)
 def test_registered_env_deepcopy_works_gridworld(gw_params, env_id):
-    WrapperClass = GRIDWORLD_WRAPPER_MAP[env_id]
+    WrapperClass = GRIDWORLD_WRAPPERS[env_id]
     custom_id = f"TestRegDC-GW-{env_id}"
     try:
         _register_gw_env(env_id, gw_params[env_id], custom_id)
@@ -208,14 +133,14 @@ def test_registered_env_get_planning_env_classic_control(cc_params, env_id):
 
         assert planning_env.is_sim_env is True
         assert isinstance(planning_env, NSClassicControlWrapper)
-        _validate_no_double_wrap(planning_env, NSClassicControlWrapper)
+        validate_no_double_wrap(planning_env, NSClassicControlWrapper)
     finally:
         _cleanup_registry(custom_id)
 
 
 @pytest.mark.parametrize("env_id", GRIDWORLD_ENV_IDS)
 def test_registered_env_get_planning_env_gridworld(gw_params, env_id):
-    WrapperClass = GRIDWORLD_WRAPPER_MAP[env_id]
+    WrapperClass = GRIDWORLD_WRAPPERS[env_id]
     custom_id = f"TestRegPE-GW-{env_id}"
     try:
         _register_gw_env(env_id, gw_params[env_id], custom_id)
@@ -227,7 +152,7 @@ def test_registered_env_get_planning_env_gridworld(gw_params, env_id):
 
         assert planning_env.is_sim_env is True
         assert isinstance(planning_env, WrapperClass)
-        _validate_no_double_wrap(planning_env, WrapperClass)
+        validate_no_double_wrap(planning_env, WrapperClass)
     finally:
         _cleanup_registry(custom_id)
 
@@ -240,8 +165,6 @@ def test_registered_env_get_planning_env_gridworld(gw_params, env_id):
 def test_registration_with_notifications_no_kwargs_leak(cc_params, env_id):
     """Register with change_notification=True. Deepcopy must not leak these
     kwargs into the base env constructor (CartPoleEnv doesn't accept them)."""
-    if env_id in ["MountainCar-v0", "MountainCarContinuous-v0"]:
-        pytest.skip("Known deepcopy state divergence issue for MountainCar")
 
     custom_id = f"TestRegKW-CC-{env_id}"
     try:
