@@ -97,7 +97,6 @@ KNOWN_BUGS = {
     "F1": "MCTS backpropagation discounts by gamma**depth cumulatively",
     "F2": "MCTS.search raises KeyError when a root action was never visited",
     "F4": "ns_gym/VehicleTracking-v0 is registered but its module does not exist",
-    "G1": "Acrobot LINK_LENGTH_2 may shrink below its centre-of-mass position",
     "G2": "freeze() hides notifications but parameters keep changing",
 }
 

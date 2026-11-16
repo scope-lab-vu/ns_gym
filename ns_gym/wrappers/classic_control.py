@@ -256,7 +256,7 @@ class NSClassicControlWrapper(base.NSWrapper):
                         constraint_dict[p] = True
                         continue
 
-                elif p == "LINK_LENGTH_2" and new_val <= 0:
+                elif p == "LINK_LENGTH_2":
                     if new_val <= 0:  # Make sure the length of the link is not negative
                         warnings.warn(
                             "Length of link must be greater than zero, parameter not updated",

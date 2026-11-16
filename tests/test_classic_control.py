@@ -14,7 +14,6 @@ from ns_gym.wrappers import NSClassicControlWrapper
 from _helpers import (
     CASE_BY_ID,
     CLASSIC_CONTROL_ENV_IDS,
-    known_bug,
     safe_actions,
     validate_no_double_wrap,
 )
@@ -285,7 +284,7 @@ def test_cartpole_reset_restores_derived_quantities():
     assert np.isclose(u.polemass_length, u.masspole * u.length)
 
 
-@pytest.mark.parametrize("link", ["1", pytest.param("2", marks=known_bug("G1"))])
+@pytest.mark.parametrize("link", ["1", "2"])
 def test_acrobot_link_cannot_shrink_below_its_centre_of_mass(link):
     """A link shorter than the distance to its own centre of mass is unphysical."""
     length, com = f"LINK_LENGTH_{link}", f"LINK_COM_POS_{link}"
