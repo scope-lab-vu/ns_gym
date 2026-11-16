@@ -684,6 +684,12 @@ def _generate_tunable_params():
     return generated_params
 
 
+#: The single table of MuJoCo tunable parameters: env class name ->
+#: parameter name -> (getter, setter). ``TUNABLE_PARAMS`` (the names a wrapper
+#: accepts) is built from it, and ``MujocoWrapper`` reads and writes parameters
+#: through it, so a parameter listed here is both accepted and settable.
+#: Only list a parameter that changes the simulation: the test suite checks
+#: that changing each one makes the trajectory diverge.
 MUJOCO_GETTERS = {
     "AntEnv": {
         "gravity": (
@@ -694,6 +700,12 @@ MUJOCO_GETTERS = {
             lambda env: env.model.body_mass[env.model.body("torso").id],
             lambda env, val: env.model.body_mass.__setitem__(
                 env.model.body("torso").id, val
+            ),
+        ),
+        "floor_friction": (
+            lambda env: env.model.geom_friction[env.model.geom("floor").id, 0],
+            lambda env, val: env.model.geom_friction.__setitem__(
+                (env.model.geom("floor").id, 0), val
             ),
         ),
     },
@@ -946,6 +958,12 @@ MUJOCO_GETTERS = {
             lambda env: env.model.dof_damping[env.model.joint("left_elbow").id],
             lambda env, val: env.model.dof_damping.__setitem__(
                 env.model.joint("left_elbow").id, val
+            ),
+        ),
+        "floor_friction": (
+            lambda env: env.model.geom_friction[env.model.geom("floor").id, 0],
+            lambda env, val: env.model.geom_friction.__setitem__(
+                (env.model.geom("floor").id, 0), val
             ),
         ),
     },

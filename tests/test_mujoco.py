@@ -72,24 +72,13 @@ def _settable_params(cls_name):
     return settable
 
 
-@pytest.mark.parametrize(
-    "env_id",
-    [
-        pytest.param(
-            env_id,
-            marks=[known_bug("A3")]
-            if env_id in ["Ant-v5", "Humanoid-v5", "HumanoidStandup-v5", "InvertedPendulum-v5", "InvertedDoublePendulum-v5"]
-            else [],
-        )
-        for env_id in MUJOCO_ENV_IDS
-    ],
-)
+@pytest.mark.parametrize("env_id", MUJOCO_ENV_IDS)
 def test_allow_list_matches_accessor_table(env_id):
     """The parameters the wrapper accepts are exactly those it can get and set.
 
-    ``base.MUJOCO_GETTERS`` builds the allow-list and ``param_look_up`` holds
-    the accessors. A name in one but not the other is either rejected although
-    it could be applied, or accepted although it cannot.
+    Both come from ``base.MUJOCO_GETTERS``. They used to be two separate
+    tables that drifted apart: a name in one but not the other was either
+    rejected although it could be applied, or accepted although it could not.
     """
     cls_name = MUJOCO_ENV_CLASS[env_id]
     assert _settable_params(cls_name) == set(TUNABLE_PARAMS[cls_name])
@@ -98,9 +87,9 @@ def test_allow_list_matches_accessor_table(env_id):
 @pytest.mark.parametrize(
     "env_id",
     [
-        pytest.param("Ant-v5", marks=known_bug("A3")),
-        pytest.param("Humanoid-v5", marks=known_bug("A3")),
-        pytest.param("HumanoidStandup-v5", marks=known_bug("A3")),
+        "Ant-v5",
+        "Humanoid-v5",
+        "HumanoidStandup-v5",
         "HalfCheetah-v5",
         "Hopper-v5",
     ],
