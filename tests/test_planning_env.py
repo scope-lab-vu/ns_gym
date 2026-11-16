@@ -604,9 +604,7 @@ def test_stepping_planning_env_leaves_real_env_untouched(case):
 # Gridworld planning envs carry the real env's map and table
 # ============================================================
 
-@pytest.mark.parametrize(
-    "case", env_cases(DISTRIBUTION_CASES, known_bugs={"FrozenLake-v1": "A1", "CliffWalking-v1": "A1"})
-)
+@pytest.mark.parametrize("case", env_cases(DISTRIBUTION_CASES))
 def test_planning_env_taken_after_reset_has_initial_dynamics(case):
     """A planner asking for its model at the start of episode 2 gets episode 2's dynamics."""
     env = case.make(
@@ -664,7 +662,6 @@ def test_frozenlake_planning_env_has_the_real_map(map_id, in_sim_change):
             break
 
 
-@known_bug("G4")
 def test_frozenlake_oracle_planning_env_keeps_current_table():
     """Oracle mode (``in_sim_change=True``): the copy keeps stepping with the
     table that was current when it was taken, not the initial one."""

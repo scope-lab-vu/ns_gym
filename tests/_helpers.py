@@ -88,7 +88,6 @@ MUJOCO_ENV_PARAMS = [
 #: Finding id -> one-line description. Ids match the findings document; the
 #: three that are also GitHub issues say so.
 KNOWN_BUGS = {
-    "A1": "FrozenLake/CliffWalking execute the previous episode's transition table after reset() (issue #44)",
     "A2": "FrozenLake planning env is always built on the default 4x4 map (issue #46)",
     "A3": "MuJoCo allow-list and accessor table disagree; documented floor_friction is rejected (issue #45)",
     "B1": "random schedulers replay the same schedule every episode and ignore reset(seed=...)",
@@ -113,7 +112,6 @@ KNOWN_BUGS = {
     "G1": "Acrobot LINK_LENGTH_2 may shrink below its centre-of-mass position",
     "G2": "freeze() hides notifications but parameters keep changing",
     "G3": "MountainCar emits a UserWarning on every deepcopy",
-    "G4": "oracle mode: FrozenLake planning env reverts to the initial table after one step",
 }
 
 

@@ -236,16 +236,15 @@ def test_reset_restores_executed_parameter(case):
     assert same(case.executed(env), case.initial())
 
 
-@pytest.mark.parametrize(
-    "case", env_cases(known_bugs={"FrozenLake-v1": "A1", "CliffWalking-v1": "A1"})
-)
+@pytest.mark.parametrize("case", env_cases())
 def test_every_episode_starts_with_initial_dynamics(case):
     """A change scheduled mid-episode must not leak into the start of the next one.
 
     The scheduler fires only at step 2. Checking the executed value *after the
     first step* is what distinguishes this from the test above: the gridworld
-    wrappers restore the base env on reset but put their own stale copy of the
-    table back on the next ``step()``.
+    wrappers keep their own copy of the transition table and re-install it on
+    every ``step()``, so restoring only the base env on reset is not enough
+    (issue #44).
     """
     env = case.make(scheduler=DiscreteScheduler({2}))
 
