@@ -26,7 +26,6 @@ from _helpers import (
     MUJOCO_TIME_TEST_IDS,
     env_cases,
     fixed_actions,
-    known_bug,
     safe_actions,
     same,
 )
@@ -417,7 +416,6 @@ def test_random_schedule_same_seed_is_reproducible(name):
     assert 0 < sum(first) < len(first), "the scheduler should fire on some steps but not all"
 
 
-@known_bug("B1")
 @pytest.mark.parametrize("name", STOCHASTIC_SCHEDULERS)
 def test_random_schedule_depends_on_seed(name):
     """``reset(seed=...)`` must reach the scheduler's RNG, not only the update function's."""
@@ -428,7 +426,6 @@ def test_random_schedule_depends_on_seed(name):
     assert _firing_pattern(env) != first, "seeds 1 and 2 produced the same change schedule"
 
 
-@known_bug("B1")
 @pytest.mark.parametrize("name", STOCHASTIC_SCHEDULERS)
 def test_random_schedule_differs_between_unseeded_episodes(name):
     """Without a seed each episode draws a new schedule, as the update functions do."""
@@ -463,13 +460,13 @@ def test_random_distribution_same_seed_is_reproducible(case):
     assert same(_first_random_dist(case, env, seed=3), _first_random_dist(case, env, seed=3))
 
 
-@pytest.mark.parametrize("case", env_cases(DISTRIBUTION_CASES, known_bugs={BRIDGE_ENV_ID: "B3"}))
+@pytest.mark.parametrize("case", env_cases(DISTRIBUTION_CASES))
 def test_random_distribution_depends_on_seed(case):
     env = _random_categorical_env(case)
     assert not same(_first_random_dist(case, env, seed=1), _first_random_dist(case, env, seed=2))
 
 
-@pytest.mark.parametrize("case", env_cases(DISTRIBUTION_CASES, known_bugs={BRIDGE_ENV_ID: "B3"}))
+@pytest.mark.parametrize("case", env_cases(DISTRIBUTION_CASES))
 def test_random_distribution_differs_between_unseeded_episodes(case):
     env = _random_categorical_env(case)
     first = _first_random_dist(case, env, seed=0)
@@ -478,7 +475,6 @@ def test_random_distribution_differs_between_unseeded_episodes(case):
     assert not same(first, second) and not same(second, third)
 
 
-@known_bug("E6")
 def test_lc_bounded_update_is_seeded_by_reset():
     """The Lipschitz-bounded update draws from an inner update function's RNG.
 
@@ -506,7 +502,6 @@ def _bridge_states(seed, n=40):
     return states
 
 
-@known_bug("B2")
 def test_bridge_env_same_seed_is_reproducible():
     """Slips must be drawn from the env's seeded RNG, like every gymnasium env."""
     assert _bridge_states(seed=0) == _bridge_states(seed=0)

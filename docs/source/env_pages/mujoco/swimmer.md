@@ -15,6 +15,4 @@ The Swimmer environment is a high-dimensional continuous control task where a mu
 
 | Parameter | Description | Default Value |
 |-----------|-------------|---------------|
-| `gravity` | Global gravitational acceleration | [ 0.    0.   -9.81] |
 | `body_mid_mass` | Mass of the middle body segment | 35.604716740684324 |
-| `geom_floor_friction` | Coefficient of friction for the floor | 1.0 |

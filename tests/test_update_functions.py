@@ -40,7 +40,6 @@ from ns_gym.update_functions.distribution import (
 )
 from ns_gym.utils import wasserstein_distance
 
-from _helpers import known_bug
 
 
 # --- Discovery-based tests ---
@@ -1152,7 +1151,6 @@ def _is_distribution(dist):
 
 
 class TestExponentialDecayClosedForm:
-    @known_bug("E1")
     def test_matches_documented_formula_over_consecutive_steps(self):
         """Docstring: ``Y_t = Y_0 * exp(-lambda * t)``."""
         fn = ExponentialDecay(_always_scheduler(), decay_rate=0.1)
@@ -1169,9 +1167,9 @@ class TestDistributionUpdatesStayValid:
         "cls,k",
         [
             (DistributionIncrementUpdate, 0.3),
-            pytest.param(DistributionIncrementUpdate, -0.3, marks=known_bug("E4", raises=(AssertionError, ValueError))),
+            (DistributionIncrementUpdate, -0.3),
             (DistributionDecrementUpdate, 0.3),
-            pytest.param(DistributionDecrementUpdate, -0.3, marks=known_bug("E4", raises=(AssertionError, ValueError))),
+            (DistributionDecrementUpdate, -0.3),
         ],
     )
     @pytest.mark.parametrize("n", [3, 4])
@@ -1184,7 +1182,6 @@ class TestDistributionUpdatesStayValid:
 
 
 class TestStepWiseUpdateExhaustion:
-    @known_bug("E5")
     def test_reports_no_change_once_the_list_is_empty(self):
         fn = StepWiseUpdate(_always_scheduler(), param_list=[2.0])
         value, changed, _ = fn(1.0, 0)
@@ -1192,14 +1189,12 @@ class TestStepWiseUpdateExhaustion:
         value, changed, delta = fn(value, 1)
         assert (value, changed, delta) == (2.0, 0, 0.0)
 
-    @known_bug("E5")
     def test_does_not_consume_the_callers_list(self):
         values = [2.0, 3.0]
         fn = StepWiseUpdate(_always_scheduler(), param_list=values)
         fn(1.0, 0)
         assert values == [2.0, 3.0]
 
-    @known_bug("E5")
     def test_distribution_variant_reports_no_change_once_empty(self):
         fn = DistributionStepWiseUpdate(_always_scheduler(), update_values=[[0.6, 0.2, 0.2]])
         dist, _, _ = fn([0.5, 0.25, 0.25], 0)
@@ -1241,11 +1236,9 @@ class TestLCBoundedDistributionUpdate:
 class TestBudgetBoundedIncrement:
     """Total change is capped by a budget ``B`` (Cheung et al., 2020)."""
 
-    @known_bug("E3", raises=TypeError)
     def test_can_be_constructed(self):
         BudgetBoundedIncrement(_always_scheduler(), k=0.1, B=1.0)
 
-    @known_bug("E3", raises=TypeError)
     def test_total_change_never_exceeds_budget(self):
         budget = 0.25
         fn = BudgetBoundedIncrement(_always_scheduler(), k=-0.1, B=budget)

@@ -105,12 +105,25 @@ class MemorylessScheduler(base.Scheduler):
         super().__init__(start, end)
         self.p = p
         self.rng = np.random.default_rng(seed=seed)
-        self.transition_time = self.rng.geometric(p=self.p, size=(1,))
+        self.transition_time = self._next_event(self.start)
+
+    def _next_event(self, after):
+        """Time of the next event: a geometric number of steps after ``after``.
+
+        Returned as a one-element array, the form ``transition_time`` has
+        always had.
+        """
+        return after + self.rng.geometric(p=self.p, size=(1,))
+
+    def reset(self) -> None:
+        """Draw the first event of a new episode, counted from ``start``."""
+        self.transition_time = self._next_event(self.start)
 
     def _check(self, t: int) -> bool:
-        if t == self.transition_time:
-            delta_t = self.rng.geometric(p=self.p, size=(1,))
-            self.transition_time = delta_t + t
+        # ``>=`` rather than ``==``: an event time that was stepped over (the
+        # scheduler was not called at exactly that time) must not stall it.
+        if t >= self.transition_time[0]:
+            self.transition_time = self._next_event(t)
             return True
         else:
             return False

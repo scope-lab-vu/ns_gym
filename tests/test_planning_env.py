@@ -19,7 +19,6 @@ from _helpers import (
     DISTRIBUTION_CASES,
     GRIDWORLD_ENV_IDS,
     env_cases,
-    known_bug,
     safe_actions,
     same,
     state_of,
@@ -559,14 +558,14 @@ def test_planning_env_parameter_is_frozen(case):
     assert same(case.executed(planning_env), frozen)
 
 
-@pytest.mark.parametrize("case", env_cases(known_bugs={"Ant-v5": "D4", "Humanoid-v5": "D4"}))
+@pytest.mark.parametrize("case", env_cases())
 def test_planning_env_follows_real_env_when_stationary(case):
     """With no update and deterministic dynamics, the copy and the real env
     visit the same states and collect the same rewards.
 
-    Ant and Humanoid reach the same states but pay different rewards: the real
-    env refreshes body positions before each step and the planning env does not,
-    and both envs compute their velocity reward from those positions.
+    Rewards are part of the check because Ant and Humanoid compute a velocity
+    reward from body positions in the simulation data, so the copy must carry
+    the same derived quantities as the original, not only the same state.
     """
     env = case.make(case.no_update_fn(), change_notification=True, delta_change_notification=True)
     env.reset(seed=0)
@@ -604,9 +603,7 @@ def test_stepping_planning_env_leaves_real_env_untouched(case):
 # Gridworld planning envs carry the real env's map and table
 # ============================================================
 
-@pytest.mark.parametrize(
-    "case", env_cases(DISTRIBUTION_CASES, known_bugs={"FrozenLake-v1": "A1", "CliffWalking-v1": "A1"})
-)
+@pytest.mark.parametrize("case", env_cases(DISTRIBUTION_CASES))
 def test_planning_env_taken_after_reset_has_initial_dynamics(case):
     """A planner asking for its model at the start of episode 2 gets episode 2's dynamics."""
     env = case.make(
@@ -631,10 +628,7 @@ FROZENLAKE_MAPS = {
 
 
 @pytest.mark.parametrize("in_sim_change", [False, True], ids=["normal", "oracle"])
-@pytest.mark.parametrize(
-    "map_id",
-    ["4x4", pytest.param("8x8", marks=known_bug("A2")), pytest.param("custom4x5", marks=known_bug("A2"))],
-)
+@pytest.mark.parametrize("map_id", ["4x4", "8x8", "custom4x5"])
 def test_frozenlake_planning_env_has_the_real_map(map_id, in_sim_change):
     """The planning env describes, and moves on, the same grid as the real env."""
     case = CASE_BY_ID["FrozenLake-v1"]
@@ -664,7 +658,6 @@ def test_frozenlake_planning_env_has_the_real_map(map_id, in_sim_change):
             break
 
 
-@known_bug("G4")
 def test_frozenlake_oracle_planning_env_keeps_current_table():
     """Oracle mode (``in_sim_change=True``): the copy keeps stepping with the
     table that was current when it was taken, not the initial one."""
@@ -686,7 +679,6 @@ def test_frozenlake_oracle_planning_env_keeps_current_table():
     assert same(case.reported(planning_env), case.executed(planning_env))
 
 
-@known_bug("C3")
 def test_cliffwalking_planning_env_keeps_reward_options():
     rewards = {"H": -7, "G": 5, "F": -2, "S": -2}
     env = CASE_BY_ID["CliffWalking-v1"].make(modified_rewards=rewards, terminal_cliff=True)
@@ -720,7 +712,7 @@ def _cartpole_is_consistent(unwrapped):
 
 
 @pytest.mark.parametrize(
-    "notify", [pytest.param(False, marks=known_bug("C1")), True], ids=["no-notification", "notification"]
+    "notify", [False, True], ids=["no-notification", "notification"]
 )
 def test_cartpole_planning_env_derived_quantities(notify):
     """``total_mass`` and ``polemass_length`` must follow whatever ``masspole`` the copy has."""
@@ -742,7 +734,6 @@ CONSTRUCTOR_ARGUMENTS = [
 ]
 
 
-@known_bug("C2")
 @pytest.mark.parametrize(
     "env_id,make_kwargs,read",
     CONSTRUCTOR_ARGUMENTS,

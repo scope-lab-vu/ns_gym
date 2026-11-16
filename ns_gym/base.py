@@ -80,6 +80,24 @@ class Scheduler(ABC):
             return self._check(t)
         return False
 
+    def seed(self, seed) -> None:
+        """Re-seed the RNG if this scheduler has one, then :meth:`reset` it.
+
+        Args:
+            seed: Seed value (int or SeedSequence) for the random number generator.
+        """
+        if hasattr(self, "rng"):
+            self.rng = np.random.default_rng(seed=seed)
+        self.reset()
+
+    def reset(self) -> None:
+        """Start a new episode.
+
+        Called by the environment on ``reset()``. Schedulers that keep state
+        drawn from their RNG (for example a pre-sampled next event time)
+        override this to draw it again; the default does nothing.
+        """
+
     @abstractmethod
     def _check(self, t: int) -> bool:
         """Core scheduling logic. Subclasses must implement this method.
@@ -93,6 +111,32 @@ class Scheduler(ABC):
             bool: Whether the event should fire at this timestep.
         """
         ...
+
+
+def _child_seed(seed, index: int) -> np.random.SeedSequence:
+    """A seed for a dependent RNG, derived deterministically from ``seed``.
+
+    Unlike ``SeedSequence.spawn`` this does not mutate ``seed``, so seeding
+    twice with the same value gives the same child.
+    """
+    ss = seed if isinstance(seed, np.random.SeedSequence) else np.random.SeedSequence(seed)
+    return np.random.SeedSequence(
+        entropy=ss.entropy,
+        spawn_key=tuple(ss.spawn_key) + (index,),
+        pool_size=ss.pool_size,
+    )
+
+
+def _rng_holders(fn):
+    """Yield every object reachable from an update function that may own an RNG:
+    the function, its scheduler, and any update function nested inside it."""
+    yield fn
+    scheduler = getattr(fn, "scheduler", None)
+    if scheduler is not None:
+        yield scheduler
+    inner = getattr(fn, "update_fn", None)
+    if isinstance(inner, UpdateFn):
+        yield from _rng_holders(inner)
 
 
 class UpdateFn(ABC):
@@ -156,6 +200,9 @@ class UpdateFn(ABC):
         """
         if hasattr(self, 'rng'):
             self.rng = np.random.default_rng(seed=seed)
+        # When a change happens can be random too: give the scheduler its own
+        # stream, derived from the same seed.
+        self.scheduler.seed(_child_seed(seed, 0))
 
     def _update(self, param: Any, t: int) -> Any:
         """Update the parameter. Subclasses must implement this method. Called by the __call__ method if the scheduler returns True.
@@ -271,6 +318,14 @@ class NSWrapper(Wrapper):
         self.persistent_params = persistent_params
         self.t = 0
         self.has_reset = False
+
+        # How the base env was created, so a planning env can be built the same
+        # way. Recorded now: when a wrapped env is itself registered and made
+        # through ``gym.make``, gymnasium overwrites ``unwrapped.spec`` with the
+        # outer spec afterwards.
+        spec = getattr(self.unwrapped, "spec", None)
+        self._base_env_id = spec.id if spec is not None else None
+        self._base_env_kwargs = dict(spec.kwargs) if spec is not None else {}
 
         env_change_space = gym.spaces.Dict(
             {param_name: gym.spaces.Discrete(2) for param_name in tunable_params.keys()}
@@ -424,11 +479,21 @@ class NSWrapper(Wrapper):
         """Copy RNG states from old update functions into fresh deepcopied ones.
 
         This preserves the RNG advancement across resets when no explicit
-        seed is provided, matching Gymnasium's convention.
+        seed is provided, matching Gymnasium's convention. It covers the
+        update function, its scheduler and any nested update function.
         """
         for key in self.tunable_params:
-            if key in old_params and hasattr(old_params[key], 'rng'):
-                self.tunable_params[key].rng = old_params[key].rng
+            if key not in old_params:
+                continue
+            holders = zip(_rng_holders(self.tunable_params[key]), _rng_holders(old_params[key]))
+            for new, old in holders:
+                if hasattr(new, "rng") and hasattr(old, "rng"):
+                    new.rng = old.rng
+            # The fresh copies carry state drawn at construction time (a
+            # pre-sampled event time); draw it again from the carried-over RNG.
+            for holder in _rng_holders(self.tunable_params[key]):
+                if isinstance(holder, Scheduler):
+                    holder.reset()
 
     def _reseed_planning_env_rngs(self) -> None:
         """Re-seed update function RNGs with fresh random seeds.
@@ -440,8 +505,35 @@ class NSWrapper(Wrapper):
             if hasattr(fn, 'rng'):
                 fn.rng = np.random.default_rng()
 
+    def _make_base_env(self, default_id: str, **overrides):
+        """Build a fresh base env the way this wrapper's own base env was built.
+
+        Uses the id and constructor arguments recorded at wrap time, so options
+        such as ``gym.make("Pendulum-v1", g=3.0)`` carry over to planning envs.
+        ``render_mode`` is dropped (a planning env must not open a window) and
+        ``overrides`` win over the recorded arguments.
+
+        Args:
+            default_id: Env id to use when the base env has no spec, i.e. it
+                was constructed directly instead of through ``gym.make``.
+        """
+        kwargs = {k: v for k, v in self._base_env_kwargs.items() if k != "render_mode"}
+        kwargs.update(overrides)
+        return gym.make(self._base_env_id or default_id, **kwargs)
+
+    @property
+    def _updates_paused(self) -> bool:
+        """True when ``step()`` must leave the tunable parameters alone: the env
+        is frozen, or it is a planning env that does not simulate changes."""
+        return self.frozen or (self.is_sim_env and not self.in_sim_change)
+
     def freeze(self, mode: bool = True):
         """ "Freezes" the current MDP so that the environment dynamics do not change.
+
+        While frozen, ``step()`` applies no parameter updates and reports no
+        change. Time still advances, so updates resume where the schedule is
+        at the moment of :meth:`unfreeze`.
+
         Args:
             mode (bool): Boolean flag indicating whether to freeze the environment or not. Defaults to True.
         """
@@ -684,6 +776,12 @@ def _generate_tunable_params():
     return generated_params
 
 
+#: The single table of MuJoCo tunable parameters: env class name ->
+#: parameter name -> (getter, setter). ``TUNABLE_PARAMS`` (the names a wrapper
+#: accepts) is built from it, and ``MujocoWrapper`` reads and writes parameters
+#: through it, so a parameter listed here is both accepted and settable.
+#: Only list a parameter that changes the simulation: the test suite checks
+#: that changing each one makes the trajectory diverge.
 MUJOCO_GETTERS = {
     "AntEnv": {
         "gravity": (
@@ -694,6 +792,12 @@ MUJOCO_GETTERS = {
             lambda env: env.model.body_mass[env.model.body("torso").id],
             lambda env, val: env.model.body_mass.__setitem__(
                 env.model.body("torso").id, val
+            ),
+        ),
+        "floor_friction": (
+            lambda env: env.model.geom_friction[env.model.geom("floor").id, 0],
+            lambda env, val: env.model.geom_friction.__setitem__(
+                (env.model.geom("floor").id, 0), val
             ),
         ),
     },
@@ -946,6 +1050,12 @@ MUJOCO_GETTERS = {
             lambda env: env.model.dof_damping[env.model.joint("left_elbow").id],
             lambda env, val: env.model.dof_damping.__setitem__(
                 env.model.joint("left_elbow").id, val
+            ),
+        ),
+        "floor_friction": (
+            lambda env: env.model.geom_friction[env.model.geom("floor").id, 0],
+            lambda env, val: env.model.geom_friction.__setitem__(
+                (env.model.geom("floor").id, 0), val
             ),
         ),
     },

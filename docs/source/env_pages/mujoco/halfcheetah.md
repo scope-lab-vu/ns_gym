@@ -31,3 +31,5 @@ The HalfCheetah environment is a high-dimensional continuous control task where 
 | `fshin_damping` | Front shin joint damping | 3.0 |
 | `ffeet_damping` | Front feet joint damping | 1.5 |
 
+**Note on `floor_friction`:** MuJoCo uses the larger of the two touching geoms' friction for a contact. The robot's own contact geoms have a friction of 0.4 here, so `floor_friction` only changes the dynamics when it is above 0.4. Lowering it below that value has no effect.
+

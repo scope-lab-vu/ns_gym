@@ -20,13 +20,6 @@ register(
     max_episode_steps=100,
 )
 
-register(
-    id='ns_gym/VehicleTracking-v0',
-    entry_point='ns_gym.envs.vehicle_tracking:VehicleTrackingEnv',
-    max_episode_steps=100,
-
-)
-
 del register
 
 # Lazy-loaded submodules: benchmark_algorithms, evaluate, context_switching

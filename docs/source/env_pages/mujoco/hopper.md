@@ -25,3 +25,5 @@ The Hopper environment is a high-dimensional continuous control task where a one
 | `leg_joint_damping` | Damping coefficient of the leg joint | 1.0 |
 | `foot_joint_damping` | Damping coefficient of the foot joint | 1.0 |
 
+**Note on `floor_friction`:** MuJoCo uses the larger of the two touching geoms' friction for a contact. The robot's own contact geoms have a friction of 2 here, so `floor_friction` only changes the dynamics when it is above 2. Lowering it below that value has no effect.
+

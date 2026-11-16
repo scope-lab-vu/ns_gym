@@ -9,8 +9,8 @@ on:
 jobs:
   undefined-names:
     # A name that is used but never defined is a NameError waiting for the
-    # first call. The files excluded below have known ones (findings F3 and F5
-    # in the bug list); drop each exclusion when its file is fixed or removed.
+    # first call. The files excluded below are unmaintained scripts with known
+    # ones; drop each exclusion when its file is fixed or removed.
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -22,7 +22,6 @@ jobs:
       - name: Check for undefined names
         run: >
           uvx ruff check --select F821 ns_gym tests
-          --per-file-ignores "ns_gym/benchmark_algorithms/DDPG.py:F821"
           --per-file-ignores "ns_gym/benchmark_algorithms/AlphaZero/data_generation.py:F821"
           --per-file-ignores "ns_gym/benchmark_algorithms/AlphaZero/nn_training.py:F821"
           --per-file-ignores "ns_gym/benchmark_algorithms/rats-experiments/nsbridge_experiment.py:F821"

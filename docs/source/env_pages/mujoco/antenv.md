@@ -18,3 +18,5 @@ The Ant environment is a high-dimensional continuous control task where a four-l
 | `gravity` | Global gravitational acceleration | [ 0.    0.   -9.81] |
 | `torso_mass` | Mass of the torso | 0.32724923474893675 |
 | `floor_friction` | Friction coefficient of the floor | 1.0 |
+
+**Note on `floor_friction`:** MuJoCo uses the larger of the two touching geoms' friction for a contact. The robot's own contact geoms have a friction of 1 here, so `floor_friction` only changes the dynamics when it is above 1. Lowering it below that value has no effect.

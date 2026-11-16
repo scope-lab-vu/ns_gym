@@ -167,7 +167,7 @@ class NSCliffWalkingWrapper(base.NSWrapper):
         Returns:
             tuple[dict, base.Reward, bool, bool, dict[str, Any]]: The observation, reward, termination signal, truncation signal, and additional information.       
         """
-        if self.is_sim_env and not self.in_sim_change:
+        if self._updates_paused:
             env_change = {"P": 0}
             delta_change = {"P": 0.0}
 
@@ -192,12 +192,20 @@ class NSCliffWalkingWrapper(base.NSWrapper):
         info["transition_prob"] = self.transition_prob
         return obs, reward, terminated, truncated, info
 
-    # --- The rest of the class remains the same ---
     def _copy_P(self, P):
         return {
             s: {a: transitions[:] for a, transitions in actions.items()}
             for s, actions in P.items()
         }
+
+    def _install_table(self, table):
+        """Make ``table`` the transition table of both the wrapper and the base env.
+
+        The wrapper keeps its own reference (``self.P``) and re-installs it on
+        every ``step()``, so the two must always be set together.
+        """
+        self.P = table
+        setattr(self.unwrapped, "P", table)
 
     def reset(
         self, *, seed: int | None = None, options: dict[str, Any] | None = None
@@ -206,7 +214,8 @@ class NSCliffWalkingWrapper(base.NSWrapper):
         if not self.persistent_params:
             self.transition_prob = deepcopy(self.initial_prob_dist)
             self.update_fn = self.tunable_params["P"]
-            setattr(self.unwrapped, "P", self.intial_p)
+            # A copy: ``_update_P_probabilities`` rewrites the table in place.
+            self._install_table(self._copy_P(self.intial_p))
         return obs, info
 
     def get_planning_env(self):
@@ -218,7 +227,7 @@ class NSCliffWalkingWrapper(base.NSWrapper):
         elif not self.delta_change_notification:
             planning_env = deepcopy(self)
             planning_env.transition_prob = deepcopy(self.initial_prob_dist)
-            setattr(planning_env.unwrapped, "P", self.intial_p)
+            planning_env._install_table(self._copy_P(self.intial_p))
         return planning_env
 
     def __deepcopy__(self, memo):
@@ -226,12 +235,14 @@ class NSCliffWalkingWrapper(base.NSWrapper):
 
         env_id = "CliffWalking-v1"
         sim_env = NSCliffWalkingWrapper(
-            gym.make(env_id, max_episode_steps=1000),
+            self._make_base_env(env_id, max_episode_steps=1000),
             tunable_params=deepcopy(self.tunable_params, memo),
             change_notification=self.change_notification,
             delta_change_notification=self.delta_change_notification,
             in_sim_change=self.in_sim_change,
             initial_prob_dist=self.initial_prob_dist,
+            modified_rewards=deepcopy(self.modified_rewards),
+            terminal_cliff=self.terminal_cliff,
             scalar_reward=self.scalar_reward,
             persistent_params=self.persistent_params,
         )
@@ -244,9 +255,7 @@ class NSCliffWalkingWrapper(base.NSWrapper):
         sim_env.update_fn = deepcopy(self.update_fn, memo)
 
         sim_env.intial_p = self._copy_P(self.intial_p)
-        current_P = self._copy_P(self.P)
-        sim_env.P = current_P
-        setattr(sim_env.unwrapped, "P", current_P)
+        sim_env._install_table(self._copy_P(self.P))
 
         sim_env.is_sim_env = True
         sim_env._reseed_planning_env_rngs()
@@ -351,7 +360,7 @@ class NSFrozenLakeWrapper(base.NSWrapper):
 
         """
 
-        if self.is_sim_env and not self.in_sim_change:
+        if self._updates_paused:
             # action = self._get_action(action)
             env_change = {"P": 0}
             delta_change = {"P": 0.0}
@@ -395,8 +404,17 @@ class NSFrozenLakeWrapper(base.NSWrapper):
         if not self.persistent_params:
             self.transition_prob = deepcopy(self.initial_prob_dist)
             self.update_fn = self.tunable_params["P"]
-            setattr(self.unwrapped, "P", self.intial_p)
+            self._install_table(deepcopy(self.intial_p))
         return obs, info
+
+    def _install_table(self, table):
+        """Make ``table`` the transition table of both the wrapper and the base env.
+
+        The wrapper keeps its own reference (``self.P``) and re-installs it on
+        every ``step()``, so the two must always be set together.
+        """
+        self.P = table
+        setattr(self.unwrapped, "P", table)
 
     def state_encoding(self, row, col):
         return row * self.ncol + col
@@ -477,15 +495,20 @@ class NSFrozenLakeWrapper(base.NSWrapper):
         elif not self.delta_change_notification:
             planning_env = deepcopy(self)
             planning_env.transition_prob = deepcopy(self.initial_prob_dist)
-            setattr(planning_env.unwrapped, "P", self.intial_p)
+            planning_env._install_table(deepcopy(self.intial_p))
         return planning_env
 
     def __deepcopy__(self, memo):
         # env_id = self.unwrapped.spec.id
         env_id = "FrozenLake-v1"
 
-        sim_env = gym.make(
-            env_id, is_slippery=False, render_mode="ansi", 
+        # Rebuild on the real env's own map. Without ``desc`` gymnasium falls
+        # back to the default 4x4 map whatever the real env was created with.
+        sim_env = self._make_base_env(
+            env_id,
+            desc=[bytes(row).decode() for row in self.unwrapped.desc],
+            is_slippery=False,
+            render_mode="ansi",
         )
         sim_env = NSFrozenLakeWrapper(
             sim_env,
@@ -505,7 +528,7 @@ class NSFrozenLakeWrapper(base.NSWrapper):
         sim_env.transition_prob = deepcopy(self.transition_prob)
         sim_env.update_fn = deepcopy(self.update_fn)
         sim_env.intial_p = deepcopy(self.intial_p)
-        sim_env.unwrapped.P = deepcopy(self.P)
+        sim_env._install_table(deepcopy(self.P))
         sim_env.is_sim_env = True
         sim_env._reseed_planning_env_rngs()
         return sim_env
@@ -596,8 +619,6 @@ class NSBridgeWrapper(base.NSWrapper):
                 "The initial probability distribution is not being set correctly."
             )
 
-        self.tunable_params = tunable_params
-        self.init_tunable_params = deepcopy(tunable_params)
         # In uniform mode, we still keep .update_fn for back-compat.
         self.update_fn = tunable_params.get("P")
         self.delta_t = 1
@@ -633,7 +654,7 @@ class NSBridgeWrapper(base.NSWrapper):
     def step(
         self, action: Any
     ) -> tuple[Any, SupportsFloat, bool, bool, dict[str, Any]]:
-        if self.is_sim_env and not self.in_sim_change:
+        if self._updates_paused:
             # Sim env: P is frozen, no drift this step. Parent NSWrapper.step
             # still expects env_change/delta_change to be dicts (one entry per
             # tunable param), so emit zero-change dicts rather than None.
@@ -662,7 +683,8 @@ class NSBridgeWrapper(base.NSWrapper):
                 self.unwrapped.right_side_prob = self.unwrapped.P_right
             else:
                 self.unwrapped.P = list(self.initial_prob_dist)
-            self.tunable_params = deepcopy(self.init_tunable_params)
+            # The base class has already restored and seeded ``tunable_params``;
+            # only the uniform-mode alias needs to follow it.
             self.update_fn = self.tunable_params.get("P")
         return obs, info
 
@@ -682,7 +704,7 @@ class NSBridgeWrapper(base.NSWrapper):
             return planning_env
 
     def __deepcopy__(self, memo):
-        sim_env = gym.make("ns_gym/Bridge-v0", max_episode_steps=1000)
+        sim_env = self._make_base_env("ns_gym/Bridge-v0", max_episode_steps=1000)
         if self._split_mode:
             init = (list(self.initial_left), list(self.initial_right))
         else:

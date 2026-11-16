@@ -13,10 +13,8 @@ The Reacher environment is a high-dimensional continuous control task where a tw
 ## Tunable Parameters
 | Parameter | Description | Default Value |
 |-----------|-------------|---------------|
-| `gravity` | Global gravitational acceleration | [ 0.    0.   -9.81] |
 | `body0_mass` | Mass of the first body | 0.03560471674068433 |
 | `body1_mass` | Mass of the second body | 0.03560471674068433 |
-| `ground_friction` | Coefficient of friction for the ground | 1.0 |
 | `joint0_damping` | Damping of the first joint | 1.0 |
 | `joint1_damping` | Damping of the second joint | 1.0 |
 

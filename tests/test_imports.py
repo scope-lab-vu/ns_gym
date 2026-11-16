@@ -182,33 +182,10 @@ def _registered_ns_gym_ids():
     return sorted(env_id for env_id in gym.registry if env_id.startswith("ns_gym/"))
 
 
-#: Registered ids that cannot be created today, with the reason.
-_BROKEN_REGISTRATIONS = {
-    "ns_gym/VehicleTracking-v0": "F4: registered, but ns_gym.envs.vehicle_tracking does not exist",
-}
-
-
 class TestRegisteredEnvs:
     """Every id ns_gym registers with gymnasium can actually be created."""
 
-    @pytest.mark.parametrize(
-        "env_id",
-        [
-            pytest.param(
-                env_id,
-                marks=[
-                    pytest.mark.xfail(
-                        strict=True,
-                        raises=ModuleNotFoundError,
-                        reason=_BROKEN_REGISTRATIONS[env_id],
-                    )
-                ]
-                if env_id in _BROKEN_REGISTRATIONS
-                else [],
-            )
-            for env_id in _registered_ns_gym_ids()
-        ],
-    )
+    @pytest.mark.parametrize("env_id", _registered_ns_gym_ids())
     def test_registered_env_can_be_made(self, env_id):
         import gymnasium as gym
 

@@ -92,7 +92,8 @@ class Bridge(gym.Env):
         else:
             P = self.P
 
-        action = np.random.choice(
+        # The env's own generator, seeded by ``reset(seed=...)``.
+        action = self.np_random.choice(
             [action, (action + 1) % 4, (action - 1) % 4], p=P
         )
         newstate, reward, done = self.transition(action)

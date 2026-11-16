@@ -13,7 +13,6 @@ from _helpers import (
     CASE_BY_ID,
     OBS_KEYS,
     env_cases,
-    known_bug,
     safe_actions,
     same,
     validate_no_double_wrap,
@@ -211,14 +210,21 @@ def test_freeze_hides_notifications():
     assert obs["env_change"] == {case.param: 1}
 
 
-@known_bug("G2")
-def test_freeze_stops_parameter_updates():
-    """The ``freeze()`` docstring says the dynamics do not change while frozen."""
-    case = CASE_BY_ID["Pendulum-v1"]
+@pytest.mark.parametrize("case", env_cases())
+def test_freeze_stops_parameter_updates(case):
+    """While frozen the dynamics do not change; they resume after ``unfreeze()``."""
     env = case.make()
     env.reset(seed=0)
-    env.freeze()
+    actions = safe_actions(case, env, 5)
+    env.step(actions[0])
     before = case.executed(env)
-    for action in safe_actions(case, env, 3):
+
+    env.freeze()
+    for action in actions[1:4]:
         env.step(action)
     assert same(case.executed(env), before)
+    assert env.t == 4, "time keeps advancing while frozen"
+
+    env.unfreeze()
+    env.step(actions[4])
+    assert not same(case.executed(env), before)

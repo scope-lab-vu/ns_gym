@@ -19,7 +19,6 @@ The Inverted Double Pendulum environment is a high-dimensional continuous contro
 | `cart_mass` | Mass of the cart | 10.47197551196598 |
 | `pole1_mass` | Mass of the first pole | 4.198738581522758 |
 | `pole2_mass` | Mass of the second pole | 4.198738581522758 |
-| `floor_friction` | Coefficient of friction for the floor | 1.0 |
 | `slider_damping` | Damping of the slider joint | 0.05 |
 | `hinge1_damping` | Damping of the first hinge joint | 0.05 |
 | `hinge2_damping` | Damping of the second hinge joint | 0.05 |

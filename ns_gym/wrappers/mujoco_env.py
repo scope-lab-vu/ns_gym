@@ -33,6 +33,7 @@ class MujocoWrapper(base.NSWrapper):
             in_sim_change=in_sim_change,
             **kwargs,
         )
+        self._scratch_data = None
         self._accessors = {}
         for key in tunable_params.keys():
             self._accessors[key] = param_look_up(
@@ -54,28 +55,23 @@ class MujocoWrapper(base.NSWrapper):
         setter(self.unwrapped, value)
 
     def _dependency_resolver(self):
-        """Re-computes derived properties of the MuJoCo model after changes.
+        """Recompute the model constants that depend on tunable parameters.
 
-        mj_setConst recomputes derived model constants (e.g. body_subtreemass)
-        that depend on mass parameters but are not updated by mj_forward alone.
-        However, mj_setConst resets qpos to qpos0, so we save and restore
-        the full integration state around the call.
+        ``mj_setConst`` refreshes derived model constants such as
+        ``body_subtreemass`` after a mass change. It uses an ``MjData`` as its
+        workspace and leaves that data in the reference configuration, so it is
+        run on a scratch ``MjData`` rather than on the live one.
+
+        The live simulation data is deliberately left untouched. The base
+        Gymnasium envs read body positions from it to compute rewards (Ant and
+        Humanoid measure velocity from the position before and after the step),
+        so refreshing it here would make a wrapped env pay different rewards
+        than the unwrapped one even when no parameter changes.
         """
         model = self.unwrapped.model
-        data = self.unwrapped.data
-
-        # Save integration state (qpos, qvel, act, time, etc.)
-        spec = mujoco.mjtState.mjSTATE_INTEGRATION
-        state_size = mujoco.mj_stateSize(model, spec)
-        state = np.empty(state_size)
-        mujoco.mj_getState(model, data, state, spec)
-
-        # Recompute derived model constants (body_subtreemass, etc.)
-        mujoco.mj_setConst(model, data)
-
-        # Restore integration state and recompute forward dynamics
-        mujoco.mj_setState(model, data, state, spec)
-        mujoco.mj_forward(model, data)
+        if self._scratch_data is None:
+            self._scratch_data = mujoco.MjData(model)
+        mujoco.mj_setConst(model, self._scratch_data)
 
     def _constraint_checker(self, new_vals: dict) -> dict[str, bool]:
         """Checks if new parameter values violate physical constraints."""
@@ -104,7 +100,7 @@ class MujocoWrapper(base.NSWrapper):
 
     def step(self, action: Any) -> tuple[Any, Any, bool, bool, dict[str, Any]]:
         """Applies physics changes and then steps the environment."""
-        if self.is_sim_env and not self.in_sim_change:
+        if self._updates_paused:
 
             env_change = {p: 0 for p in self.tunable_params.keys()}
             delta_change = {p: 0.0 for p in self.tunable_params.keys()}
@@ -139,7 +135,8 @@ class MujocoWrapper(base.NSWrapper):
                     delta_change[k] = False
                     env_change[k] = False
 
-            self._dependency_resolver()
+            if any(env_change.values()):
+                self._dependency_resolver()
             obs, reward, terminated, truncated, info = super().step(
                 action, env_change=env_change, delta_change=delta_change
             )
@@ -149,14 +146,18 @@ class MujocoWrapper(base.NSWrapper):
     def reset(
         self, *, seed: int | None = None, options: dict[str, Any] | None = None
     ) -> tuple[Any, dict[str, Any]]:
-        """Reset environment and restore initial model parameters."""
-        obs, info = super().reset(seed=seed, options=options)
+        """Restore initial model parameters, then reset the environment.
 
+        The parameters are restored first so the base env computes its reset
+        observation with them. Some observations depend on the parameters
+        directly (Humanoid's includes body masses).
+        """
         if not self.persistent_params:
             for k, v in self.initial_params.items():
                 self._set_param_value(k, deepcopy(v))
+            self._dependency_resolver()
 
-        self._dependency_resolver()
+        obs, info = super().reset(seed=seed, options=options)
         return obs, info
 
     def get_planning_env(self):
@@ -195,9 +196,10 @@ class MujocoWrapper(base.NSWrapper):
             "PusherEnv": "Pusher-v5",
         }
 
-        base_id = id_map.get(base_class_name, self.unwrapped.spec.id)
-
-        sim_env = gym.make(base_id)
+        # Rebuilt with the base env's own id and constructor arguments
+        # (``terminate_when_unhealthy``, ``xml_file``, ...); the id map is the
+        # fallback for an env that was not created through gym.make.
+        sim_env = self._make_base_env(id_map.get(base_class_name))
         sim_env = MujocoWrapper(
             sim_env,
             deepcopy(self.tunable_params),
@@ -209,26 +211,59 @@ class MujocoWrapper(base.NSWrapper):
         )
         sim_env.reset()
 
-        # Copy full MuJoCo integration state (time, qpos, qvel, act,
-        # qacc_warmstart) using the built-in state API for exact continuation
-        spec = mujoco.mjtState.mjSTATE_INTEGRATION
-        state_size = mujoco.mj_stateSize(self.unwrapped.model, spec)
-        state = np.empty(state_size)
-        mujoco.mj_getState(self.unwrapped.model, self.unwrapped.data, state, spec)
-        mujoco.mj_setState(sim_env.unwrapped.model, sim_env.unwrapped.data, state, spec)
-
-        # Copy wrapper state
-        sim_env.t = deepcopy(self.t)
-
         # Copy current tunable parameter values into the new model
         for k in self.tunable_params:
             sim_env._set_param_value(k, deepcopy(self._get_param_value(k)))
-
-        # Recompute all derived MuJoCo quantities from the copied state
         sim_env._dependency_resolver()
+
+        # Clone the whole simulation, not only the integration state: the base
+        # env computes rewards from derived quantities (body positions), so the
+        # copy must hold the same ones to continue exactly like the original.
+        _copy_simulation(
+            self.unwrapped.model,
+            self.unwrapped.data,
+            sim_env.unwrapped.model,
+            sim_env.unwrapped.data,
+        )
+
+        # Copy wrapper state
+        sim_env.t = deepcopy(self.t)
         sim_env.is_sim_env = True
         sim_env._reseed_planning_env_rngs()
         return sim_env
+
+
+def _copy_simulation(src_model, src_data, dst_model, dst_data) -> None:
+    """Copy a running MuJoCo simulation into another ``MjData`` of the same model.
+
+    The Python bindings have no ``mj_copyData`` for two separately built
+    models, so this is done in two parts:
+
+    1. The integration state (time, qpos, qvel, act, warm start) through
+       MuJoCo's state API.
+    2. Every fixed-size array of ``MjData``. This carries the inputs that
+       persist between steps (``ctrl``, ``xfrc_applied``, mocap poses) and the
+       derived quantities as the last ``mj_step`` left them (``xpos``,
+       ``cfrc_ext``...), which the Gymnasium envs read for rewards and
+       observations.
+
+    Constraint and island arrays are skipped: their size depends on the
+    current contacts, and the next ``mj_step`` rebuilds them from the state.
+    """
+    spec = mujoco.mjtState.mjSTATE_INTEGRATION
+    state = np.empty(mujoco.mj_stateSize(src_model, spec))
+    mujoco.mj_getState(src_model, src_data, state, spec)
+    mujoco.mj_setState(dst_model, dst_data, state, spec)
+
+    for name in dir(src_data):
+        if name.startswith(("_", "efc_")) or "island" in name:
+            continue
+        src_field = getattr(src_data, name, None)
+        if not isinstance(src_field, np.ndarray):
+            continue
+        dst_field = getattr(dst_data, name, None)
+        if isinstance(dst_field, np.ndarray) and dst_field.shape == src_field.shape:
+            np.copyto(dst_field, src_field)
 
 
 def param_look_up(env_name: str, tunable_param: str) -> tuple[Callable, Callable]:
@@ -244,472 +279,7 @@ def param_look_up(env_name: str, tunable_param: str) -> tuple[Callable, Callable
             - A setter function that takes an env instance and a value, and sets the parameter.
 
     """
-    mappings = {
-        "AntEnv": {
-            "gravity": (
-                lambda env: env.model.opt.gravity,
-                lambda env, val: np.copyto(env.model.opt.gravity, val),
-            ),
-            "torso_mass": (
-                lambda env: env.model.body_mass[env.model.body("torso").id],
-                lambda env, val: env.model.body_mass.__setitem__(
-                    env.model.body("torso").id, val
-                ),
-            ),
-            "floor_friction": (
-                lambda env: env.model.geom_friction[env.model.geom("floor").id, 0],
-                # Corrected line below
-                lambda env, val: env.model.geom_friction.__setitem__(
-                    (env.model.geom("floor").id, 0), val
-                ),
-            ),
-        },
-        "HalfCheetahEnv": {
-            "gravity": (
-                lambda env: env.model.opt.gravity,
-                lambda env, val: np.copyto(env.model.opt.gravity, val),
-            ),
-            "torso_mass": (
-                lambda env: env.model.body_mass[env.model.body("torso").id],
-                lambda env, val: env.model.body_mass.__setitem__(
-                    env.model.body("torso").id, val
-                ),
-            ),
-            "bthigh_mass": (
-                lambda env: env.model.body_mass[env.model.body("bthigh").id],
-                lambda env, val: env.model.body_mass.__setitem__(
-                    env.model.body("bthigh").id, val
-                ),
-            ),
-            "bshin_mass": (
-                lambda env: env.model.body_mass[env.model.body("bshin").id],
-                lambda env, val: env.model.body_mass.__setitem__(
-                    env.model.body("bshin").id, val
-                ),
-            ),
-            "bfoot_mass": (
-                lambda env: env.model.body_mass[env.model.body("bfoot").id],
-                lambda env, val: env.model.body_mass.__setitem__(
-                    env.model.body("bfoot").id, val
-                ),
-            ),
-            "fthigh_mass": (
-                lambda env: env.model.body_mass[env.model.body("fthigh").id],
-                lambda env, val: env.model.body_mass.__setitem__(
-                    env.model.body("fthigh").id, val
-                ),
-            ),
-            "fshin_mass": (
-                lambda env: env.model.body_mass[env.model.body("fshin").id],
-                lambda env, val: env.model.body_mass.__setitem__(
-                    env.model.body("fshin").id, val
-                ),
-            ),
-            "ffeet_mass": (
-                lambda env: env.model.body_mass[env.model.body("ffoot").id],
-                lambda env, val: env.model.body_mass.__setitem__(
-                    env.model.body("ffoot").id, val
-                ),
-            ),
-            "floor_friction": (
-                lambda env: env.model.geom_friction[env.model.geom("floor").id, 0],
-                lambda env, val: env.model.geom_friction.__setitem__(
-                    (env.model.geom("floor").id, 0), val
-                ),
-            ),
-            "bthigh_damping": (
-                lambda env: env.model.dof_damping[env.model.joint("bthigh").id],
-                lambda env, val: env.model.dof_damping.__setitem__(
-                    env.model.joint("bthigh").id, val
-                ),
-            ),
-            "bshin_damping": (
-                lambda env: env.model.dof_damping[env.model.joint("bshin").id],
-                lambda env, val: env.model.dof_damping.__setitem__(
-                    env.model.joint("bshin").id, val
-                ),
-            ),
-            "bfoot_damping": (
-                lambda env: env.model.dof_damping[env.model.joint("bfoot").id],
-                lambda env, val: env.model.dof_damping.__setitem__(
-                    env.model.joint("bfoot").id, val
-                ),
-            ),
-            "fthigh_damping": (
-                lambda env: env.model.dof_damping[env.model.joint("fthigh").id],
-                lambda env, val: env.model.dof_damping.__setitem__(
-                    env.model.joint("fthigh").id, val
-                ),
-            ),
-            "fshin_damping": (
-                lambda env: env.model.dof_damping[env.model.joint("fshin").id],
-                lambda env, val: env.model.dof_damping.__setitem__(
-                    env.model.joint("fshin").id, val
-                ),
-            ),
-            "ffeet_damping": (
-                lambda env: env.model.dof_damping[env.model.joint("ffoot").id],
-                lambda env, val: env.model.dof_damping.__setitem__(
-                    env.model.joint("ffoot").id, val
-                ),
-            ),
-        },
-        "HopperEnv": {
-            "gravity": (
-                lambda env: env.model.opt.gravity,
-                lambda env, val: np.copyto(env.model.opt.gravity, val),
-            ),
-            "torso_mass": (
-                lambda env: env.model.body_mass[env.model.body("torso").id],
-                lambda env, val: env.model.body_mass.__setitem__(
-                    env.model.body("torso").id, val
-                ),
-            ),
-            "thigh_mass": (
-                lambda env: env.model.body_mass[env.model.body("thigh").id],
-                lambda env, val: env.model.body_mass.__setitem__(
-                    env.model.body("thigh").id, val
-                ),
-            ),
-            "leg_mass": (
-                lambda env: env.model.body_mass[env.model.body("leg").id],
-                lambda env, val: env.model.body_mass.__setitem__(
-                    env.model.body("leg").id, val
-                ),
-            ),
-            "foot_mass": (
-                lambda env: env.model.body_mass[env.model.body("foot").id],
-                lambda env, val: env.model.body_mass.__setitem__(
-                    env.model.body("foot").id, val
-                ),
-            ),
-            "floor_friction": (
-                lambda env: env.model.geom_friction[env.model.geom("floor").id, 0],
-                lambda env, val: env.model.geom_friction.__setitem__(
-                    (env.model.geom("floor").id, 0), val
-                ),
-            ),
-            "thigh_joint_damping": (
-                lambda env: env.model.dof_damping[env.model.joint("thigh_joint").id],
-                lambda env, val: env.model.dof_damping.__setitem__(
-                    env.model.joint("thigh_joint").id, val
-                ),
-            ),
-            "leg_joint_damping": (
-                lambda env: env.model.dof_damping[env.model.joint("leg_joint").id],
-                lambda env, val: env.model.dof_damping.__setitem__(
-                    env.model.joint("leg_joint").id, val
-                ),
-            ),
-            "foot_joint_damping": (
-                lambda env: env.model.dof_damping[env.model.joint("foot_joint").id],
-                lambda env, val: env.model.dof_damping.__setitem__(
-                    env.model.joint("foot_joint").id, val
-                ),
-            ),
-        },
-        "HumanoidEnv": {
-            "gravity": (
-                lambda env: env.model.opt.gravity,
-                lambda env, val: np.copyto(env.model.opt.gravity, val),
-            ),
-            "torso_mass": (
-                lambda env: env.model.body_mass[env.model.body("torso").id],
-                lambda env, val: env.model.body_mass.__setitem__(
-                    env.model.body("torso").id, val
-                ),
-            ),
-            "lwaist_mass": (
-                lambda env: env.model.body_mass[env.model.body("lwaist").id],
-                lambda env, val: env.model.body_mass.__setitem__(
-                    env.model.body("lwaist").id, val
-                ),
-            ),
-            "pelvis_mass": (
-                lambda env: env.model.body_mass[env.model.body("pelvis").id],
-                lambda env, val: env.model.body_mass.__setitem__(
-                    env.model.body("pelvis").id, val
-                ),
-            ),
-            "right_thigh_mass": (
-                lambda env: env.model.body_mass[env.model.body("right_thigh").id],
-                lambda env, val: env.model.body_mass.__setitem__(
-                    env.model.body("right_thigh").id, val
-                ),
-            ),
-            "left_thigh_mass": (
-                lambda env: env.model.body_mass[env.model.body("left_thigh").id],
-                lambda env, val: env.model.body_mass.__setitem__(
-                    env.model.body("left_thigh").id, val
-                ),
-            ),
-            "right_shin_mass": (
-                lambda env: env.model.body_mass[env.model.body("right_shin").id],
-                lambda env, val: env.model.body_mass.__setitem__(
-                    env.model.body("right_shin").id, val
-                ),
-            ),
-            "left_shin_mass": (
-                lambda env: env.model.body_mass[env.model.body("left_shin").id],
-                lambda env, val: env.model.body_mass.__setitem__(
-                    env.model.body("left_shin").id, val
-                ),
-            ),
-            "right_foot_mass": (
-                lambda env: env.model.body_mass[env.model.body("right_foot").id],
-                lambda env, val: env.model.body_mass.__setitem__(
-                    env.model.body("right_foot").id, val
-                ),
-            ),
-            "left_foot_mass": (
-                lambda env: env.model.body_mass[env.model.body("left_foot").id],
-                lambda env, val: env.model.body_mass.__setitem__(
-                    env.model.body("left_foot").id, val
-                ),
-            ),
-            "right_upper_arm_mass": (
-                lambda env: env.model.body_mass[env.model.body("right_upper_arm").id],
-                lambda env, val: env.model.body_mass.__setitem__(
-                    env.model.body("right_upper_arm").id, val
-                ),
-            ),
-            "left_upper_arm_mass": (
-                lambda env: env.model.body_mass[env.model.body("left_upper_arm").id],
-                lambda env, val: env.model.body_mass.__setitem__(
-                    env.model.body("left_upper_arm").id, val
-                ),
-            ),
-            "right_lower_arm_mass": (
-                lambda env: env.model.body_mass[env.model.body("right_lower_arm").id],
-                lambda env, val: env.model.body_mass.__setitem__(
-                    env.model.body("right_lower_arm").id, val
-                ),
-            ),
-            "left_lower_arm_mass": (
-                lambda env: env.model.body_mass[env.model.body("left_lower_arm").id],
-                lambda env, val: env.model.body_mass.__setitem__(
-                    env.model.body("left_lower_arm").id, val
-                ),
-            ),
-            "floor_friction": (
-                lambda env: env.model.geom_friction[env.model.geom("floor").id, 0],
-                lambda env, val: env.model.geom_friction.__setitem__(
-                    (env.model.geom("floor").id, 0), val
-                ),
-            ),
-            "right_knee_damping": (
-                lambda env: env.model.dof_damping[env.model.joint("right_knee").id],
-                lambda env, val: env.model.dof_damping.__setitem__(
-                    env.model.joint("right_knee").id, val
-                ),
-            ),
-            "left_knee_damping": (
-                lambda env: env.model.dof_damping[env.model.joint("left_knee").id],
-                lambda env, val: env.model.dof_damping.__setitem__(
-                    env.model.joint("left_knee").id, val
-                ),
-            ),
-            "right_elbow_damping": (
-                lambda env: env.model.dof_damping[env.model.joint("right_elbow").id],
-                lambda env, val: env.model.dof_damping.__setitem__(
-                    env.model.joint("right_elbow").id, val
-                ),
-            ),
-            "left_elbow_damping": (
-                lambda env: env.model.dof_damping[env.model.joint("left_elbow").id],
-                lambda env, val: env.model.dof_damping.__setitem__(
-                    env.model.joint("left_elbow").id, val
-                ),
-            ),
-        },
-        "InvertedPendulumEnv": {
-            "gravity": (
-                lambda env: env.model.opt.gravity,
-                lambda env, val: np.copyto(env.model.opt.gravity, val),
-            ),
-            "pole_mass": (
-                lambda env: env.model.body_mass[env.model.body("pole").id],
-                lambda env, val: env.model.body_mass.__setitem__(
-                    env.model.body("pole").id, val
-                ),
-            ),
-            "cart_mass": (
-                lambda env: env.model.body_mass[env.model.body("cart").id],
-                lambda env, val: env.model.body_mass.__setitem__(
-                    env.model.body("cart").id, val
-                ),
-            ),
-            "rail_friction": (
-                lambda env: env.model.geom_friction[env.model.geom("rail").id, 0],
-                lambda env, val: env.model.geom_friction.__setitem__(
-                    (env.model.geom("rail").id, 0), val
-                ),
-            ),
-        },
-        "InvertedDoublePendulumEnv": {
-            "gravity": (
-                lambda env: env.model.opt.gravity,
-                lambda env, val: np.copyto(env.model.opt.gravity, val),
-            ),
-            "cart_mass": (
-                lambda env: env.model.body_mass[env.model.body("cart").id],
-                lambda env, val: env.model.body_mass.__setitem__(
-                    env.model.body("cart").id, val
-                ),
-            ),
-            "pole1_mass": (
-                lambda env: env.model.body_mass[env.model.body("pole").id],
-                lambda env, val: env.model.body_mass.__setitem__(
-                    env.model.body("pole").id, val
-                ),
-            ),
-            "pole2_mass": (
-                lambda env: env.model.body_mass[env.model.body("pole2").id],
-                lambda env, val: env.model.body_mass.__setitem__(
-                    env.model.body("pole2").id, val
-                ),
-            ),
-            "floor_friction": (
-                lambda env: env.model.geom_friction[env.model.geom("rail").id, 0],
-                lambda env, val: env.model.geom_friction.__setitem__(
-                    (env.model.geom("rail").id, 0), val
-                ),
-            ),
-            "slider_damping": (
-                lambda env: env.model.dof_damping[env.model.joint("slider").id],
-                lambda env, val: env.model.dof_damping.__setitem__(
-                    env.model.joint("slider").id, val
-                ),
-            ),
-            "hinge1_damping": (
-                lambda env: env.model.dof_damping[env.model.joint("hinge").id],
-                lambda env, val: env.model.dof_damping.__setitem__(
-                    env.model.joint("hinge").id, val
-                ),
-            ),
-            "hinge2_damping": (
-                lambda env: env.model.dof_damping[env.model.joint("hinge2").id],
-                lambda env, val: env.model.dof_damping.__setitem__(
-                    env.model.joint("hinge2").id, val
-                ),
-            ),
-        },
-        "ReacherEnv": {
-            # "gravity": (
-            #     lambda env: env.model.opt.gravity,
-            #     lambda env, val: np.copyto(env.model.opt.gravity, val),
-            # ),
-            "body0_mass": (
-                lambda env: env.model.body_mass[env.model.body("body0").id],
-                lambda env, val: env.model.body_mass.__setitem__(
-                    env.model.body("body0").id, val
-                ),
-            ),
-            "body1_mass": (
-                lambda env: env.model.body_mass[env.model.body("body1").id],
-                lambda env, val: env.model.body_mass.__setitem__(
-                    env.model.body("body1").id, val
-                ),
-            ),
-            # "ground_friction": (
-            #     lambda env: env.model.geom_friction[env.model.geom("ground").id, 0],
-            #     lambda env, val: env.model.geom_friction.__setitem__(
-            #         (env.model.geom("ground").id, 0), val
-            #     ),
-            # ),
-            "joint0_damping": (
-                lambda env: env.model.dof_damping[env.model.joint("joint0").id],
-                lambda env, val: env.model.dof_damping.__setitem__(
-                    env.model.joint("joint0").id, val
-                ),
-            ),
-            "joint1_damping": (
-                lambda env: env.model.dof_damping[env.model.joint("joint1").id],
-                lambda env, val: env.model.dof_damping.__setitem__(
-                    env.model.joint("joint1").id, val
-                ),
-            ),
-        },
-        "SwimmerEnv": {
-            # "gravity": (
-            #     lambda env: env.model.opt.gravity,
-            #     lambda env, val: np.copyto(env.model.opt.gravity, val),
-            # ),
-            "body_mid_mass": (
-                lambda env: env.model.body_mass[env.model.body("mid").id],
-                lambda env, val: env.model.body_mass.__setitem__(
-                    env.model.body("mid").id, val
-                ),
-            ),
-            # "geom_floor_friction": (
-            #     lambda env: env.model.geom_friction[env.model.geom("floor").id, 0],
-            #     lambda env, val: env.model.geom_friction.__setitem__(
-            #         (env.model.geom("floor").id, 0), val
-            #     ),
-            # ),
-        },
-        "PusherEnv": {
-            "gravity": (
-                lambda env: env.model.opt.gravity,
-                lambda env, val: np.copyto(env.model.opt.gravity, val),
-            ),
-            "r_shoulder_pan_link_mass": (
-                lambda env: env.model.body_mass[
-                    env.model.body("r_shoulder_pan_link").id
-                ],
-                lambda env, val: env.model.body_mass.__setitem__(
-                    env.model.body("r_shoulder_pan_link").id, val
-                ),
-            ),
-            "r_shoulder_lift_link_mass": (
-                lambda env: env.model.body_mass[
-                    env.model.body("r_shoulder_lift_link").id
-                ],
-                lambda env, val: env.model.body_mass.__setitem__(
-                    env.model.body("r_shoulder_lift_link").id, val
-                ),
-            ),
-            "r_upper_arm_link_mass": (
-                lambda env: env.model.body_mass[env.model.body("r_upper_arm_link").id],
-                lambda env, val: env.model.body_mass.__setitem__(
-                    env.model.body("r_upper_arm_link").id, val
-                ),
-            ),
-            "r_forearm_link_mass": (
-                lambda env: env.model.body_mass[env.model.body("r_forearm_link").id],
-                lambda env, val: env.model.body_mass.__setitem__(
-                    env.model.body("r_forearm_link").id, val
-                ),
-            ),
-            "r_shoulder_pan_joint_damping": (
-                lambda env: env.model.dof_damping[
-                    env.model.joint("r_shoulder_pan_joint").id
-                ],
-                lambda env, val: env.model.dof_damping.__setitem__(
-                    env.model.joint("r_shoulder_pan_joint").id, val
-                ),
-            ),
-            "r_shoulder_lift_joint_damping": (
-                lambda env: env.model.dof_damping[
-                    env.model.joint("r_shoulder_lift_joint").id
-                ],
-                lambda env, val: env.model.dof_damping.__setitem__(
-                    env.model.joint("r_shoulder_lift_joint").id, val
-                ),
-            ),
-            "r_elbow_flex_joint_damping": (
-                lambda env: env.model.dof_damping[
-                    env.model.joint("r_elbow_flex_joint").id
-                ],
-                lambda env, val: env.model.dof_damping.__setitem__(
-                    env.model.joint("r_elbow_flex_joint").id, val
-                ),
-            ),
-        },
-    }
-
-    # HumanoidStandupEnv uses the same XML and attributes as HumanoidEnv
-    mappings["HumanoidStandupEnv"] = mappings["HumanoidEnv"]
+    mappings = base.MUJOCO_GETTERS
 
     if env_name in mappings:
         env_mapping = mappings[env_name]

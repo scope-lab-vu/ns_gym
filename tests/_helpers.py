@@ -85,36 +85,10 @@ MUJOCO_ENV_PARAMS = [
 # Known bugs
 # --------------------------------------------------------------------------
 
-#: Finding id -> one-line description. Ids match the findings document; the
-#: three that are also GitHub issues say so.
-KNOWN_BUGS = {
-    "A1": "FrozenLake/CliffWalking execute the previous episode's transition table after reset() (issue #44)",
-    "A2": "FrozenLake planning env is always built on the default 4x4 map (issue #46)",
-    "A3": "MuJoCo allow-list and accessor table disagree; documented floor_friction is rejected (issue #45)",
-    "B1": "random schedulers replay the same schedule every episode and ignore reset(seed=...)",
-    "B2": "Bridge.step samples from the global numpy RNG, so reset(seed=...) is ignored",
-    "B3": "NSBridgeWrapper.reset re-copies the update functions after they were seeded",
-    "C1": "CartPole planning env / reset leaves total_mass and polemass_length inconsistent with masspole",
-    "C2": "planning envs are rebuilt from a hard-coded id and drop the base env's constructor arguments",
-    "C3": "CliffWalking planning env loses modified_rewards and terminal_cliff",
-    "D1": "MujocoWrapper.reset returns an observation computed before parameters are restored",
-    "D4": "MujocoWrapper changes Ant/Humanoid rewards with no parameter change; planning envs pay different rewards",
-    "D2": "docs list friction parameters that have no physical effect and that the wrapper rejects",
-    "D5": "Bridge docs name the split parameters left_side/right_side; the wrapper accepts P_left/P_right",
-    "E1": "ExponentialDecay compounds exp(-lambda*t) on every call instead of Y_0*exp(-lambda*t)",
-    "E2": "MemorylessScheduler with start > 0 never fires",
-    "E3": "BudgetBoundedIncrement cannot be constructed",
-    "E4": "DistributionIncrementUpdate/DistributionDecrementUpdate clamp one side only and leave [0, 1]",
-    "E5": "StepWiseUpdate reports a change after its list is exhausted and empties the caller's list",
-    "E6": "LCBoundedDistrubutionUpdate uses slow rejection sampling and its RNG is not reachable by reset(seed=...)",
-    "F1": "MCTS backpropagation discounts by gamma**depth cumulatively",
-    "F2": "MCTS.search raises KeyError when a root action was never visited",
-    "F4": "ns_gym/VehicleTracking-v0 is registered but its module does not exist",
-    "G1": "Acrobot LINK_LENGTH_2 may shrink below its centre-of-mass position",
-    "G2": "freeze() hides notifications but parameters keep changing",
-    "G3": "MountainCar emits a UserWarning on every deepcopy",
-    "G4": "oracle mode: FrozenLake planning env reverts to the initial table after one step",
-}
+#: Finding id -> one-line description of a confirmed bug that is not fixed yet.
+#: Empty when every known bug has been fixed. To record a new one, add an entry
+#: here and mark the test that demonstrates it with ``@known_bug("<id>")``.
+KNOWN_BUGS: dict = {}
 
 
 def known_bug(bug_id: str, raises: Any = AssertionError):

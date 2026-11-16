@@ -137,10 +137,22 @@ class MCTS(base.Agent):
             self._backpropagation(R,expanded_node)
 
 
-        ba = self.best_action(self.v0) # best action
-        action_values = [self.Qsa[(self.v0.state,a)] for a in self.possible_actions] # Q values for s a pairs
+        action_values = self.root_action_values()
         ba = np.argmax(action_values)
         return ba,action_values
+
+    def root_action_values(self):
+        """Estimated Q value of every action at the root, in action order.
+
+        An action that was never tried (possible when there are fewer
+        simulations than actions) has no estimate. It is given the lowest value
+        among the tried actions, so it is neither preferred nor an outlier for
+        code that normalises the list.
+        """
+        root = self.v0.state
+        visited = [self.Qsa[(root, a)] for a in self.possible_actions if (root, a) in self.Qsa]
+        fallback = min(visited) if visited else 0.0
+        return [self.Qsa.get((root, a), fallback) for a in self.possible_actions]
 
     def _tree_policy(self, node) -> ChanceNode:
         """Tree policy for MCTS. Traverse the tree from the root node to a leaf node.
@@ -216,18 +228,32 @@ class MCTS(base.Agent):
                 return new_node
 
     def _backpropagation(self,R,v,depth=0):
-        """Backtrack to update the number of times a node has beenm visited and the value of a node untill we reach the root node. 
+        """Propagate a simulation result from the expanded leaf back to the root.
+
+        ``R`` is what ``_default_policy`` returned for the leaf ``v``: the
+        discounted rollout return from that state, or, for a terminal leaf, the
+        reward received on entering it.
+
+        Walking up, ``G`` is the return from the current decision node onwards.
+        Each chance node (a state-action pair) is credited with the reward for
+        the transition it led to plus ``gamma`` times the return from the next
+        state: ``Q(s, a) <- r(s, a, s') + gamma * G(s')``. Discounting therefore
+        happens once per decision, and rewards collected inside the tree count
+        as well as the rollout.
         """
-        depth = 0 
+        # A terminal leaf has no future; its reward is added just below.
+        G = 0.0 if v.is_terminal else R
         while v:
-            v.value += R
             if type(v) == ChanceNode:
+                v.value += G
                 assert not isinstance(v.parent.state, dict), "Parent state is still a dict after type checking."
-                self.update_metrics_chance_node(v.parent.state,v.action,R)
+                self.update_metrics_chance_node(v.parent.state,v.action,G)
             else:
+                v.value += G
                 self.update_metrics_decision_node(v.state)
-            R = R*(self.gamma**depth)
-            depth+=1
+                # Seen from the action that led here: the reward for arriving,
+                # plus the discounted return from this state.
+                G = v.reward + self.gamma * G
             v = v.parent
 
     def update_metrics_chance_node(self, state, action, reward):
@@ -337,7 +363,7 @@ class MCTS(base.Agent):
             sa = (s, a)  # Create a state-action pair
             # Check if this state-action pair has been explored
             if sa in self.Qsa and sa in self.Nsa and self.Nsa[sa] > 0:
-                avg_value = self.Qsa[sa] / self.Nsa[sa]  # Calculate average value
+                avg_value = self.Qsa[sa]  # Qsa is already the running average
                 if avg_value > best_avg_value:
                     best_avg_value = avg_value
                     best_action = a

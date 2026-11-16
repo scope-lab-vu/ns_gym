@@ -212,15 +212,20 @@ class StepWiseUpdate(base.UpdateFn):
 
     def __init__(self, scheduler: Type[base.Scheduler], param_list: list) -> None:
         super().__init__(scheduler)
-        self.param_list = param_list
+        # A copy: values are consumed as they are applied, and the caller's
+        # list must not be emptied as a side effect.
+        self.param_list = list(param_list)
 
-    def _update(self, param: list, t: int) -> Any:
-        try:
-            param = self.param_list.pop(0)
-        except AssertionError:
-            "No more parameters to update"
-        finally:
-            return param
+    def __call__(self, param: Any, t: Union[int, float]) -> tuple[Any, int, float]:
+        if not self.param_list:
+            # Nothing left to apply: report no change even if the scheduler fires.
+            self.prev_param = param
+            self.prev_time = t
+            return (param, 0, 0.0)
+        return super().__call__(param, t)
+
+    def _update(self, param: Any, t: int) -> Any:
+        return self.param_list.pop(0)
 
 
 class NoUpdate(base.UpdateFn):
@@ -273,6 +278,12 @@ class ExponentialDecay(base.UpdateFn):
 
         where :math:`Y_t` is the parameter value at time step :math:`t`, :math:`Y_0` is the initial parameter value, and :math:`\lambda` is the rate of decay.
 
+        Each update multiplies the current value by
+        :math:`exp(-\lambda (t - t_{prev}))`, where :math:`t_{prev}` is the time
+        of the previous update (0 before the first one). The product of those
+        factors is :math:`exp(-\lambda t)`, so the value follows the formula
+        above whichever steps the scheduler fires on.
+
     Args:
         scheduler (Type[base.Scheduler]): scheduler that determines when the update function fires.
         decay_rate (float): The rate of decay. i.e. :math:`\lambda`
@@ -281,10 +292,14 @@ class ExponentialDecay(base.UpdateFn):
     def __init__(self, scheduler: Type[base.Scheduler], decay_rate: float) -> None:
         super().__init__(scheduler)
         self.decay_rate = decay_rate
+        self._last_update_time = 0
 
     def _update(self, param: Any, t: int) -> Any:
-        updated_param = param * np.exp(-self.decay_rate * t)
-        return updated_param
+        # Time went backwards: a new episode started (persistent parameters
+        # keep this function across resets). Decay from t = 0 again.
+        last = self._last_update_time if t >= self._last_update_time else 0
+        self._last_update_time = t
+        return param * np.exp(-self.decay_rate * (t - last))
 
 
 class GeometricProgression(base.UpdateFn):

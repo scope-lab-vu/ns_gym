@@ -14,7 +14,6 @@ from ns_gym.wrappers import NSClassicControlWrapper
 from _helpers import (
     CASE_BY_ID,
     CLASSIC_CONTROL_ENV_IDS,
-    known_bug,
     safe_actions,
     validate_no_double_wrap,
 )
@@ -271,7 +270,6 @@ def test_constraint_checker_prevents_invalid_values():
 # Derived quantities, constraints and copy behaviour
 # ============================================================
 
-@known_bug("C1")
 def test_cartpole_reset_restores_derived_quantities():
     """``reset()`` restores ``masspole``; ``total_mass`` and ``polemass_length`` must follow."""
     case = CASE_BY_ID["CartPole-v1"]
@@ -286,7 +284,7 @@ def test_cartpole_reset_restores_derived_quantities():
     assert np.isclose(u.polemass_length, u.masspole * u.length)
 
 
-@pytest.mark.parametrize("link", ["1", pytest.param("2", marks=known_bug("G1"))])
+@pytest.mark.parametrize("link", ["1", "2"])
 def test_acrobot_link_cannot_shrink_below_its_centre_of_mass(link):
     """A link shorter than the distance to its own centre of mass is unphysical."""
     length, com = f"LINK_LENGTH_{link}", f"LINK_COM_POS_{link}"
@@ -299,13 +297,7 @@ def test_acrobot_link_cannot_shrink_below_its_centre_of_mass(link):
     assert getattr(env.unwrapped, length) >= getattr(env.unwrapped, com)
 
 
-@pytest.mark.parametrize(
-    "env_id",
-    [
-        pytest.param(env_id, marks=[known_bug("G3")] if env_id == "MountainCar-v0" else [])
-        for env_id in CLASSIC_CONTROL_ENV_IDS
-    ],
-)
+@pytest.mark.parametrize("env_id", CLASSIC_CONTROL_ENV_IDS)
 def test_deepcopy_does_not_warn(cc_params, env_id):
     """Planners copy the env thousands of times; a copy must not emit a warning."""
     import warnings
@@ -316,5 +308,4 @@ def test_deepcopy_does_not_warn(cc_params, env_id):
         warnings.simplefilter("always")
         copy.deepcopy(env)
 
-    ns_gym_warnings = [w for w in caught if "known issue" in str(w.message)]
-    assert not ns_gym_warnings, str(ns_gym_warnings[0].message)
+    assert not caught, f"deepcopy warned: {caught[0].message}"

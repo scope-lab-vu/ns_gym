@@ -183,7 +183,7 @@ class DDPG(base.Agent):
         ep = 0
         self.best_score = -math.inf
 
-        while True:
+        while ep < num_episodes:
  
             state,info = env.reset()
             t = 0
@@ -205,8 +205,8 @@ class DDPG(base.Agent):
                 # else:
                 #     noise = torch.randn(2) * 0.05
 
-                # noise = torch.randn(2) * 0.15
-                action = self.actor(torch.tensor(state)) + noise
+                action = self.actor(torch.tensor(state))
+                action = action + torch.randn_like(action) * 0.15  # exploration noise
                 action = torch.clamp(action, -1, 1)  # Clip action to [-1, 1]
 
                 with torch.no_grad():
@@ -320,7 +320,8 @@ class DDPG(base.Agent):
 
             while not (done or truncated):
                 
-                action = self.actor(torch.tensor(state)) + torch.randn(2) * 0.15 # Add noise to the action
+                action = self.actor(torch.tensor(state))
+                action = action + torch.randn_like(action) * 0.15 # Add noise to the action
                 
                 with torch.no_grad():
                     action = action.squeeze(0).cpu().numpy()  # Remove batch dimension and convert to numpy

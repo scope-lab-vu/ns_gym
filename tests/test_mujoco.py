@@ -17,12 +17,9 @@ from _helpers import (
     MUJOCO_ENV_IDS,
     MUJOCO_ENV_PARAMS,
     fixed_actions,
-    known_bug,
 )
 
 ENV_PARAM_IDS = [f"{env_id}-{param}" for env_id, param in MUJOCO_ENV_PARAMS]
-
-HUMANOID_IDS = ["Humanoid-v5", "HumanoidStandup-v5"]
 
 
 def _all_params_env(env_id, k=0.1, **wrapper_kwargs):
@@ -72,24 +69,13 @@ def _settable_params(cls_name):
     return settable
 
 
-@pytest.mark.parametrize(
-    "env_id",
-    [
-        pytest.param(
-            env_id,
-            marks=[known_bug("A3")]
-            if env_id in ["Ant-v5", "Humanoid-v5", "HumanoidStandup-v5", "InvertedPendulum-v5", "InvertedDoublePendulum-v5"]
-            else [],
-        )
-        for env_id in MUJOCO_ENV_IDS
-    ],
-)
+@pytest.mark.parametrize("env_id", MUJOCO_ENV_IDS)
 def test_allow_list_matches_accessor_table(env_id):
     """The parameters the wrapper accepts are exactly those it can get and set.
 
-    ``base.MUJOCO_GETTERS`` builds the allow-list and ``param_look_up`` holds
-    the accessors. A name in one but not the other is either rejected although
-    it could be applied, or accepted although it cannot.
+    Both come from ``base.MUJOCO_GETTERS``. They used to be two separate
+    tables that drifted apart: a name in one but not the other was either
+    rejected although it could be applied, or accepted although it could not.
     """
     cls_name = MUJOCO_ENV_CLASS[env_id]
     assert _settable_params(cls_name) == set(TUNABLE_PARAMS[cls_name])
@@ -98,9 +84,9 @@ def test_allow_list_matches_accessor_table(env_id):
 @pytest.mark.parametrize(
     "env_id",
     [
-        pytest.param("Ant-v5", marks=known_bug("A3")),
-        pytest.param("Humanoid-v5", marks=known_bug("A3")),
-        pytest.param("HumanoidStandup-v5", marks=known_bug("A3")),
+        "Ant-v5",
+        "Humanoid-v5",
+        "HumanoidStandup-v5",
         "HalfCheetah-v5",
         "Hopper-v5",
     ],
@@ -173,19 +159,13 @@ def test_mujoco_reset_restores_all_parameters(env_id):
         )
 
 
-@pytest.mark.parametrize(
-    "env_id",
-    [
-        pytest.param(env_id, marks=[known_bug("D1")] if env_id in HUMANOID_IDS else [])
-        for env_id in MUJOCO_ENV_IDS
-    ],
-)
+@pytest.mark.parametrize("env_id", MUJOCO_ENV_IDS)
 def test_mujoco_reset_observation_is_reproducible(env_id):
     """``reset(seed=s)`` returns the same observation before and after an episode.
 
     The observation must be computed with the restored parameters. Humanoid
     observations include body masses, so an observation built before the
-    restore carries the previous episode's values.
+    restore would carry the previous episode's values.
     """
     ns_env = _all_params_env(env_id)
     obs, _ = ns_env.reset(seed=42)
@@ -261,19 +241,13 @@ def test_wrapped_vs_unwrapped_dynamics_divergence(env_id, param):
     env_with_change.close()
 
 
-@pytest.mark.parametrize(
-    "env_id",
-    [
-        pytest.param(env_id, marks=[known_bug("D4")] if env_id in ["Ant-v5", "Humanoid-v5"] else [])
-        for env_id in MUJOCO_ENV_IDS
-    ],
-)
+@pytest.mark.parametrize("env_id", MUJOCO_ENV_IDS)
 def test_unchanged_parameters_leave_rewards_identical_to_gymnasium(env_id):
     """Wrapping an env without changing any parameter must not change its rewards.
 
     States already match (see the test above). Rewards are checked separately
-    because Ant and Humanoid derive a velocity reward from body positions that
-    the wrapper recomputes before every step.
+    because Ant and Humanoid derive a velocity reward from body positions in
+    the simulation data, which the wrapper must therefore leave untouched.
     """
     param = next(p for p in TUNABLE_PARAMS[MUJOCO_ENV_CLASS[env_id]] if p != "gravity")
     plain = gym.make(env_id)

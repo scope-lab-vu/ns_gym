@@ -67,7 +67,7 @@ class NSClassicControlWrapper(base.NSWrapper):
             tuple[dict[str, Any], base.Reward, bool, bool, dict[str, Any]]: NS-Gym Observation dictionary, reward, done flag, truncated flag, info dictionary
         """
 
-        if self.is_sim_env and not self.in_sim_change:
+        if self._updates_paused:
 
             env_change = {p: 0 for p in self.tunable_params.keys()}
             delta_change = {p: 0.0 for p in self.tunable_params.keys()}
@@ -105,6 +105,7 @@ class NSClassicControlWrapper(base.NSWrapper):
         if not self.persistent_params:
             for k, v in self.initial_params.items():
                 setattr(self.unwrapped, k, deepcopy(v))
+            self._dependency_resolver()
 
         return obs, info
 
@@ -133,6 +134,7 @@ class NSClassicControlWrapper(base.NSWrapper):
             planning_env = deepcopy(self)
             for k, v in self.initial_params.items():
                 setattr(planning_env.unwrapped, k, deepcopy(v))
+            planning_env._dependency_resolver()
             return planning_env
 
     def __deepcopy__(self, memo):
@@ -148,24 +150,14 @@ class NSClassicControlWrapper(base.NSWrapper):
             "AcrobotEnv": "Acrobot-v1",
         }
 
-        # Fallback to spec.id only if we don't recognize the class
-        base_id = id_map.get(base_class_name, self.unwrapped.spec.id)
+        # Used only when the base env was not created through gym.make.
+        default_id = id_map.get(base_class_name)
 
-        if self.unwrapped.__class__.__name__ in ["MountainCarEnv", "MountainCarContinuousEnv"]:
-            warnings.warn(
-                f"Deepcopy for {self.unwrapped.__class__.__name__} has a known "
-                "issue with state divergence in the test suite. While parameter "
-                "updates and notifications function correctly, be cautious if "
-                "using `get_planning_env()` for simulation, as the test assertion "
-                "`assert not np.array_equal(sim_obs['state'], obs['state'])` fails.",
-                UserWarning
-            )
-        # Don't forward spec.kwargs — it contains NSWrapper kwargs
-        # (change_notification, etc.) and gym.make() internal kwargs
-        # (order_enforce, disable_env_checker) that aren't valid for the
-        # base env constructor. Standard classic control envs don't need
-        # any constructor kwargs.
-        sim_env = gym.make(base_id)
+        # Rebuild from the id and constructor arguments recorded at wrap time.
+        # ``self.unwrapped.spec.kwargs`` cannot be used here: for a registered
+        # wrapped env it holds the NSWrapper arguments (change_notification,
+        # etc.) and gym.make() internals, not the base env's arguments.
+        sim_env = self._make_base_env(default_id)
         sim_env = NSClassicControlWrapper(
             sim_env,
             deepcopy(self.tunable_params),
@@ -264,7 +256,7 @@ class NSClassicControlWrapper(base.NSWrapper):
                         constraint_dict[p] = True
                         continue
 
-                elif p == "LINK_LENGTH_2" and new_val <= 0:
+                elif p == "LINK_LENGTH_2":
                     if new_val <= 0:  # Make sure the length of the link is not negative
                         warnings.warn(
                             "Length of link must be greater than zero, parameter not updated",

@@ -61,7 +61,8 @@ class DistributionIncrementUpdate(base.UpdateDistributionFn):
     def _update(self, param: list[float], t: int, **kwargs) -> Any:
         """Update the parameter by incrementing the intended direction by k.
         """
-        param[0] = min(1, param[0] + self.k)
+        # Clamped on both sides so the result stays a distribution for any sign of k.
+        param[0] = min(1, max(0, param[0] + self.k))
         for i in range(1, len(param)):
             param[i] = (1 - param[0]) / (len(param) - 1)
         return param
@@ -91,7 +92,8 @@ class DistributionDecrementUpdate(base.UpdateDistributionFn):
         Returns:
             param (list): Updated probability distribution
         """
-        param[0] = max(0, param[0] - self.k)
+        # Clamped on both sides so the result stays a distribution for any sign of k.
+        param[0] = min(1, max(0, param[0] - self.k))
         for i in range(1, len(param)):
             param[i] = (1 - param[0]) / (len(param) - 1)
         return param
@@ -108,9 +110,16 @@ class DistributionStepWiseUpdate(base.UpdateDistributionFn):
 
     def __init__(self, scheduler: base.Scheduler, update_values: list) -> None:
         super().__init__(scheduler)
-        self.update_values = update_values
+        # A copy: values are consumed as they are applied, and the caller's
+        # list must not be emptied as a side effect.
+        self.update_values = list(update_values)
 
     def __call__(self, param: Any, t: int) -> Any:
+        if not self.update_values:
+            # Nothing left to apply: report no change even if the scheduler fires.
+            self.prev_param = param
+            self.prev_time = t
+            return (param, 0, 0.0)
         return super().__call__(param, t)
 
     def _update(self, param, t: int) -> Any:
@@ -122,20 +131,16 @@ class DistributionStepWiseUpdate(base.UpdateDistributionFn):
         Returns:
             list: updated parameter value
         """
-        try:
-            param = self.update_values.pop(0)
-        except AssertionError:
-            "No more parameters to update"
-        finally:
-            return param
+        return self.update_values.pop(0)
 
 
 class LCBoundedDistrubutionUpdate(base.UpdateDistributionFn):
     """Decrement the parameters so that the change is Lipshitz continuous.
 
     Overview:
-        This function would call the decrement update function and check if the change is Lipshitz continuous.
-        If not it would recall the decrement update function until the change is Lipshitz continuous.
+        This function draws a candidate distribution from the inner update function and moves the current
+        distribution toward it, as far as the Lipschitz bound allows: all the way if the candidate is within
+        the bound, otherwise to the point on the segment between them that sits exactly on the bound.
 
         The Lipshitz continuous constraint between to probability distributions is defined as:
 
@@ -164,31 +169,41 @@ class LCBoundedDistrubutionUpdate(base.UpdateDistributionFn):
             )
             self.update_fn = update_fn(scheduler)
 
+    def seed(self, seed) -> None:
+        """Re-seed this function and the inner update function it draws candidates from."""
+        super().seed(seed)
+        self.update_fn.seed(base._child_seed(seed, 1))
+
     def _update(self, param: Any, t: int) -> Any:
-        max_trys = int(1e5)
         cur_dist = np.asarray(param, dtype=float)
         delta_time = abs(t - self.prev_time)
         d = self.L * delta_time
 
-        for _ in range(max_trys):
-            # Some inner _update implementations mutate their argument in
-            # place, so each candidate must start from a fresh copy.
-            updated_dist = self.update_fn._update(list(param), t)
-            if utils.wasserstein_distance(cur_dist, np.asarray(updated_dist, dtype=float)) <= d:
-                return updated_dist
+        # Some inner _update implementations mutate their argument in place,
+        # so the candidate starts from a copy.
+        candidate = np.asarray(self.update_fn._update(list(param), t), dtype=float)
+        distance = utils.wasserstein_distance(cur_dist, candidate)
+        if distance <= d:
+            return [float(p) for p in candidate]
 
-        raise ValueError(
-            "Could not find a Lipschitz-continuous update after "
-            f"{max_trys} attempts (L={self.L}, delta_time={delta_time})"
-        )
+        # W1 on index-ordered outcomes is the L1 distance between the two CDFs,
+        # so it scales linearly along the segment from ``cur_dist`` to
+        # ``candidate``: a step of ``d / distance`` lands exactly on the bound.
+        # A convex combination of two distributions is itself a distribution.
+        step = d / distance
+        return [float(p) for p in cur_dist + step * (candidate - cur_dist)]
 
 
-class BudgetBoundedIncrement(base.UpdateDistributionFn):
+class BudgetBoundedIncrement(DistributionIncrementUpdate):
     """Increment the parameters so that the total amount of change is bounded by some budget.
 
     Overview:
         This function contrains the total amount of change in the parameter by some max budget.
         This formulation is outlined in Cheung et al. 2020.
+
+        Each update is a :class:`DistributionIncrementUpdate` step. A step is applied only if
+        the Wasserstein distance it adds keeps the running total within ``B``; otherwise the
+        distribution is left unchanged and no change is reported.
 
     Args:
         scheduler (base.Scheduler): scheduler that determines when the update function fires.
@@ -201,17 +216,17 @@ class BudgetBoundedIncrement(base.UpdateDistributionFn):
     ) -> None:
         super().__init__(scheduler, k)
         self.B = B
-        self.total_change = 0
+        self.total_change = 0.0
 
-    def __call__(self, param: Any, t: int) -> Any:
-        curr_dist = param
-        updated_param, change = super().__call__(param, t)
-        amount_change = utils.wasserstein_distance(curr_dist, updated_param)
+    def __call__(self, param: list[float], t: int) -> Any:
+        updated_param, changed, amount_change = super().__call__(param, t)
+        if not changed:
+            return updated_param, changed, amount_change
         if self.total_change + amount_change <= self.B:
             self.total_change += amount_change
-            return updated_param, change
-        else:
-            return curr_dist, False
+            return updated_param, changed, amount_change
+        # Over budget: keep the distribution as it was.
+        return list(param), 0, 0.0
 
 
 class DistributionNoUpdate(base.UpdateDistributionFn):
