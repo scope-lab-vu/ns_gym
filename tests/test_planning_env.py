@@ -629,10 +629,7 @@ FROZENLAKE_MAPS = {
 
 
 @pytest.mark.parametrize("in_sim_change", [False, True], ids=["normal", "oracle"])
-@pytest.mark.parametrize(
-    "map_id",
-    ["4x4", pytest.param("8x8", marks=known_bug("A2")), pytest.param("custom4x5", marks=known_bug("A2"))],
-)
+@pytest.mark.parametrize("map_id", ["4x4", "8x8", "custom4x5"])
 def test_frozenlake_planning_env_has_the_real_map(map_id, in_sim_change):
     """The planning env describes, and moves on, the same grid as the real env."""
     case = CASE_BY_ID["FrozenLake-v1"]

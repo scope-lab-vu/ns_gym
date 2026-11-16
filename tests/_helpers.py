@@ -88,7 +88,6 @@ MUJOCO_ENV_PARAMS = [
 #: Finding id -> one-line description. Ids match the findings document; the
 #: three that are also GitHub issues say so.
 KNOWN_BUGS = {
-    "A2": "FrozenLake planning env is always built on the default 4x4 map (issue #46)",
     "A3": "MuJoCo allow-list and accessor table disagree; documented floor_friction is rejected (issue #45)",
     "B1": "random schedulers replay the same schedule every episode and ignore reset(seed=...)",
     "B2": "Bridge.step samples from the global numpy RNG, so reset(seed=...) is ignored",

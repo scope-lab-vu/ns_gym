@@ -500,8 +500,13 @@ class NSFrozenLakeWrapper(base.NSWrapper):
         # env_id = self.unwrapped.spec.id
         env_id = "FrozenLake-v1"
 
+        # Rebuild on the real env's own map. Without ``desc`` gymnasium falls
+        # back to the default 4x4 map whatever the real env was created with.
         sim_env = gym.make(
-            env_id, is_slippery=False, render_mode="ansi", 
+            env_id,
+            desc=[bytes(row).decode() for row in self.unwrapped.desc],
+            is_slippery=False,
+            render_mode="ansi",
         )
         sim_env = NSFrozenLakeWrapper(
             sim_env,
