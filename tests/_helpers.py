@@ -94,7 +94,6 @@ KNOWN_BUGS = {
     "C1": "CartPole planning env / reset leaves total_mass and polemass_length inconsistent with masspole",
     "C2": "planning envs are rebuilt from a hard-coded id and drop the base env's constructor arguments",
     "C3": "CliffWalking planning env loses modified_rewards and terminal_cliff",
-    "D4": "MujocoWrapper changes Ant/Humanoid rewards with no parameter change; planning envs pay different rewards",
     "D2": "docs list friction parameters that have no physical effect and that the wrapper rejects",
     "D5": "Bridge docs name the split parameters left_side/right_side; the wrapper accepts P_left/P_right",
     "E1": "ExponentialDecay compounds exp(-lambda*t) on every call instead of Y_0*exp(-lambda*t)",

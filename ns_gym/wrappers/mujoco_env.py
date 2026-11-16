@@ -33,6 +33,7 @@ class MujocoWrapper(base.NSWrapper):
             in_sim_change=in_sim_change,
             **kwargs,
         )
+        self._scratch_data = None
         self._accessors = {}
         for key in tunable_params.keys():
             self._accessors[key] = param_look_up(
@@ -54,28 +55,23 @@ class MujocoWrapper(base.NSWrapper):
         setter(self.unwrapped, value)
 
     def _dependency_resolver(self):
-        """Re-computes derived properties of the MuJoCo model after changes.
+        """Recompute the model constants that depend on tunable parameters.
 
-        mj_setConst recomputes derived model constants (e.g. body_subtreemass)
-        that depend on mass parameters but are not updated by mj_forward alone.
-        However, mj_setConst resets qpos to qpos0, so we save and restore
-        the full integration state around the call.
+        ``mj_setConst`` refreshes derived model constants such as
+        ``body_subtreemass`` after a mass change. It uses an ``MjData`` as its
+        workspace and leaves that data in the reference configuration, so it is
+        run on a scratch ``MjData`` rather than on the live one.
+
+        The live simulation data is deliberately left untouched. The base
+        Gymnasium envs read body positions from it to compute rewards (Ant and
+        Humanoid measure velocity from the position before and after the step),
+        so refreshing it here would make a wrapped env pay different rewards
+        than the unwrapped one even when no parameter changes.
         """
         model = self.unwrapped.model
-        data = self.unwrapped.data
-
-        # Save integration state (qpos, qvel, act, time, etc.)
-        spec = mujoco.mjtState.mjSTATE_INTEGRATION
-        state_size = mujoco.mj_stateSize(model, spec)
-        state = np.empty(state_size)
-        mujoco.mj_getState(model, data, state, spec)
-
-        # Recompute derived model constants (body_subtreemass, etc.)
-        mujoco.mj_setConst(model, data)
-
-        # Restore integration state and recompute forward dynamics
-        mujoco.mj_setState(model, data, state, spec)
-        mujoco.mj_forward(model, data)
+        if self._scratch_data is None:
+            self._scratch_data = mujoco.MjData(model)
+        mujoco.mj_setConst(model, self._scratch_data)
 
     def _constraint_checker(self, new_vals: dict) -> dict[str, bool]:
         """Checks if new parameter values violate physical constraints."""
@@ -139,7 +135,8 @@ class MujocoWrapper(base.NSWrapper):
                     delta_change[k] = False
                     env_change[k] = False
 
-            self._dependency_resolver()
+            if any(env_change.values()):
+                self._dependency_resolver()
             obs, reward, terminated, truncated, info = super().step(
                 action, env_change=env_change, delta_change=delta_change
             )
@@ -213,26 +210,59 @@ class MujocoWrapper(base.NSWrapper):
         )
         sim_env.reset()
 
-        # Copy full MuJoCo integration state (time, qpos, qvel, act,
-        # qacc_warmstart) using the built-in state API for exact continuation
-        spec = mujoco.mjtState.mjSTATE_INTEGRATION
-        state_size = mujoco.mj_stateSize(self.unwrapped.model, spec)
-        state = np.empty(state_size)
-        mujoco.mj_getState(self.unwrapped.model, self.unwrapped.data, state, spec)
-        mujoco.mj_setState(sim_env.unwrapped.model, sim_env.unwrapped.data, state, spec)
-
-        # Copy wrapper state
-        sim_env.t = deepcopy(self.t)
-
         # Copy current tunable parameter values into the new model
         for k in self.tunable_params:
             sim_env._set_param_value(k, deepcopy(self._get_param_value(k)))
-
-        # Recompute all derived MuJoCo quantities from the copied state
         sim_env._dependency_resolver()
+
+        # Clone the whole simulation, not only the integration state: the base
+        # env computes rewards from derived quantities (body positions), so the
+        # copy must hold the same ones to continue exactly like the original.
+        _copy_simulation(
+            self.unwrapped.model,
+            self.unwrapped.data,
+            sim_env.unwrapped.model,
+            sim_env.unwrapped.data,
+        )
+
+        # Copy wrapper state
+        sim_env.t = deepcopy(self.t)
         sim_env.is_sim_env = True
         sim_env._reseed_planning_env_rngs()
         return sim_env
+
+
+def _copy_simulation(src_model, src_data, dst_model, dst_data) -> None:
+    """Copy a running MuJoCo simulation into another ``MjData`` of the same model.
+
+    The Python bindings have no ``mj_copyData`` for two separately built
+    models, so this is done in two parts:
+
+    1. The integration state (time, qpos, qvel, act, warm start) through
+       MuJoCo's state API.
+    2. Every fixed-size array of ``MjData``. This carries the inputs that
+       persist between steps (``ctrl``, ``xfrc_applied``, mocap poses) and the
+       derived quantities as the last ``mj_step`` left them (``xpos``,
+       ``cfrc_ext``...), which the Gymnasium envs read for rewards and
+       observations.
+
+    Constraint and island arrays are skipped: their size depends on the
+    current contacts, and the next ``mj_step`` rebuilds them from the state.
+    """
+    spec = mujoco.mjtState.mjSTATE_INTEGRATION
+    state = np.empty(mujoco.mj_stateSize(src_model, spec))
+    mujoco.mj_getState(src_model, src_data, state, spec)
+    mujoco.mj_setState(dst_model, dst_data, state, spec)
+
+    for name in dir(src_data):
+        if name.startswith(("_", "efc_")) or "island" in name:
+            continue
+        src_field = getattr(src_data, name, None)
+        if not isinstance(src_field, np.ndarray):
+            continue
+        dst_field = getattr(dst_data, name, None)
+        if isinstance(dst_field, np.ndarray) and dst_field.shape == src_field.shape:
+            np.copyto(dst_field, src_field)
 
 
 def param_look_up(env_name: str, tunable_param: str) -> tuple[Callable, Callable]:

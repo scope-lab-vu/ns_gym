@@ -17,7 +17,6 @@ from _helpers import (
     MUJOCO_ENV_IDS,
     MUJOCO_ENV_PARAMS,
     fixed_actions,
-    known_bug,
 )
 
 ENV_PARAM_IDS = [f"{env_id}-{param}" for env_id, param in MUJOCO_ENV_PARAMS]
@@ -242,19 +241,13 @@ def test_wrapped_vs_unwrapped_dynamics_divergence(env_id, param):
     env_with_change.close()
 
 
-@pytest.mark.parametrize(
-    "env_id",
-    [
-        pytest.param(env_id, marks=[known_bug("D4")] if env_id in ["Ant-v5", "Humanoid-v5"] else [])
-        for env_id in MUJOCO_ENV_IDS
-    ],
-)
+@pytest.mark.parametrize("env_id", MUJOCO_ENV_IDS)
 def test_unchanged_parameters_leave_rewards_identical_to_gymnasium(env_id):
     """Wrapping an env without changing any parameter must not change its rewards.
 
     States already match (see the test above). Rewards are checked separately
-    because Ant and Humanoid derive a velocity reward from body positions that
-    the wrapper recomputes before every step.
+    because Ant and Humanoid derive a velocity reward from body positions in
+    the simulation data, which the wrapper must therefore leave untouched.
     """
     param = next(p for p in TUNABLE_PARAMS[MUJOCO_ENV_CLASS[env_id]] if p != "gravity")
     plain = gym.make(env_id)

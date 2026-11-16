@@ -559,14 +559,14 @@ def test_planning_env_parameter_is_frozen(case):
     assert same(case.executed(planning_env), frozen)
 
 
-@pytest.mark.parametrize("case", env_cases(known_bugs={"Ant-v5": "D4", "Humanoid-v5": "D4"}))
+@pytest.mark.parametrize("case", env_cases())
 def test_planning_env_follows_real_env_when_stationary(case):
     """With no update and deterministic dynamics, the copy and the real env
     visit the same states and collect the same rewards.
 
-    Ant and Humanoid reach the same states but pay different rewards: the real
-    env refreshes body positions before each step and the planning env does not,
-    and both envs compute their velocity reward from those positions.
+    Rewards are part of the check because Ant and Humanoid compute a velocity
+    reward from body positions in the simulation data, so the copy must carry
+    the same derived quantities as the original, not only the same state.
     """
     env = case.make(case.no_update_fn(), change_notification=True, delta_change_notification=True)
     env.reset(seed=0)
