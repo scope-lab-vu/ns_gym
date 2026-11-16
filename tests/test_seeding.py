@@ -26,7 +26,6 @@ from _helpers import (
     MUJOCO_TIME_TEST_IDS,
     env_cases,
     fixed_actions,
-    known_bug,
     safe_actions,
     same,
 )
@@ -461,13 +460,13 @@ def test_random_distribution_same_seed_is_reproducible(case):
     assert same(_first_random_dist(case, env, seed=3), _first_random_dist(case, env, seed=3))
 
 
-@pytest.mark.parametrize("case", env_cases(DISTRIBUTION_CASES, known_bugs={BRIDGE_ENV_ID: "B3"}))
+@pytest.mark.parametrize("case", env_cases(DISTRIBUTION_CASES))
 def test_random_distribution_depends_on_seed(case):
     env = _random_categorical_env(case)
     assert not same(_first_random_dist(case, env, seed=1), _first_random_dist(case, env, seed=2))
 
 
-@pytest.mark.parametrize("case", env_cases(DISTRIBUTION_CASES, known_bugs={BRIDGE_ENV_ID: "B3"}))
+@pytest.mark.parametrize("case", env_cases(DISTRIBUTION_CASES))
 def test_random_distribution_differs_between_unseeded_episodes(case):
     env = _random_categorical_env(case)
     first = _first_random_dist(case, env, seed=0)
@@ -503,7 +502,6 @@ def _bridge_states(seed, n=40):
     return states
 
 
-@known_bug("B2")
 def test_bridge_env_same_seed_is_reproducible():
     """Slips must be drawn from the env's seeded RNG, like every gymnasium env."""
     assert _bridge_states(seed=0) == _bridge_states(seed=0)

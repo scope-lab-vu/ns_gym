@@ -617,8 +617,6 @@ class NSBridgeWrapper(base.NSWrapper):
                 "The initial probability distribution is not being set correctly."
             )
 
-        self.tunable_params = tunable_params
-        self.init_tunable_params = deepcopy(tunable_params)
         # In uniform mode, we still keep .update_fn for back-compat.
         self.update_fn = tunable_params.get("P")
         self.delta_t = 1
@@ -683,7 +681,8 @@ class NSBridgeWrapper(base.NSWrapper):
                 self.unwrapped.right_side_prob = self.unwrapped.P_right
             else:
                 self.unwrapped.P = list(self.initial_prob_dist)
-            self.tunable_params = deepcopy(self.init_tunable_params)
+            # The base class has already restored and seeded ``tunable_params``;
+            # only the uniform-mode alias needs to follow it.
             self.update_fn = self.tunable_params.get("P")
         return obs, info
 
