@@ -1,8 +1,9 @@
-"""MCTS and PA-MCTS: that they run against ns_gym planning envs and that their
-value estimates mean what they say."""
+"""The benchmark algorithms: MCTS and PA-MCTS run against ns_gym planning envs and
+their value estimates mean what they say; DDPG training runs and stops."""
 
 import random
 
+import gymnasium as gym
 import numpy as np
 import pytest
 
@@ -190,3 +191,24 @@ def test_pamcts_requires_exactly_one_value_head():
         _pamcts(q_value_fn=lambda s, e: np.zeros(4), DDQN_model=object(), DDQN_model_path="weights.pth")
     with pytest.raises(TypeError):
         _pamcts(q_value_fn="not callable")
+
+
+# ============================================================
+# DDPG
+# ============================================================
+
+def test_ddpg_train_runs_for_the_requested_number_of_episodes(tmp_path, capsys):
+    """``train`` explores with noise, stops after ``num_episodes`` and returns.
+
+    DDPG expects float32 observations, hence the dtype wrapper around Swimmer
+    (8 observations, 2 actions: the class defaults).
+    """
+    from ns_gym.benchmark_algorithms import DDPG
+
+    env = gym.wrappers.DtypeObservation(gym.make("Swimmer-v5", max_episode_steps=20), np.float32)
+    agent = DDPG(state_dim=8, action_dim=2)
+
+    agent.train(env, num_episodes=2, batch_size=8, warmup_episodes=1, save_path=f"{tmp_path}/")
+
+    assert len(agent.replay_buffer) == 3 * 20  # one warm-up episode and two training episodes
+    capsys.readouterr()  # discard the progress prints
